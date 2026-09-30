@@ -52,14 +52,15 @@ open(out, "wb").write(data + b"".join(images))
 EOF
 cp "$WORK/ico256.png" "$OUT/bibli.png"
 
-# The web home-screen icons (Add to Home Screen on a phone): the logo on a solid
-# white square, full bleed, so a phone can round it and it never turns black on
-# a transparent background. Served from app/static/ and named in the web app
-# manifest and the apple-touch-icon link.
+# The web home-screen icons (Add to Home Screen on a phone). Full bleed on a
+# light gradient, like the desktop icon, with the logo kept inside the maskable
+# safe zone (~55% of the width) so Android can shape it into its adaptive icon
+# without clipping the logo, and iOS can round it. Declared "maskable" in the web
+# app manifest, and linked as the apple-touch-icon. Served from app/static/.
 cat > "$WORK/web.html" <<'EOF'
 <html><body style="margin:0">
-<div style="width:1024px;height:1024px;background:#ffffff;display:flex;align-items:center;justify-content:center">
-<img src="favicon.svg" style="width:660px;height:660px"></div></body></html>
+<div style="width:1024px;height:1024px;background:linear-gradient(#ffffff,#e6ecfb);display:flex;align-items:center;justify-content:center">
+<img src="favicon.svg" style="width:560px;height:560px"></div></body></html>
 EOF
 (cd "$WORK" && "$CHROME" --headless=new --disable-gpu \
     --screenshot="$WORK/web1024.png" --window-size=1024,1024 --hide-scrollbars web.html 2>/dev/null)

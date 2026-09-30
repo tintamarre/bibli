@@ -23,9 +23,13 @@ func (a *app) manifest(w http.ResponseWriter, r *http.Request) {
 		"display":          "standalone",
 		"background_color": "#ffffff",
 		"theme_color":      themeColor[instanceTheme()],
+		// "maskable": the icon has a full-bleed background and the logo well
+		// inside the safe zone, so Android shapes it into its adaptive icon
+		// (rounded square, circle) instead of dropping the logo on a plain
+		// white tile; "any" lets a browser that ignores maskable use it too.
 		"icons": []map[string]string{
-			{"src": asset("/static/icon-192.png"), "sizes": "192x192", "type": "image/png", "purpose": "any"},
-			{"src": asset("/static/icon-512.png"), "sizes": "512x512", "type": "image/png", "purpose": "any"},
+			{"src": asset("/static/icon-192.png"), "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
+			{"src": asset("/static/icon-512.png"), "sizes": "512x512", "type": "image/png", "purpose": "any maskable"},
 		},
 	}
 	w.Header().Set("Content-Type", "application/manifest+json; charset=utf-8")
