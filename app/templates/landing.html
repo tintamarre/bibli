@@ -1,0 +1,28 @@
+{{define "document"}}<!DOCTYPE html>
+<html lang="{{lang}}" data-theme="{{theme}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bibli{{with school}} · {{.}}{{end}}</title>
+<link rel="icon" type="image/svg+xml" href="{{asset "/static/favicon.svg"}}">
+<link rel="stylesheet" href="{{asset "/static/app.css"}}">
+</head>
+<body class="page-centred">
+<main class="centre-card landing">
+  {{template "logo" "landing-icon"}}
+  <h1 class="brand-login">Bibli</h1>
+  {{with school}}<p class="sub-login">{{.}}</p>{{end}}
+  <p class="landing-intro">{{T "landing.intro"}}</p>
+
+  <a class="btn-primary" href="/login">{{T "login.submit"}}</a>
+
+  <section class="landing-parents">
+    <b>{{T "landing.parents_question"}}</b>
+    <p>{{T "landing.parents_help"}}</p>
+  </section>
+
+  <p class="landing-footer">{{T "common.free_software"}} ·
+    <a href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank" rel="noopener">AGPL-3.0</a></p>
+</main>
+</body>
+</html>{{end}}

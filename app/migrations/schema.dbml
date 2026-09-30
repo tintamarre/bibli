@@ -1,0 +1,145 @@
+// Bibli — database schema, for dbdiagram.io. Documentation only:
+// 001_initial.sql is authoritative; update both in the same commit.
+// DBML cannot say it: every table is STRICT, dates are ISO-8601 TEXT, and the
+// enums are CHECK constraints on TEXT columns.
+
+Project bibli {
+  database_type: 'SQLite'
+  Note: '''
+    Library management for a primary school.
+    Up to ~20000 copies and ~1000 pupils, a few dozen loans a week.
+    One SQLite file, one writer: backup is copying that file (with VACUUM INTO).
+  '''
+}
+
+Enum copy_status {
+  available  [note: 'on the shelf, lendable']
+  damaged    [note: 'kept, not lendable']
+  lost       [note: 'closes any open loan']
+  withdrawn  [note: 'out of the collection']
+}
+
+Enum borrower_kind {
+  student
+  teacher  [note: 'borrows in batches for a lesson']
+}
+
+Table book {
+  id integer [pk, increment]
+  isbn13 text [unique, note: 'canonical form; NULL for a book without an ISBN']
+  isbn10 text [note: 'NULL when absent, or when the prefix is 979']
+  title text [not null]
+  subtitle text
+  authors text [note: 'free text, separated by " ; "']
+  publisher text
+  year integer
+  language text [note: 'ISO 639-1: fr, nl, en']
+  source_metadata text [note: 'bnf | unicat | google | openlibrary | manual | local']
+  source_url text [note: 'permanent record URL (BnF ARK, Open Library page…)']
+  source_payload text [note: 'raw catalogue response, so enrichment can be replayed']
+  source_date text
+  created_at text [not null, default: `datetime('now')`]
+  updated_at text [not null, default: `datetime('now')`]
+
+  indexes {
+    title [name: 'idx_book_title']
+    isbn10 [name: 'idx_book_isbn10', note: 'partial: WHERE isbn10 IS NOT NULL']
+  }
+
+  Note: 'The work: one row per title, whatever the number of physical copies.'
+}
+
+Table copy {
+  id integer [pk, increment]
+  book_id integer [not null, ref: > book.id, note: 'ON DELETE RESTRICT']
+  code text [not null, unique, note: 'printed on the label, e.g. VOL204572']
+  location text [note: 'classe P3, bac albums, réserve…']
+  status copy_status [not null, default: 'available']
+  acquired_on text
+  notes text
+  created_at text [not null, default: `datetime('now')`]
+
+  indexes {
+    book_id [name: 'idx_copy_book']
+  }
+
+  Note: 'The physical book: what carries a label and what gets borrowed.'
+}
+
+Table borrower {
+  id integer [pk, increment]
+  first_name text [not null]
+  last_initial text [not null, note: '"Durant" is stored as "D." — never the full last name']
+  class text [note: 'P3A; changes every school year']
+  kind borrower_kind [not null, default: 'student']
+  card_code text [unique, note: 'card barcode, e.g. LEC73048, pupil or teacher alike']
+  active integer [not null, default: 1, note: 'CHECK (active IN (0,1)). Never deleted, deactivated then anonymised']
+  family_token text [note: '128-bit secret for /family/{token}; NULL by default, revocable']
+  deactivated_on text [note: 'start of the anonymisation delay']
+  created_at text [not null, default: `datetime('now')`]
+
+  indexes {
+    class [name: 'idx_borrower_class', note: 'partial: WHERE active = 1']
+    (last_initial, first_name) [name: 'idx_borrower_name']
+    family_token [unique, name: 'idx_borrower_token', note: 'partial: WHERE family_token IS NOT NULL']
+  }
+
+  Note: '''
+    Pupils and teachers together. Minors' data, so only first name, last-name
+    initial and class: a leak of this file stays barely identifying.
+    Row id 1 is the inactive sentinel receiving anonymised loans; its name
+    is filled at startup from the locale catalogue.
+  '''
+}
+
+Table loan {
+  id integer [pk, increment]
+  copy_id integer [not null, ref: > copy.id, note: 'ON DELETE RESTRICT']
+  borrower_id integer [not null, ref: > borrower.id, note: 'ON DELETE RESTRICT']
+  loaned_on text [not null, default: `date('now')`]
+  due_on text [not null]
+  returned_on text [note: 'NULL means the loan is open']
+
+  indexes {
+    copy_id [unique, name: 'idx_loan_copy_active', note: 'partial: WHERE returned_on IS NULL — this is what guarantees, at database level, that a copy is out at most once']
+    borrower_id [name: 'idx_loan_borrower_active', note: 'partial: WHERE returned_on IS NULL']
+    due_on [name: 'idx_loan_overdue', note: 'partial: WHERE returned_on IS NULL']
+    borrower_id [name: 'idx_loan_borrower', note: 'every loan: histories and counts']
+    copy_id [name: 'idx_loan_copy', note: 'every loan: histories and counts']
+  }
+
+  Note: '''
+    Rows are never deleted: a returned loan keeps the work's loan count, and the
+    daily purge reassigns old ones to the sentinel borrower rather than removing
+    them.
+  '''
+}
+
+Table setting {
+  key text [pk]
+  value text [not null]
+  label text [not null, note: 'written at insert, read by no screen']
+  updated_at text [not null, default: `datetime('now')`]
+
+  Note: '''
+    Settings changeable without redeploying:
+    loan_days (14), retention_years (3), school_name, language (fr),
+    theme (ink), express_catalogue (1), anonymous_borrower_id (1), and
+    session_secret — drawn at first start by auth.go, never seeded.
+  '''
+}
+
+Table schema_migrations {
+  name text [pk, note: 'the migration filename']
+  applied_at text [not null, default: `datetime('now')`]
+
+  Note: 'Created by db.go, not by a migration: it has to be read to know what is still due.'
+}
+
+// ---------------------------------------------------------------------------
+// Views — no DBML equivalent.
+//   v_available    copies on the shelf: status = 'available' and no open loan.
+//   v_active_loan  who has what right now, with days_overdue computed.
+//   v_overdue      v_active_loan where days_overdue > 0, ordered by class.
+//                  A loan due today is not overdue.
+// ---------------------------------------------------------------------------

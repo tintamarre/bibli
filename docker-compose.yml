@@ -1,0 +1,59 @@
+# Bibli — production: pulls the image published by CI and runs it.
+# A third-party school has only three things to do:
+#   1. copy .env.example to .env and set an admin password;
+#   2. docker compose up -d
+#   3. to update:  docker compose pull && docker compose up -d
+#
+# The SQLite database lives in ./data on the host (bind mount). NEVER put that
+# directory on a network share (NFS/CIFS): locking is broken there and the
+# database corrupts.
+#
+# Bibli makes its own backups (VACUUM INTO, never a cp) in ./data/backups,
+# rotating grandfather-father-son: 7 daily files, 4 weekly, 4 monthly, always
+# the same 15 names. Cover thumbnails are kept in ./data/cache, one file per
+# ISBN, safe to delete by hand. Both are shown on the Settings screen.
+# Remember to copy ./data off-site regularly.
+
+services:
+  bibli:
+    # :stable = the latest version published by the release workflow.
+    # Do not use :latest in production: it follows every push to main.
+    image: ghcr.io/tintamarre/bibli:stable
+    container_name: bibli
+    restart: always
+    # Loopback only: with -trust-proxy, anyone reaching the port directly could
+    #   forge X-Forwarded-For. For direct LAN access with no proxy, publish
+    #   "8087:8080" and remove -trust-proxy.
+    ports:
+      - "127.0.0.1:8087:8080"
+    volumes:
+      - ./data:/data
+    # -trust-proxy: required behind a reverse proxy, so that the sign-in attempt
+    #   counter tells clients apart (without it everyone shares the proxy's
+    #   address and five failures lock out the whole school).
+    #   REMOVE IT if Bibli is exposed directly, with no proxy in front.
+    # -secure-cookies=false: add only for HTTP access on the local network
+    #   (otherwise the browser drops the session cookie, see README).
+    command:
+      - "-db"
+      - "/data/biblio.db"
+      - "-addr"
+      - ":8080"
+      - "-backup-dir"
+      - "/data/backups"
+      - "-cache-dir"
+      - "/data/cache"
+      - "-trust-proxy"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/healthcheck"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    environment:
+      - TZ=Europe/Brussels
+      # Librarian password (protects the whole application). Set it in .env.
+      - BIBLI_ADMIN_PASSWORD=${BIBLI_ADMIN_PASSWORD:?set BIBLI_ADMIN_PASSWORD in .env}
+      # Optional: Google Books API key (raises the enrichment quota, avoids 429s).
+      # It can be pasted in /settings instead; set here, it wins over that field.
+      - BIBLI_GOOGLE_BOOKS_KEY=${BIBLI_GOOGLE_BOOKS_KEY:-}

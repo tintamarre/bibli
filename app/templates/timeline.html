@@ -1,0 +1,7 @@
+{{/* One open loan on the shared time axis (timeline.go): the capsule is what
+     was granted, its right end the due date; over it the loan so far, ending at
+     today. The label names both dates. */}}
+{{define "loan_bar"}}{{if .Valid}}{{$label := T "loans.timeline_label" (shortDate .LoanedOn) (shortDate .DueOn)}}<span
+      class="tl" role="img" title="{{$label}}" aria-label="{{$label}}"
+  ><span class="tl-period{{if .Clipped}} tl-clipped{{end}}" style="left:{{.Left}}%;width:{{.Period}}%"></span
+  ><span class="tl-bar{{if .Overdue}} tl-bar-late{{end}}{{if .Clipped}} tl-clipped{{end}}" style="left:{{.Left}}%;width:{{.Bar}}%;--s:{{.Stop}}%"></span></span>{{end}}{{end}}

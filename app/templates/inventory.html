@@ -1,0 +1,172 @@
+{{define "title_icon"}}{{template "icon-inventory" "title-icon"}}{{end}}
+{{/* Hard right: "Cataloguer", then the output menu. Kept outside inv_actions,
+     which is swapped out of band on every search. */}}
+{{define "title_actions"}}
+<a class="btn-secondary" href="/catalogue">{{template "icon-plus" "btn-icon"}}{{T "inventory.add_book"}}</a>
+{{template "inv_actions" .}}
+{{end}}
+
+{{/* Everything that leaves the screen, behind one <details data-autoclose>
+     (app.js). Each entry carries the filter, so it outputs what the list shows. */}}
+{{define "inv_actions"}}
+<details class="page-menu" id="inv-actions" data-autoclose{{if .OOB}} hx-swap-oob="true"{{end}}>
+  <summary>{{template "icon-download" "btn-icon"}}{{T "inventory.actions"}} {{template "icon-chevron" "icon-chevron"}}</summary>
+  <div class="menu-admin-panel">
+    <a href="{{.Filter.URL "/print/labels"}}" target="_blank" rel="noopener"
+      >{{template "icon-card" "menu-icon"}}<span>{{Tn "labels.print_count" .Page.Total}}</span></a>
+    <a href="{{.Filter.URL "/print/inventory"}}" target="_blank" rel="noopener"
+      >{{template "icon-print" "menu-icon"}}<span>{{T "inventory.print_list"}}</span></a>
+    {{/* The .xlsx is the one to double-click; the CSV is for whatever reads a
+         file. */}}
+    <a href="{{.Filter.URL "/export.xlsx"}}">{{template "icon-download" "menu-icon"}}<span>{{T "inventory.export_xlsx"}}</span></a>
+    <a href="{{.Filter.URL "/export.csv"}}">{{template "icon-download" "menu-icon"}}<span>{{T "inventory.export_csv"}}</span></a>
+  </div>
+</details>
+{{end}}
+
+{{define "content"}}
+<p class="note">
+  {{T "inventory.help"}}
+</p>
+
+{{/* One form for the whole state of the list, so filters and order always post
+     together. "sortchange" is fired by the headings (app.js); "change" bubbles
+     from the dropdowns. */}}
+<form id="inv-filter" class="filter-bar" onsubmit="return false"
+      hx-post="/inventory/search"
+      hx-trigger="keyup changed delay:250ms from:find input[type=search], change, sortchange"
+      hx-target="#inventory-list" hx-swap="outerHTML" hx-sync="this:replace">
+  {{/* The search box on a line of its own (.filter-row-search). */}}
+  <div class="filter-row filter-row-search">
+    <div class="search-wrap">{{template "icon-search" "search-icon"}}
+      <input class="field-search" name="q" type="search" value="{{.Filter.Q}}"
+             placeholder="{{T "inventory.search_placeholder"}}" autocomplete="off">
+    </div>
+  </div>
+  {{/* A period, or an exact range whose two fields the data-range entry
+       reveals. They also show for an address that arrived carrying dates. */}}
+  {{/* The three filters on one row, each label and dropdown one .filter-pair so
+       they wrap together. */}}
+  <div class="filter-row filter-row-selects">
+    <span class="filter-pair">
+    <label class="filter-label" for="added-filter">{{T "filter.added"}}</label>
+    <select class="filter-select" id="added-filter" name="added"
+            onchange="toggleRange(this, 'inv-range')">
+      <option value=""{{if not .Filter.Added}} selected{{end}}>{{T "filter.added_any"}}</option>
+      <option value="today"{{if eq .Filter.Added "today"}} selected{{end}}>{{T "filter.added_today"}}</option>
+      <option value="7d"{{if eq .Filter.Added "7d"}} selected{{end}}>{{T "filter.added_7d"}}</option>
+      <option value="30d"{{if eq .Filter.Added "30d"}} selected{{end}}>{{T "filter.added_30d"}}</option>
+      <option value="custom" data-range{{if eq .Filter.Added "custom"}} selected{{end}}>{{T "filter.added_custom"}}</option>
+    </select>
+    </span>
+    <span class="filter-range" id="inv-range"{{if not .Filter.RangeOpen}} hidden{{end}}>
+      <span class="filter-sep">{{T "filter.range_from"}}</span>
+      <input class="filter-date" type="date" id="inv-from" name="from" value="{{.Filter.From}}">
+      <span class="filter-sep">{{T "filter.range_to"}}</span>
+      <input class="filter-date" type="date" name="to" value="{{.Filter.To}}">
+    </span>
+    <span class="filter-pair">{{template "location_select" .}}</span>
+    <span class="filter-pair">
+    <label class="filter-label" for="status-filter">{{T "inventory.col_condition"}}</label>
+    <select class="filter-select" id="status-filter" name="status">
+      <option value=""{{if not .Filter.Status}} selected{{end}}>{{T "filter.all_statuses"}}</option>
+      <option value="available"{{if eq .Filter.Status "available"}} selected{{end}}>{{T "status.available"}}</option>
+      <option value="damaged"{{if eq .Filter.Status "damaged"}} selected{{end}}>{{T "status.damaged"}}</option>
+      <option value="lost"{{if eq .Filter.Status "lost"}} selected{{end}}>{{T "status.lost"}}</option>
+      <option value="withdrawn"{{if eq .Filter.Status "withdrawn"}} selected{{end}}>{{T "status.withdrawn"}}</option>
+    </select>
+    </span>
+    {{/* Out or on the shelf, beside the condition and not merged into it. */}}
+    <span class="filter-pair">
+    <label class="filter-label" for="loan-filter">{{T "inventory.col_loan"}}</label>
+    <select class="filter-select" id="loan-filter" name="loan">
+      <option value=""{{if not .Filter.Loan}} selected{{end}}>{{T "filter.all_loans"}}</option>
+      <option value="out"{{if eq .Filter.Loan "out"}} selected{{end}}>{{T "inventory.out"}}</option>
+      <option value="shelf"{{if eq .Filter.Loan "shelf"}} selected{{end}}>{{T "inventory.on_shelf"}}</option>
+    </select>
+    </span>
+  </div>
+  {{/* The order lives in the form so it survives a search. */}}
+  <input type="hidden" name="sort" value="{{.Filter.Sort}}">
+  <input type="hidden" name="dir" value="{{.Filter.Dir}}">
+</form>
+
+{{template "inventory_list" .}}
+{{end}}
+
+{{define "inventory_list"}}
+<div id="inventory-list" class="table-scroll">
+{{/* The outputs, swapped back into the title row out of band so they carry the
+     current filter. OOB is set only by the search handler, so the first render
+     leaves no stray attribute. */}}
+{{if .OOB}}{{template "inv_actions" .}}{{end}}
+{{/* The day of entry is a column only while filtered to a period (ByDate).
+     Hidden by a class on the table, not left out of the row: inv_row redraws a
+     row without the filter, and a row one cell short would shift every value. */}}
+<table class="table{{if not .Filter.ByDate}} hide-added{{end}}">
+  <thead>
+    <tr>
+      <th>{{template "sort_head" (sortCol $.Filter "mark" (T "inventory.col_mark"))}}</th>
+      <th class="col-title">{{template "sort_head" (sortCol $.Filter "title" (T "inventory.col_title"))}}</th>
+      <th>{{template "sort_head" (sortCol $.Filter "isbn" (T "inventory.col_isbn"))}}</th>
+      <th>{{template "sort_head" (sortCol $.Filter "code" (T "inventory.col_code"))}}</th>
+      <th>{{template "sort_head" (sortCol $.Filter "location" (T "inventory.col_location"))}}</th>
+      <th>{{template "sort_head" (sortCol $.Filter "status" (T "inventory.col_condition"))}}</th>
+      <th>{{template "sort_head" (sortCol $.Filter "loan" (T "inventory.col_loan"))}}</th>
+      {{/* Newest first on the first click. */}}
+      <th class="col-added">{{template "sort_head" (sortColDesc $.Filter "added" (T "labels.col_added"))}}</th>
+    </tr>
+  </thead>
+  <tbody>
+    {{range .Rows}}{{template "inv_row" .}}{{else}}
+    <tr><td colspan="8" class="empty">{{T "inventory.empty"}}</td></tr>
+    {{end}}
+  </tbody>
+</table>
+{{template "pager" .Page}}
+</div>
+{{end}}
+
+{{define "inv_row"}}
+<tr id="ex-{{.ID}}"{{if .Flash}} class="flash-ok"{{end}}>
+  <td data-label="{{T "inventory.col_mark"}}" class="col-code"><span class="code">{{.Mark}}</span></td>
+  {{/* The column class clips the title (app.css); the whole title is under the
+       pointer. */}}
+  <td class="col-title" data-label="{{T "inventory.col_title"}}"
+    ><a class="link-title" href="/book/{{.BookID}}" title="{{.Title}}"><span class="ti-head">{{titleHead .Title}}</span><span class="ti-tail">{{titleTail .Title}}</span></a></td>
+  {{/* The ISBN links to the catalogue record when there is one; no ISBN is
+       said. */}}
+  <td data-label="{{T "inventory.col_isbn"}}" class="col-code">
+    {{if not .ISBN}}<span class="no-isbn">{{T "inventory.no_isbn"}}</span
+    >{{else if .URL}}<a class="link-record" href="{{.URL}}" target="_blank" rel="noopener" title="{{T "inventory.record_title"}}"><span class="code">{{.ISBN}}</span>{{template "icon-external" "icon-trailing"}}</a
+    >{{else}}<span class="code">{{.ISBN}}</span>{{end}}
+  </td>
+  <td data-label="{{T "inventory.col_code"}}" class="col-code"><span class="code">{{.Code}}</span></td>
+  <td data-label="{{T "inventory.col_location"}}" class="col-field">
+    {{/* The title attribute gives back a location the box cuts off. */}}
+    <input class="inv-location" name="location" value="{{.Location}}" placeholder="—"
+           title="{{.Location}}"
+           hx-post="/inventory/{{.ID}}" hx-include="closest tr"
+           hx-target="closest tr" hx-swap="outerHTML" hx-trigger="change">
+  </td>
+  <td data-label="{{T "inventory.col_condition"}}" class="col-field">
+    <select class="inv-status status-{{.Status}}" name="status" data-status="{{.Status}}"
+            hx-post="/inventory/{{.ID}}" hx-include="closest tr"
+            hx-target="closest tr" hx-swap="outerHTML" hx-trigger="change"
+            hx-on::confirm="event.preventDefault(); confirmStatus(this, function () { event.detail.issueRequest(true); })">
+      <option value="available"{{if eq .Status "available"}} selected{{end}}>{{T "status.available"}}</option>
+      <option value="damaged"{{if eq .Status "damaged"}} selected{{end}}>▲ {{T "status.damaged"}}</option>
+      <option value="lost"{{if eq .Status "lost"}} selected{{end}}>? {{T "status.lost"}}</option>
+      <option value="withdrawn"{{if eq .Status "withdrawn"}} selected{{end}}>✕ {{T "status.withdrawn"}}</option>
+    </select>
+  </td>
+  {{/* When an out copy is due back, on the pill's line so the row keeps its
+       height. */}}
+  <td data-label="{{T "inventory.col_loan"}}" class="col-loan"><span class="loan-cell">{{if .Out}}<span class="status-pill status-out">{{template "icon-borrow" "status-icon"}}{{T "inventory.out"}}</span>{{if .DueOn}}<span class="copy-due{{if gt .DaysOverdue 0}} overdue{{end}}" title="{{shortDate .DueOn}}">{{if gt .DaysOverdue 0}}{{Tn "loans.days_overdue" .DaysOverdue}}{{else}}{{T "inventory.due_back" (relativeDate .DueOn)}}{{end}}</span>{{end}}{{else if onShelf .Status}}<span class="status-pill status-shelf">{{template "icon-shelf" "status-icon"}}{{T "inventory.on_shelf"}}</span>{{else}}{{/* Lost or withdrawn: a dash, neither out nor on a shelf. Punctuation, so not in the catalogues. */}}<span class="loan-none">&mdash;</span>{{end}}{{if .LoanClosed}}<span class="overdue-badge">{{T "inventory.loan_closed"}}</span>{{end}}</span></td>
+  {{/* How long ago rather than the day; the day is under the pointer. */}}
+  <td data-label="{{T "labels.col_added"}}" class="col-added">
+    <time class="when-ago" datetime="{{.AddedOn}}" title="{{shortDate .AddedOn}}"
+      >{{with relativeDate .AddedOn}}{{.}}{{else}}{{shortDate $.AddedOn}}{{end}}</time>
+  </td>
+</tr>
+{{end}}

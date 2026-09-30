@@ -1,0 +1,137 @@
+{{/* What the four printable sheets share: the head, the two toolbar buttons and
+     the close script, and for the two printed on stickers, the sticker sheet.
+     Each keeps its own <style> for what is on it. */}}
+
+{{define "sheet_head"}}<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{.}} · Bibli</title>
+<link rel="icon" type="image/svg+xml" href="{{asset "/static/favicon.svg"}}">
+<link rel="stylesheet" href="{{asset "/static/print.css"}}">{{end}}
+
+{{define "sheet_print"}}<button type="button" class="btn-primary" onclick="window.print()">{{template "icon-print" "btn-icon"}}{{T "common.print"}}</button>{{end}}
+
+{{/* Close, hard right of the toolbar (print.css). */}}
+{{define "sheet_close"}}<button type="button" class="btn-secondary btn-close" onclick="closeSheet()">{{template "icon-close" "btn-icon"}}{{T "common.close"}}</button>{{end}}
+
+{{/* Firefox will not let a script close a tab a link opened, so after a moment
+     go back to the screen it came from. */}}
+{{define "sheet_script"}}<script>
+  function closeSheet() {
+    window.close();
+    setTimeout(function () {
+      location.replace(document.referrer || "/");
+    }, 200);
+  }
+</script>{{end}}
+
+{{/* The sticker sheet the copy labels and the borrower cards both print on: an
+     A4 sheet of 44 stickers, 48.5 × 25.4 mm, 4 × 11, edge to edge (Avery
+     Zweckform 3657 and its compatibles). The product is these five numbers;
+     the script reads the count per page from them, so another product is a
+     change here and nowhere else. Every size is millimetres of paper and the
+     page has no margin of its own, so what is drawn lands on the sticker —
+     provided the print dialog prints at 100 %. */}}
+{{define "sticker_style"}}<style>
+  :root {
+    --st-w: 48.5mm; --st-h: 25.4mm; --st-cols: 4; --st-rows: 11;
+    --st-margin-x: 8mm; --st-margin-y: 8.8mm;
+  }
+  @page { size: A4; margin: 0; }
+  body { background: var(--bg); }
+  .page {
+    position: relative; width: 210mm; height: 297mm; padding: var(--st-margin-y) var(--st-margin-x);
+    background: #fff; margin: 0 0 8mm; box-shadow: 0 1px 4px rgba(0, 0, 0, .18);
+    display: grid; grid-template-columns: repeat(var(--st-cols), var(--st-w)); grid-auto-rows: var(--st-h);
+  }
+  /* What the stack is — a class, the school — in the top margin, which on a
+     sticker sheet is backing paper and on plain paper heads the class sheet. */
+  .page-head { position: absolute; top: 4mm; left: var(--st-margin-x); right: var(--st-margin-x);
+    font-size: 7pt; line-height: 1; color: #777; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sticker {
+    width: var(--st-w); height: var(--st-h); overflow: hidden; padding: 1.6mm 2.5mm 1.4mm;
+    text-align: center; display: flex; flex-direction: column; align-items: center; gap: .5mm;
+    /* Where the sticker's edges are: on screen always, on paper when asked. */
+    outline: .2mm dashed #ccc; outline-offset: -.1mm;
+  }
+  .sticker > * { flex: none; max-width: 100%; }
+  /* The barcode takes whatever height the lines around it leave, at a fixed
+     width narrower than the sticker: about 0.3 mm a module and 5 mm of white
+     either side, so the print of a cover next to it stays out of the quiet
+     zone a scanner needs. */
+  .sticker svg.cb { width: 36mm; flex: 1 1 0; min-height: 5mm; }
+  .sticker .school { font-size: 5.5pt; line-height: 1.1; color: #777; width: 100%;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sticker .code { font-family: ui-monospace, monospace; font-size: 6.5pt; letter-spacing: .02em; color: #444; }
+  /* A sticker already used on a sheet that went through the printer before. */
+  .sticker.used { visibility: hidden; }
+  body.no-school .sticker .school { display: none; }
+  .toolbar .opt input[type=number] { width: 4.5em; height: 44px; font: inherit; padding: 0 .5rem;
+    border: 1px solid var(--border-strong); border-radius: var(--radius-s); background: var(--surface); }
+  @media print {
+    body { padding: 0; background: none; }
+    .page { margin: 0; box-shadow: none; break-after: page; }
+    .page:last-child { break-after: auto; }
+    .sticker { outline: none; }
+    body.cut-lines .sticker { outline: .2mm dashed #999; }
+  }
+</style>{{end}}
+
+{{/* Where on the sheet to start, and cut lines for plain paper: chosen on the
+     sheet, with nothing to reload or save. */}}
+{{define "sticker_controls"}}<label class="opt">{{T "sticker.start"}} <input type="number" id="st-start" min="1" value="1"
+    onchange="stickerLayout()"></label>
+  <label class="opt"><input type="checkbox"
+    onchange="document.body.classList.toggle('cut-lines', this.checked)"> {{T "sticker.cut_lines"}}</label>{{end}}
+
+{{define "sticker_note"}}<p class="sheet-note">{{T "sticker.note"}}</p>{{end}}
+
+{{/* Draws the barcodes, then deals the stickers of .sheet onto pages, after as
+     many blanks as the sheet in the printer has already used. data-head on
+     .sheet, when set, heads every page. */}}
+{{define "sticker_script"}}<script>
+  document.querySelectorAll(".sticker .cb").forEach(function (el) {
+    try {
+      JsBarcode(el, el.dataset.code, { format: "CODE128", displayValue: false, margin: 0, height: 40 });
+      // Stretched to the box the sticker leaves it: bars scale evenly across,
+      // and a taller or shorter bar reads the same.
+      el.setAttribute("preserveAspectRatio", "none");
+    } catch (e) { /* invalid code: leave the readable text below */ }
+  });
+
+  var stSheet = document.querySelector(".sheet");
+  var stCells = Array.prototype.slice.call(stSheet.querySelectorAll(".sticker"));
+  var stRoot = getComputedStyle(document.documentElement);
+  var stPerPage = parseInt(stRoot.getPropertyValue("--st-cols"), 10) * parseInt(stRoot.getPropertyValue("--st-rows"), 10);
+  function stickerLayout() {
+    if (!stCells.length) return;
+    var box = document.getElementById("st-start");
+    box.max = stPerPage;
+    var start = Math.min(stPerPage, Math.max(1, parseInt(box.value, 10) || 1));
+    box.value = start;
+    var cells = [];
+    for (var i = 1; i < start; i++) {
+      var used = document.createElement("div");
+      used.className = "sticker used";
+      cells.push(used);
+    }
+    cells = cells.concat(stCells);
+    stSheet.textContent = "";
+    for (var p = 0; p < cells.length; p += stPerPage) {
+      var page = document.createElement("div");
+      page.className = "page";
+      if (stSheet.dataset.head) {
+        var head = document.createElement("div");
+        head.className = "page-head";
+        head.textContent = stSheet.dataset.head;
+        page.appendChild(head);
+      }
+      cells.slice(p, p + stPerPage).forEach(function (c) { page.appendChild(c); });
+      stSheet.appendChild(page);
+    }
+  }
+
+  // Firefox hands a reloaded page its inputs as they were left, but not what
+  // their handlers had done — the sheet would then contradict its own boxes.
+  // Applying them once on load settles it whatever the browser did.
+  document.querySelectorAll(".opt input").forEach(function (box) { if (box.onchange) box.onchange(); });
+</script>{{end}}

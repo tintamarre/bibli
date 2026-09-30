@@ -1,0 +1,21 @@
+{{define "title_icon"}}{{template "icon-shelf" "title-icon"}}{{end}}
+{{define "content"}}
+  <div class="home-actions">
+    <a class="action-card" href="/borrow">
+      {{template "icon-borrow" "action-card-icon"}}
+      <span class="action-card-title">{{T "nav.borrow"}}</span>
+      <span class="action-card-sub">{{T "home.borrow_hint"}}</span>
+    </a>
+    <a class="action-card" href="/return">
+      {{template "icon-return" "action-card-icon"}}
+      <span class="action-card-title">{{T "nav.return"}}</span>
+      <span class="action-card-sub">{{T "home.return_hint"}}</span>
+    </a>
+  </div>
+
+  <div class="counters">
+    <a class="counter" href="/inventory">{{template "icon-shelf" "counter-icon"}}<b>{{.Available}}</b> {{Tn "home.on_shelf" .Available}}</a>
+    <a class="counter" href="/loans">{{template "icon-borrow" "counter-icon"}}<b>{{.Out}}</b> {{Tn "home.loans_out" .Out}}</a>
+    <a class="counter {{if gt .Overdue 0}}counter-alert{{end}}" href="/loans?overdue=1">{{template "icon-clock" "counter-icon"}}<b>{{.Overdue}}</b> {{Tn "home.overdue" .Overdue}}</a>
+  </div>
+{{end}}

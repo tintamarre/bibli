@@ -1,0 +1,215 @@
+{{define "title_icon"}}{{template "icon-book" "title-icon"}}{{end}}
+{{define "title_aside"}}{{with .F.Authors}}<span class="title-authors">{{.}}</span>{{end}}{{end}}
+{{define "back_link"}}<p class="back-link"><a class="link-quiet" href="/inventory">{{template "icon-back" "icon-inline"}}{{T "inventory.back"}}</a></p>{{end}}
+{{/* Correcting the record opens the folded form (app.js, openForm). */}}
+{{define "title_actions"}}
+<button type="button" class="btn-secondary btn-open-form" onclick="openForm('book-edit')"
+  >{{template "icon-edit" "btn-icon"}}{{T "common.edit"}}</button>
+{{end}}
+{{/* Looking the record up elsewhere: one quiet menu at the foot of the record,
+     dropped when there is nothing to link to. */}}
+{{define "book_lookup"}}
+{{if or .RecordLink .BnFLink .UniCatLink .GoogleBooksLink .GoogleLink}}
+<details class="page-menu page-menu-quiet book-lookup" data-autoclose>
+  <summary>{{template "icon-search" "btn-icon"}}{{T "book.lookup_elsewhere"}} {{template "icon-chevron" "icon-chevron"}}</summary>
+  <div class="menu-admin-panel">
+    {{with .RecordLink}}<a href="{{.}}" target="_blank" rel="noopener"
+      >{{template "icon-external" "menu-icon"}}<span>{{T "book.source_record"}}</span></a>{{end}}
+    {{/* Only when there is no permalink: the BnF search rate-limits
+         (computeLinks). */}}
+    {{with .BnFLink}}<a href="{{.}}" target="_blank" rel="noopener"
+      >{{template "icon-external" "menu-icon"}}<span>BnF</span></a>{{end}}
+    {{with .UniCatLink}}<a href="{{.}}" target="_blank" rel="noopener"
+      >{{template "icon-external" "menu-icon"}}<span>UniCat</span></a>{{end}}
+    {{with .GoogleBooksLink}}<a href="{{.}}" target="_blank" rel="noopener"
+      >{{template "icon-external" "menu-icon"}}<span>Google Books</span></a>{{end}}
+    {{with .GoogleLink}}<a href="{{.}}" target="_blank" rel="noopener"
+      >{{template "icon-external" "menu-icon"}}<span>{{T "book.google_search"}}</span></a>{{end}}
+  </div>
+</details>
+{{end}}
+{{end}}
+{{define "content"}}
+{{if .F.Ok}}<p class="ok">{{T "settings.saved"}}</p>{{end}}
+{{if .F.Enriched}}<p class="ok">{{T "book.enriched"}}</p>{{end}}
+{{if .F.NotFound}}<p class="warning">{{T "book.not_found"}}</p>{{end}}
+{{if .F.Silent}}<p class="warning">{{T "book.catalogues_silent"}}</p>{{end}}
+{{if .F.LoanClosed}}<p class="warning">{{T "book.loan_closed"}}</p>{{end}}
+{{with .F.Error}}<p class="err">{{.}}</p>{{end}}
+{{/* The author rides in the heading (title_aside); the subtitle stays below. */}}
+{{with .F.Subtitle}}<p class="page-sub">{{.}}</p>{{end}}
+
+{{/* One panel: the record, the cover, and the copies. */}}
+<section class="scan-block book-panel">
+  {{/* The cover leads the record; on a phone it stays on top (app.css). */}}
+  <div class="metadata-row">
+  {{if .F.ISBN13}}
+  {{/* Served by Bibli, not by a third party (cover.go). */}}
+  <div class="metadata-cover">
+    <img class="cover" src="/cover/{{.F.ISBN13}}{{with .F.Fingerprint}}?v={{.}}{{end}}" alt="{{T "book.cover_alt" .F.Title}}" loading="lazy">
+  </div>
+  {{end}}
+  <div class="metadata-fields">
+  {{/* What the record says; title, subtitle and authors are already the
+       heading. A label over each value, and only the values there are. */}}
+  <div class="book-facts">
+    <h3 class="book-zone-title">{{T "book.record"}}</h3>
+    <ul class="facts">
+      {{with .F.Publisher}}<li><span class="fact-label">{{T "catalogue.f_publisher"}}</span><span class="fact-value">{{.}}</span></li>{{end}}
+      {{if .F.Year}}<li><span class="fact-label">{{T "catalogue.f_year"}}</span><span class="fact-value">{{.F.Year}}</span></li>{{end}}
+      {{with .F.Language}}<li><span class="fact-label">{{T "catalogue.f_language"}}</span><span class="fact-value">{{.}}</span></li>{{end}}
+      {{/* The ISBN-13 alone, the one on the barcode. */}}
+      <li><span class="fact-label">{{T "catalogue.f_isbn"}}</span><span class="fact-value">{{if .F.ISBN13}}<span class="code">{{.F.ISBN13}}</span>{{else}}{{T "inventory.no_isbn"}}{{end}}</span></li>
+      {{with .F.Source}}<li><span class="fact-label">{{T "catalogue.f_source"}}</span><span class="fact-value">{{sourceWording .}}</span></li>{{end}}
+    </ul>
+    {{template "book_lookup" .F}}
+  </div>
+  {{/* Folded until asked for; the id lets it close from inside (app.js,
+       closeForm). Open when the save came back with something to fix. */}}
+  <details id="book-edit" class="form-on-demand book-edit"{{if .F.Error}} open{{end}}>
+    <summary>{{T "book.edit_heading"}}</summary>
+    {{/* The heading, and beside it the helper that fills the fields from the
+         catalogues: a form of its own, since forms do not nest. */}}
+    <div class="book-edit-head">
+      <h3 class="book-zone-title">{{T "book.edit_heading"}}</h3>
+      {{if .F.ISBN13}}
+      <form method="post" action="/book/{{.F.ID}}/enrich">
+        <button class="link-quiet" type="submit">{{template "icon-search" "icon-inline"}}{{T "book.enrich"}}</button>
+      </form>
+      {{end}}
+    </div>
+    <form method="post" action="/book/{{.F.ID}}">
+      <label class="field"><span>{{T "catalogue.f_title"}}</span><input name="title" value="{{.F.Title}}" required></label>
+      <div class="field-grid">
+        <label class="field"><span>{{T "catalogue.f_subtitle"}}</span><input name="subtitle" value="{{.F.Subtitle}}"></label>
+        <label class="field"><span>{{T "catalogue.f_authors"}}</span><input name="authors" value="{{.F.Authors}}"></label>
+      </div>
+      <div class="field-grid">
+        <label class="field"><span>{{T "catalogue.f_publisher"}}</span><input name="publisher" value="{{.F.Publisher}}"></label>
+        <label class="field"><span>{{T "catalogue.f_year"}}</span>
+          <input name="year" type="number" inputmode="numeric" value="{{if .F.Year}}{{.F.Year}}{{end}}"></label>
+        <label class="field"><span>{{T "catalogue.f_language"}}</span><input name="language" value="{{.F.Language}}" maxlength="5"></label>
+      </div>
+      {{/* One bar: keep or drop the changes on the left, the destructive action
+           alone on the right. The delete button belongs to its own form below
+           (form attribute), so it keeps its confirmation. */}}
+      <div class="book-edit-actions">
+        <button class="btn-primary" type="submit">{{T "common.save"}}</button>
+        <button type="button" class="link-quiet" onclick="closeForm('book-edit')">{{T "common.cancel"}}</button>
+        {{if .F.Deletable}}
+        <button class="btn-danger" type="submit" form="book-delete"
+          >{{template "icon-close" "btn-icon"}}{{T "book.delete"}}</button>
+        {{end}}
+      </div>
+    </form>
+    {{/* Deletion, only for a work no loan has ever touched; otherwise the
+         sentence says to withdraw copies instead. The count includes withdrawn
+         copies, since all go. */}}
+    {{if .F.Deletable}}
+    <form id="book-delete" method="post" action="/book/{{.F.ID}}/delete"
+          data-confirm="{{Tn "book.confirm_delete" (len .F.Copies) .F.Title}}"></form>
+    {{else}}
+    <p class="note book-edit-note">{{T "book.delete_blocked"}}</p>
+    {{end}}
+  </details>
+  </div>
+  {{/* Where it goes back, apart from what it is and opposite the cover: the
+       cote as the label prints it, then the bins its copies sit in. */}}
+  <div class="book-shelf">
+    <h3 class="book-zone-title">{{T "book.shelved"}}</h3>
+    {{with .F.Mark}}<p class="book-shelf-mark"><span class="shelf-mark" title="{{T "inventory.col_mark"}}">{{.}}</span></p>{{end}}
+    {{/* One line per emplacement; its count once the book has several copies. */}}
+    {{$many := gt .F.ShelvedCopies 1}}
+    <ul class="shelf-places">
+      {{range .F.Shelves}}<li><span class="shelf-place{{if not .Place}} shelf-none{{end}}">{{with .Place}}{{.}}{{else}}{{T "filter.no_location"}}{{end}}</span>{{if $many}}<span class="shelf-count">{{Tn "book.shelf_copies" .Copies}}</span>{{end}}</li>{{end}}
+    </ul>
+  </div>
+  </div>
+
+  <div class="panel-part">
+  <h2 class="subtitle">{{template "icon-inventory" "subtitle-icon"}}{{T "book.copies_heading" .F.AvailableCount .F.TotalCount}}{{if .F.OutCount}} · {{Tn "book.copies_out" .F.OutCount}}{{end}}</h2>
+  {{if .F.Copies}}
+  <table class="table">
+    <thead><tr><th>{{T "inventory.col_code"}}</th><th>{{T "inventory.col_location"}}</th><th>{{T "inventory.col_condition"}}</th><th>{{T "inventory.col_loan"}}</th><th></th></tr></thead>
+    <tbody>
+    {{range .F.Copies}}
+    <tr{{if .New}} class="row-new"{{end}}>
+      <td data-label="{{T "inventory.col_code"}}"><span class="code">{{.Code}}</span>{{if .New}}
+        <span class="badge-new">{{T "book.copy_added_today"}}</span>{{end}}</td>
+      {{/* In the row's form by its form attribute: a form cannot span two cells. */}}
+      <td data-label="{{T "inventory.col_location"}}" class="col-field">
+        <input class="inv-location" name="location" value="{{.Location}}" placeholder="—" title="{{.Location}}"
+               form="copy-{{.ID}}" onchange="this.form.submit()">
+      </td>
+      <td data-label="{{T "inventory.col_condition"}}" class="col-field">
+        <form id="copy-{{.ID}}" method="post" action="/book/{{$.F.ID}}/copy/{{.ID}}">
+          <select name="status" class="inv-status status-{{.Status}}" data-status="{{.Status}}"
+                  onchange="var s = this; confirmStatus(s, function () { s.form.submit(); })">
+            <option value="available"{{if eq .Status "available"}} selected{{end}}>{{T "status.available"}}</option>
+            <option value="damaged"{{if eq .Status "damaged"}} selected{{end}}>▲ {{T "status.damaged"}}</option>
+            <option value="lost"{{if eq .Status "lost"}} selected{{end}}>? {{T "status.lost"}}</option>
+            <option value="withdrawn"{{if eq .Status "withdrawn"}} selected{{end}}>✕ {{T "status.withdrawn"}}</option>
+          </select>
+        </form>
+      </td>
+      {{/* One element per cell: on mobile they are flex boxes. */}}
+      {{/* One statement on one line: .loan-cell centres the pill and the name. */}}
+      <td data-label="{{T "inventory.col_loan"}}" class="col-loan"><span class="loan-cell">{{if .Out}}<span class="status-pill status-out">{{template "icon-borrow" "status-icon"}}{{T "inventory.out"}}</span>{{if .BorrowerID}}<a class="link-person" href="/borrowers/{{.BorrowerID}}">{{.BorrowerFirstName}} {{.BorrowerLastInitial}}{{with .BorrowerClass}} ({{.}}){{end}}</a>{{end}}{{/* When it is due back, or the days late in red; the day is under the pointer. */}}{{if .DueOn}}<span class="copy-due{{if gt .DaysOverdue 0}} overdue{{end}}" title="{{shortDate .DueOn}}">{{if gt .DaysOverdue 0}}{{Tn "loans.days_overdue" .DaysOverdue}}{{else}}{{T "book.copy_back" (relativeDate .DueOn)}}{{end}}</span>{{end}}{{else if onShelf .Status}}<span class="status-pill status-shelf">{{template "icon-shelf" "status-icon"}}{{T "inventory.on_shelf"}}</span>{{else}}{{/* Lost or withdrawn: a dash, neither out nor on a shelf. Punctuation, so not in the catalogues. */}}<span class="loan-none">&mdash;</span>{{end}}</span></td>
+      {{/* One label, for this copy. */}}
+      <td class="col-actions">
+        <a class="btn-icon-action" href="/print/labels?codes={{.Code}}" target="_blank" rel="noopener"
+           title="{{T "book.print_one_label"}}" aria-label="{{T "book.print_one_label"}}"
+          >{{template "icon-card" "action-icon"}}<span class="action-label">{{T "book.print_one_label"}}</span></a>
+      </td>
+    </tr>
+    {{end}}
+    </tbody>
+  </table>
+  {{end}}
+  {{/* Quiet links with a 44 px target. */}}
+  <div class="copy-actions">
+    <form method="post" action="/book/{{.F.ID}}/copy"
+          data-confirm="{{T "book.confirm_add_copy" .F.Title}}">
+      <button class="link-quiet" type="submit">{{template "icon-plus" "icon-inline"}}{{T "book.add_copy"}}</button>
+    </form>
+    {{/* The labels of what was entered today, before the whole book's sheet. */}}
+    {{with .F.NewCodes}}
+    <a class="link-quiet" target="_blank" rel="noopener"
+       href="/print/labels?codes={{range $i, $c := .}}{{if $i}},{{end}}{{$c}}{{end}}"
+       >{{template "icon-card" "icon-inline"}}{{Tn "book.print_labels_today" (len .)}}</a>
+    {{end}}
+    {{/* The book's whole label sheet, only when it prints something the two
+         links above do not. */}}
+    {{if and (gt (len .F.Copies) 1) (gt (len .F.Copies) (len .F.NewCodes))}}
+    <a class="link-quiet" target="_blank" rel="noopener"
+       href="/print/labels?codes={{range $i, $c := .F.Copies}}{{if $i}},{{end}}{{$c.Code}}{{end}}"
+       >{{template "icon-card" "icon-inline"}}{{Tn "labels.print_count" (len .F.Copies)}}</a>
+    {{end}}
+  </div>
+  </div>
+</section>
+
+<section class="scan-block">
+  <h2 class="subtitle">{{template "icon-history" "subtitle-icon"}}{{T "book.stats_heading"}}</h2>
+  {{/* How many different children have had it, and its share of time out in
+       copy-days (explained in the tooltip). Dropped when nothing has been lent. */}}
+  <p>{{Tn "book.loans_total" .F.LoansTotal}}{{if .F.LoansTotal}} · {{Tn "book.readers" .F.Stats.Readers}}{{if .F.Stats.HasShare}} · <span title="{{T "book.out_share_help"}}">{{T "book.out_share" .F.Stats.OutShare}}</span>{{end}}{{end}} · {{T "book.loans_current" .F.OutCount}}</p>
+  {{if .F.History}}
+  <table class="table">
+    <thead><tr><th>{{T "loans.col_borrower"}}</th><th>{{T "loans.class"}}</th><th>{{T "borrower.col_borrowed_on"}}</th><th>{{T "borrower.col_returned_on"}}</th><th class="col-num">{{T "borrower.col_duration"}}</th></tr></thead>
+    <tbody>
+    {{range .F.History}}
+    <tr>
+      <td data-label="{{T "loans.col_borrower"}}"><a class="link-person" href="/borrowers/{{.BorrowerID}}">{{.FirstName}} {{.LastInitial}}</a></td>
+      <td data-label="{{T "loans.class"}}">{{.Class}}</td>
+      <td data-label="{{T "borrower.col_borrowed_on"}}"><span class="when">{{shortDate .LoanedOn}}
+        <span class="relative">{{relativeDate .LoanedOn}}</span></span></td>
+      <td data-label="{{T "borrower.col_returned_on"}}">{{if .Out}}<span class="status-pill status-out">{{template "icon-borrow" "status-icon"}}{{T "book.still_out"}}</span>{{else}}{{shortDate .ReturnedOn}}{{end}}</td>
+      <td data-label="{{T "borrower.col_duration"}}" class="col-num">{{duration .Days}}</td>
+    </tr>
+    {{end}}
+    </tbody>
+  </table>
+  {{else}}<p class="empty">{{template "icon-empty" "empty-icon"}}{{T "book.no_loans"}}</p>{{end}}
+</section>
+{{end}}

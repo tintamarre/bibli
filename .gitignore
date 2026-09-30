@@ -1,0 +1,39 @@
+# Compiled binaries
+/bibli
+/biblio
+bibli
+biblio
+
+# Local SQLite databases (never committed) and their WAL/SHM files
+*.db
+*.db-wal
+*.db-shm
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# Backups
+*.backup
+backups/
+
+# app/build-info.json is committed with placeholder values: go:embed needs the
+# file to exist. CI overwrites it before building, and the result is not
+# committed back.
+
+# Environment secrets (the .env.example template is committed)
+.env
+
+# macOS / editors
+.DS_Store
+*.swp
+.idea/
+.vscode/
+
+# Cover cache (refetchable from the catalogues)
+cache/
+
+# Screenshots produced by scripts/screenshots.mjs
+screenshots/
+
+# Desktop apps built by scripts/macos-app.sh, windows-app.sh and linux-app.sh
+dist/

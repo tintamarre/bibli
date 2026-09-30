@@ -1,0 +1,156 @@
+{{define "title_icon"}}{{template "icon-settings" "title-icon"}}{{end}}
+{{define "width"}} page-medium{{end}}
+{{define "content"}}
+{{if .Ok}}<p class="ok">{{T "settings.saved"}}</p>{{end}}
+{{if .ForgottenShown}}<p class="ok">{{Tn "settings.covers_forgotten" .Forgotten}}</p>{{end}}
+{{with .Error}}<p class="err">{{.}}</p>{{end}}
+
+<form method="post" action="/settings" class="scan-block">
+  {{/* Each setting: label, control, then its explanation, inside it (app.css). */}}
+  <div class="settings-list">
+
+    <div class="setting">
+      <label class="field"><span>{{T "settings.school_name"}}</span>
+        <input name="school_name" value="{{.School}}" maxlength="120"
+               placeholder="{{T "settings.school_name_placeholder"}}"></label>
+    </div>
+
+    <div class="setting">
+      <label class="field"><span>{{T "settings.language"}}</span>
+        <select name="language">
+          {{range .Languages}}<option value="{{.Code}}"{{if .Selected}} selected{{end}}>{{.Name}}</option>{{end}}
+        </select></label>
+      <p class="note">{{T "settings.language_help"}}</p>
+    </div>
+
+    {{/* Choosing a theme shows it at once (app.js, data-theme-preview); it
+         reaches the rest of the school when the form is saved. */}}
+    <div class="setting">
+      <label class="field"><span>{{T "settings.theme"}}</span>
+        <select name="theme" data-theme-preview>
+          {{range .Themes}}<option value="{{.Code}}"{{if .Selected}} selected{{end}}>{{.Name}}</option>{{end}}
+        </select></label>
+      <p class="note">{{T "settings.theme_help"}}</p>
+    </div>
+
+    <div class="setting">
+      <div class="field"><span>{{T "settings.loan_duration"}}</span>
+        <div class="field-inline">
+          <input class="field-number" id="loan-days" name="loan_days" type="number"
+                 inputmode="numeric" min="1" max="365" value="{{.LoanDays}}" required>
+          <label for="loan-days">{{T "settings.days"}}</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="setting">
+      <div class="field"><span>{{T "settings.retention"}}</span>
+        <div class="field-inline">
+          <input class="field-number" id="retention" name="retention_years"
+                 type="number" inputmode="numeric" min="1" max="{{.RetentionMax}}"
+                 value="{{.Retention}}" required>
+          <label for="retention">{{T "settings.years"}}</label>
+        </div>
+      </div>
+      <p class="note">{{T "settings.retention_help" .Retention}}</p>
+    </div>
+
+    <div class="setting">
+      <div class="field">
+        <span>{{T "settings.express_catalogue"}}</span>
+        <label class="field-check">
+          <input type="checkbox" name="express_catalogue" value="1"{{if .Express}} checked{{end}}>
+          <span>{{T "settings.express_catalogue_label"}}</span>
+        </label>
+      </div>
+      <p class="note">{{T "settings.express_catalogue_help"}}</p>
+    </div>
+
+    <div class="setting">
+      <div class="field">
+        <span>{{T "settings.family_links"}}</span>
+        <label class="field-check">
+          <input type="checkbox" name="family_links" value="1"{{if .FamilyLinks}} checked{{end}}{{if not .FamilyOffered}} disabled{{end}}>
+          <span>{{T "settings.family_links_label"}}</span>
+        </label>
+      </div>
+      <p class="note">{{if .FamilyOffered}}{{T "settings.family_links_help"}}{{else}}{{T "settings.family_links_single"}}{{end}}</p>
+    </div>
+
+    {{/* The saved key is never sent back to the page: an empty field leaves it
+         as it is. */}}
+    <div class="setting">
+      <label class="field"><span>{{T "settings.google_key"}}</span>
+        <input name="google_key" maxlength="200" autocomplete="off" spellcheck="false"
+               {{if .GoogleFromEnv}}disabled placeholder="{{T "settings.google_key_env"}}"
+               {{else if not googleKeyMissing}}placeholder="{{T "settings.google_key_saved"}}"{{end}}></label>
+      {{if and (not .GoogleFromEnv) (not googleKeyMissing)}}
+      <label class="field-check">
+        <input type="checkbox" name="google_key_remove" value="1">
+        <span>{{T "settings.google_key_remove"}}</span>
+      </label>
+      {{end}}
+      <p class="note">{{if .GoogleFromEnv}}{{T "settings.google_key_env_help"}}{{else}}{{T "settings.google_key_help"}}{{end}}</p>
+    </div>
+
+  </div>
+
+  <button class="btn-primary btn-auto" type="submit">{{T "common.save"}}</button>
+</form>
+
+<h2 class="section-title">{{template "icon-install" "section-icon"}}{{T "settings.install_state"}}</h2>
+<div class="info-grid">
+
+  <section class="info-block">
+    <h3>{{T "settings.backup"}}</h3>
+    {{with .Backup}}
+    {{if not .Active}}
+      <p class="warning">{{T "settings.backup_off_prefix"}} <b>{{T "settings.backup_off_word"}}</b>
+        (<span class="code">-backup-dir ""</span>). {{T "settings.backup_off_advice"}}</p>
+    {{else if .Error}}
+      <p class="err">{{T "settings.backup_failed" .When}} {{.Error}}</p>
+      <p>{{T "settings.backup_failed_help"}}</p>
+    {{else if .Never}}
+      <p>{{T "settings.backup_never"}}</p>
+    {{else}}
+      <p class="ok">{{T "settings.backup_ok" .When}}</p>
+      <p>{{T "settings.backup_file"}} <span class="code">{{.Path}}</span><br>
+        {{T "settings.backup_keep_note"}}</p>
+    {{end}}
+    <p>{{T "settings.database"}}<br><span class="code">{{.DBPath}}</span></p>
+    {{/* One download per day kept, named after the day taken, not the rotation
+         slot. */}}
+    {{with .Files}}
+    <p class="backup-download-label">{{T "settings.backup_download"}}</p>
+    <ul class="backup-list">
+      {{range .}}
+      <li><a href="/settings/backup/{{.Name}}" download>{{template "icon-download" "icon-inline"}}<span>{{.When}}</span></a>
+        <span class="backup-size">{{.Size}}</span></li>
+      {{end}}
+    </ul>
+    <p class="note">{{T "settings.backup_download_note"}}</p>
+    {{end}}
+    {{end}}
+  </section>
+
+  <section class="info-block">
+    <h3>{{T "settings.cataloguing"}}</h3>
+    <p>{{T "settings.google_label"}}
+      {{if googleKeyMissing}}<b>{{T "settings.google_limited"}}</b> {{T "settings.google_limited_help"}}{{else}}<b>{{T "settings.google_on"}}</b> {{T "settings.google_on_help"}}{{end}}</p>
+    {{with .Cache}}
+    <p>{{if .Active}}{{T "settings.cache_label"}} <b>{{.Count}}</b> {{T "settings.cache_note" .Size}}
+    {{else}}{{T "settings.cache_off_prefix"}} <b>{{T "settings.cache_off_word"}}</b> {{T "settings.cache_off_suffix"}}{{end}}</p>
+    {{/* Forget the recorded absences, keeping every image. Offered only
+         when there is something to forget. */}}
+    {{if and .Active .Absent}}
+    <p>{{T "settings.covers_absent_prefix"}} <b>{{.Absent}}</b>, {{T "settings.covers_absent_note"}}</p>
+    <form method="post" action="/settings/covers/absences/forget"
+          data-confirm="{{T "settings.covers_forget_confirm" .Absent}}">
+      <button class="link-quiet" type="submit">{{template "icon-refresh" "icon-inline"}}{{T "settings.covers_forget"}}</button>
+    </form>
+    {{end}}
+    {{end}}
+  </section>
+
+</div>
+{{end}}

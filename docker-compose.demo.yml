@@ -1,0 +1,41 @@
+# Bibli — the public demonstration instance.
+#
+#     docker compose -f docker-compose.demo.yml up -d
+#
+# A separate file rather than a profile in docker-compose.yml: BIBLI_DEMO_RESET
+# deletes the whole collection every time it fires, and a school must not be
+# able to reach it by uncommenting a line in the file it was given.
+#
+# No backups (the binary turns them off in demonstration mode) and a named
+# volume rather than ./data: the database is rebuilt every six hours, so there
+# is nothing on the host worth pointing at. The volume is really for the cover
+# cache, which survives a restart.
+
+services:
+  bibli:
+    image: ghcr.io/tintamarre/bibli:stable
+    container_name: bibli-demo
+    restart: always
+    ports:
+      - "8088:8080"
+    volumes:
+      - bibli-demo:/data
+    command: ["-db", "/data/biblio.db", "-addr", ":8080", "-cache-dir", "/data/cache", "-trust-proxy"]
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/healthcheck"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    environment:
+      - TZ=Europe/Brussels
+      # Published wherever the demonstration is linked from.
+      - BIBLI_ADMIN_PASSWORD=${BIBLI_ADMIN_PASSWORD:?set BIBLI_ADMIN_PASSWORD in .env}
+      # Remove this and it stops being a demonstration.
+      - BIBLI_DEMO_RESET=${BIBLI_DEMO_RESET:-6h}
+      # Visitors catalogue the same handful of ISBNs all day; the anonymous
+      # quota runs out faster here than anywhere.
+      - BIBLI_GOOGLE_BOOKS_KEY=${BIBLI_GOOGLE_BOOKS_KEY:-}
+
+volumes:
+  bibli-demo:

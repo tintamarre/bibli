@@ -1,0 +1,69 @@
+{{define "title_icon"}}{{template "icon-stats" "title-icon"}}{{end}}
+{{define "width"}} page-medium{{end}}
+{{define "content"}}
+  {{/* The year day by day. The grid is the texture; what it says is said in
+       words underneath: nothing is left behind a hover. */}}
+  <section class="stats-card">
+  <h2 class="section-title">{{T "stats.year_title"}}</h2>
+  <div class="hm">
+    <div class="hm-months" style="--weeks:{{.Year.Weeks}}" aria-hidden="true">
+      {{range .Year.Months}}<span style="grid-column:{{.Start}} / span {{.Span}}">{{.Label}}</span>{{end}}
+    </div>
+    <div class="hm-grid" style="--weeks:{{.Year.Weeks}}" role="img" aria-label="{{.Year.Summary}}">
+      {{range .Year.Rows}}{{range .}}<span class="hm-cell {{if not .Date}}hm-pad{{else if .Ahead}}hm-ahead{{else}}hm-l{{.Level}}{{end}}"{{with .Label}} title="{{.}}"{{end}}></span>{{end}}{{end}}
+    </div>
+    <p class="note hm-legend">
+      <span>{{if .Year.Total}}{{.Year.Summary}}{{with .Year.Busiest}} · {{.}}{{end}}{{else}}{{T "stats.year_none"}}{{end}}</span>
+      <span class="hm-key">{{T "stats.scale_less"}}
+        <span class="hm-cell hm-l0"></span><span class="hm-cell hm-l1"></span><span class="hm-cell hm-l2"></span><span class="hm-cell hm-l3"></span><span class="hm-cell hm-l4"></span>
+        {{T "stats.scale_more"}}</span>
+    </p>
+  </div>
+  </section>
+
+  <section class="stats-card">
+  <h2 class="section-title">{{T "stats.months_title"}}</h2>
+  <div class="bars">
+    {{range .Months}}
+      <span class="bar" title="{{.Title}}">
+        <span class="bar-track"><span class="bar-fill" style="height:{{.Height}}%"></span></span>
+        <span class="bar-label">{{.Label}}</span>
+      </span>
+    {{end}}
+  </div>
+  </section>
+
+  <div class="stats-lists">
+    <section class="stats-card">
+      <h2 class="section-title">{{T "stats.top_title"}}</h2>
+      {{if .Top}}
+        <ol class="rank">
+          {{range .Top}}<li><a class="link-title" href="/book/{{.ID}}">{{.Title}}</a> <span class="rank-count">{{Tn "stats.top_count" .Count}}</span></li>{{end}}
+        </ol>
+      {{else}}
+        <p class="note">{{T "stats.top_none"}}</p>
+      {{end}}
+    </section>
+    <section class="stats-card">
+      <h2 class="section-title">{{T "stats.idle_title"}}</h2>
+      {{if .Idle.Titles}}
+        <p class="note">{{Tn "stats.idle_summary" .Idle.Never .Idle.Total .Idle.Share}}</p>
+        <ol class="rank">
+          {{range .Idle.Titles}}<li><a class="link-title" href="/book/{{.ID}}">{{.Title}}</a> <span class="rank-count">{{T "stats.idle_since" (shortDate .Since)}}</span></li>{{end}}
+        </ol>
+      {{else}}
+        <p class="note">{{T "stats.idle_none"}}</p>
+      {{end}}
+    </section>
+  </div>
+
+  {{/* The one export of this screen: a row per work, no borrower named. */}}
+  <section class="stats-card">
+    <h2 class="section-title">{{T "stats.review_title"}}</h2>
+    <p class="note">{{Tn "stats.review_help" .Retention}}</p>
+    <p class="stats-review">
+      <a class="btn-secondary" href="/stats/collection.xlsx" download>{{template "icon-download" "btn-icon"}}{{T "stats.review_xlsx"}}</a>
+      <a class="link-quiet" href="/stats/collection.csv" download>{{T "stats.review_csv"}}</a>
+    </p>
+  </section>
+{{end}}

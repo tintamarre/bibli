@@ -1,0 +1,1526 @@
+/* Bibli — hand-written stylesheet, served by the binary, no CDN.
+   Order: tokens, then the shared surfaces (where the whole look changes), then
+   the screens in menu order, then one small-screens block. */
+
+/* Atkinson Hyperlegible (SIL OFL, vendor/atkinson/OFL.txt): 0 from O, 1 from l.
+   Latin subset only. No fingerprint: a font file is never edited, only renamed. */
+@font-face { font-family: "Atkinson Hyperlegible"; font-style: normal; font-weight: 400; font-display: swap;
+  src: url("vendor/atkinson/atkinson-400.woff2") format("woff2"); }
+@font-face { font-family: "Atkinson Hyperlegible"; font-style: normal; font-weight: 700; font-display: swap;
+  src: url("vendor/atkinson/atkinson-700.woff2") format("woff2"); }
+@font-face { font-family: "Atkinson Hyperlegible"; font-style: italic; font-weight: 400; font-display: swap;
+  src: url("vendor/atkinson/atkinson-400-italic.woff2") format("woff2"); }
+
+/* These tokens are the Stamp palette and every theme's default: the indigo of
+   a date stamp, every grey with a faint blue cast. The page is nearly as white
+   as a card, so --border alone separates them. A theme replaces colours below;
+   themes_test.go checks each defines them all, leaves the fixed ones alone,
+   and measures contrast. */
+:root {
+  --bg:            #f8f9fa;
+  --surface:       #ffffff;
+  --border:        #d6d8e2;
+  --border-strong: #b8bcca;
+  /* A band set into the page (table heading row, filter bar): darker than both
+     the page and the rows, so it caps the table. */
+  --sunken:        #e3e7f1;
+  --text:          #1c2230;
+  /* Secondary text: table headings, hints, axis labels. Held at 6:1 on the
+     darkest background it sits on (the heading band); themes_test.go measures it. */
+  --muted:         #4a515d;
+
+  --accent:        #3a43a3;
+  --accent-dark:   #2d3488;
+  --accent-light:  #eef0fa;
+  --accent-border: #cfd3f0;
+  --accent-hover:  #e3e6f7;
+
+  --ok:       #15803d;
+  --ok-bg:  #ecfdf3;
+  --ok-border:  #abefc6;
+  --err:      #b42318;
+  --err-bg: #fef3f2;
+  --err-border: #fecdc9;
+  --alert:      #b54708;
+  --alert-bg: #fffaeb;
+  --alert-border: #fedf89;
+
+  /* The loan timeline only: the accent's hue running, orange overrun. Not
+     --accent or --err: the bar is a state, and the red words already say "late". */
+  --tl-run:  #a9b1e6;
+  --tl-late: #efa13c;
+
+  /* The year heatmap: one ramp (--hm-3 is --tl-run), no second hue.
+     --hm-0 is an open day with no loan, drawn rather than left blank. */
+  --hm-0:     #dcdee7;
+  --hm-ahead: #eef0f4;
+  --hm-1:     #e3e6f7;
+  --hm-2:     #c3c9ef;
+  --hm-3:     #a9b1e6;
+  --hm-4:     #6f79cf;
+
+  --radius:   12px;
+  --radius-s: 8px;
+  --shadow:   none;
+
+  /* Page widths: a template picks one in base.html's "width" block. */
+  --width-wide:   76rem; /* tables: loans, borrowers, inventory */
+  --width-medium: 58rem; /* settings: three fields side by side */
+  --width-narrow: 46rem; /* scan screens, forms */
+  /* Measure of a short centred block and of a standalone card. */
+  --measure:       26rem;
+  --measure-card: 30rem;
+}
+
+/* ====================================================================
+   Themes. A theme with a palette of its own redefines every colour token of
+   :root except the ones whose meaning is fixed — overdue red, overrun orange,
+   the green of a thing that worked, the amber of a warning — which no theme
+   touches.
+   ==================================================================== */
+
+/* Ink: the :root palette, with the top bar drawn in its indigo and white on
+   it. Only the bar changes: the drop-down panels stay white. */
+:root[data-theme="ink"] .header { background: var(--accent); border-bottom-color: var(--accent-dark); }
+:root[data-theme="ink"] .brand { color: #fff; }
+:root[data-theme="ink"] .brand-school { color: rgba(255, 255, 255, .78); }
+:root[data-theme="ink"] .logo-brand {
+  box-sizing: content-box; width: 22px; height: 22px; padding: 4px; border-radius: 7px;
+  background: #fff; color: var(--accent);
+}
+:root[data-theme="ink"] :is(.menu a, .menu-admin > summary, .menu-burger > summary) { color: rgba(255, 255, 255, .88); }
+:root[data-theme="ink"] .menu a:hover { color: #fff; }
+:root[data-theme="ink"] :is(.menu-admin > summary:hover, .menu-admin[open] > summary, .menu-burger[open] > summary) {
+  background: rgba(255, 255, 255, .12); color: #fff;
+}
+:root[data-theme="ink"] .menu a[aria-current="page"] { color: #fff; box-shadow: inset 0 -3px 0 #fff; }
+:root[data-theme="ink"] .nav-sep { background: rgba(255, 255, 255, .35); }
+:root[data-theme="ink"] .header :is(a, summary):focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+
+/* Crayons: one colour per part of the application, for its entry, icons,
+   buttons and table bands. None is red or orange (the inventory's is the brown
+   of a wooden shelf, too dark to read as either), and each holds white text.
+   The base (home, settings, statistics) is slate, so the areas are the only
+   saturated colours; the heatmap counts loans made, in Borrow's green. */
+:root[data-theme="crayons"] {
+  --bg:            #f3f4f7;
+  --surface:       #ffffff;
+  --border:        #e0e3ea;
+  --border-strong: #c6ccd7;
+  --sunken:        #eaedf3;
+  --text:          #1a1f2b;
+  --muted:         #4a5362;
+  --accent:        #3d4a5c;
+  --accent-dark:   #2e3847;
+  --accent-light:  #eef1f5;
+  --accent-border: #d3d9e2;
+  --accent-hover:  #e2e7ee;
+  --tl-run:        #9cc0f0;
+  --hm-0:          #e2e6ed;
+  --hm-ahead:      #f1f3f6;
+  --hm-1:          #e3f1e8;
+  --hm-2:          #bfe3cc;
+  --hm-3:          #8fcca6;
+  --hm-4:          #3f9a66;
+  --shadow:        0 1px 2px rgba(16, 24, 40, .06), 0 1px 3px rgba(16, 24, 40, .04);
+}
+/* An area is a page's content (<main data-area>, pageArea) or a link to it,
+   so header entries carry their colour on every screen. */
+:root[data-theme="crayons"] :is([data-area="borrow"], a[href="/borrow"]) {
+  --accent: #1f7a4a; --accent-dark: #17613a; --accent-light: #e9f6ee;
+  --accent-border: #bfe3cc; --accent-hover: #daf0e2; --sunken: #e3f1e8;
+}
+:root[data-theme="crayons"] :is([data-area="return"], a[href="/return"]) {
+  --accent: #0e7490; --accent-dark: #0b5d74; --accent-light: #e6f5f9;
+  --accent-border: #b7e1ec; --accent-hover: #d5eef5; --sunken: #e0eff3;
+}
+:root[data-theme="crayons"] :is([data-area="loans"], a[href="/loans"]) {
+  --accent: #2457c5; --accent-dark: #1c46a0; --accent-light: #ebf1fd;
+  --accent-border: #c5d6f7; --accent-hover: #dce7fb; --sunken: #e4ebf8;
+}
+:root[data-theme="crayons"] :is([data-area="borrowers"], a[href="/borrowers"]) {
+  --accent: #7c3aad; --accent-dark: #642c8e; --accent-light: #f4ecfa;
+  --accent-border: #dcc6ee; --accent-hover: #ebdef6; --sunken: #efe6f5;
+}
+:root[data-theme="crayons"] :is([data-area="inventory"], a[href="/inventory"], a[href="/catalogue"]) {
+  --accent: #7a5230; --accent-dark: #634225; --accent-light: #f7f0e8;
+  --accent-border: #e5d3bf; --accent-hover: #efe3d5; --sunken: #f1e8de;
+}
+/* Here the icons are the colour code, drawn at full strength. */
+:root[data-theme="crayons"] :is(.nav-icon, .menu-icon, .title-icon) { color: var(--accent); opacity: 1; }
+
+/* Phone breakpoint: 40rem everywhere, in the final block. The one exception
+   (76rem, --width-wide) is commented in place. */
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font: 16px/1.55 "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  /* Dates, counts and codes line up down a column. */
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  background: var(--bg);
+  /* A long word breaks rather than widening the page. */
+  overflow-wrap: break-word;
+}
+/* Form controls default to the system face; they take the page's instead. */
+button, input, select, textarea { font-family: inherit; }
+
+/* ---------- Page ---------- */
+.page { max-width: var(--width-wide); margin: 0 auto; padding: 1.5rem 1.25rem 4rem; }
+.page-narrow { max-width: var(--width-narrow); }
+.page-medium { max-width: var(--width-medium); }
+/* Inside a wide page, a form keeps a readable measure. */
+.form-measured { max-width: var(--width-narrow); }
+/* Save, and beside it the way out of a form something opened. */
+.form-actions { display: flex; align-items: center; gap: 1rem; }
+.form-actions .btn-primary { flex: 1 1 auto; }
+.title { font-size: 1.6rem; margin: .25rem 0 1.25rem; letter-spacing: -.02em; }
+/* The heading, with the actions hard right; they wrap under it before either
+   is squashed. */
+.title-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+.title-row .title { flex: 1 1 auto; min-width: 0; }
+/* The slot's content aligns with the heading's first line. */
+.title-row > :not(.title) { margin-top: .3rem; }
+/* A page-level drop-down: a <details>, so it needs no JavaScript. The trigger
+   is drawn exactly as a .btn-secondary, since it sits beside one. */
+.page-menu { position: relative; }
+.page-menu > summary {
+  list-style: none; cursor: pointer; user-select: none; white-space: nowrap;
+  min-height: 44px; display: inline-flex; align-items: center; padding: 0 1.1rem;
+  font-size: 1rem; font-weight: 600;
+  color: var(--accent-dark); background: var(--surface);
+  border: 1px solid var(--border-strong); border-radius: var(--radius-s);
+}
+.page-menu > summary::-webkit-details-marker { display: none; }
+.page-menu > summary::marker { content: ""; }
+.page-menu > summary:hover,
+.page-menu[open] > summary { background: var(--bg); border-color: var(--accent); }
+.page-menu[open] .icon-chevron { transform: rotate(180deg); }
+.page-menu .menu-admin-panel { min-width: 15rem; }
+/* The same menu, quieter: no box or bold until pointed at or open, for what a
+   page offers once in a long while. */
+.page-menu-quiet > summary {
+  background: none; border-color: transparent; color: var(--muted); font-weight: 500; padding: 0 .75rem;
+}
+.page-menu-quiet > summary:hover,
+.page-menu-quiet[open] > summary { background: var(--surface); border-color: var(--border); color: var(--text); }
+/* One focus ring for every control beside a heading; browsers clip their own
+   on the 8 px corners. */
+.btn-primary:focus-visible, .btn-secondary:focus-visible,
+.page-menu > summary:focus-visible, .link-quiet:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 2px;
+}
+/* The back link, tight above the heading: 44 px tall, the negative
+   margins giving back most of that height. */
+.back-link { margin: -.5rem 0 -.4rem; font-size: .92rem; }
+.back-link .link-quiet { min-height: 44px; }
+/* The author, muted, so it does not compete with the title. */
+.title-authors { font-size: 1rem; font-weight: 400; color: var(--muted); letter-spacing: 0; margin-left: .7rem; }
+/* The screen's icon, in the accent; em-sized to follow the heading. */
+.title-icon {
+  width: .95em; height: .95em; margin-right: .5rem; vertical-align: -.07em;
+  color: var(--accent);
+}
+.subtitle { font-size: 1.05rem; margin: 0 0 .75rem; }
+/* Headings in sentence case, not tracked capitals. */
+.section-title {
+  font-size: 1.05rem; font-weight: 700;
+  color: var(--text); margin: 2rem 0 .75rem;
+}
+
+/* ====================================================================
+   Shared surfaces
+   ==================================================================== */
+
+.scan-block, .action-card, .counter, .success-block, .error-block, .centre-card, .collapsible,
+.stats-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+.return-card, .family-list li {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-s);
+}
+.info-block, .tip, .landing-parents, .new-book {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-s);
+}
+
+/* Input fields: one border and focus ring everywhere. */
+.scan, .field input, .field select, .csv-area, .field-number, .field-search,
+.inv-location, .inv-status, .edit-field {
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-s);
+  background: var(--surface);
+  color: var(--text);
+}
+/* Password reveal: the eye sits inside the field, which keeps room for it.
+   The button fills the field's height (44 px); icons swap on aria-pressed. */
+.field-reveal { position: relative; display: block; }
+.field-reveal .scan { padding-right: 3.25rem; }
+.reveal {
+  position: absolute; top: 0; right: 0; bottom: 0; width: 3.25rem;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: none; border: 0; padding: 0; cursor: pointer; color: var(--muted);
+}
+.reveal:hover { color: var(--accent-dark); }
+.reveal:focus-visible {
+  outline: none; border-radius: var(--radius-s); box-shadow: 0 0 0 3px var(--accent-light);
+}
+.reveal-eye, .reveal-eye-off { width: 22px; height: 22px; }
+.reveal[aria-pressed="true"] .reveal-eye { display: none; }
+.reveal:not([aria-pressed="true"]) .reveal-eye-off { display: none; }
+.inv-location, .inv-status, .edit-field { font: inherit; }
+.scan:focus, .field input:focus, .field select:focus, .csv-area:focus, .field-number:focus,
+.field-search:focus, .inv-location:focus, .inv-status:focus, .edit-field:focus {
+  outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-light);
+}
+
+/* Buttons */
+.btn-primary {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-height: 52px; padding: 0 1.5rem;
+  font-size: 1.1rem; font-weight: 600;
+  color: #fff; background: var(--accent);
+  border: none; border-radius: var(--radius-s);
+  cursor: pointer; text-decoration: none; width: 100%;
+}
+.btn-primary:hover { background: var(--accent-dark); }
+.btn-primary:disabled { background: var(--border-strong); cursor: not-allowed; }
+.btn-auto { width: auto; padding: 0 2rem; }
+.btn-secondary {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-height: 44px; padding: 0 1.1rem;
+  font-size: 1rem; font-weight: 600;
+  color: var(--accent-dark); background: var(--surface);
+  border: 1px solid var(--border-strong); border-radius: var(--radius-s);
+  cursor: pointer; text-decoration: none;
+}
+.btn-secondary:hover { background: var(--bg); border-color: var(--accent); }
+/* A page turner with nothing on that side stays, so the pair keeps its shape. */
+.btn-secondary:disabled { color: var(--muted); border-color: var(--border); background: var(--surface); cursor: default; }
+.btn-small { min-height: 36px; padding: 0 .7rem; font-size: .9rem; }
+.btn-camera, .btn-link {
+  font-weight: 600; cursor: pointer;
+  color: var(--accent-dark); background: var(--accent-light);
+  border: 1px solid var(--accent-border); border-radius: var(--radius-s);
+}
+.btn-camera:hover, .btn-link:hover { background: var(--accent-hover); }
+.btn-link { min-height: 36px; padding: 0 .7rem; font-size: .9rem; }
+/* Icons (icons.html): 24x24, currentColor, so a slot sets only the size.
+   flex:none keeps an icon from being squeezed. */
+.menu-icon, .counter-icon, .btn-icon, .icon-inline, .icon-chevron, .icon-burger,
+.subtitle-icon, .section-icon, .empty-icon, .search-icon, .icon-trailing,
+.nav-icon, .title-icon, .status-icon {
+  flex: 0 0 auto;
+}
+/* Inside a button or a quiet link: text-sized, on the baseline. */
+.btn-icon, .icon-inline {
+  width: 1.05em; height: 1.05em; margin-right: .45em; vertical-align: -.17em;
+}
+.icon-inline { opacity: .75; }
+/* An icon after its label (the "next" arrow). */
+.btn-icon.icon-after { margin-right: 0; margin-left: .45em; }
+/* An external link's arrow: after the label, small. */
+.icon-trailing {
+  width: .8em; height: .8em; margin-left: .45em; vertical-align: -.02em; opacity: .6;
+}
+
+/* Beside a heading: text-sized, muted. */
+.subtitle-icon, .section-icon {
+  width: 1.05em; height: 1.05em; margin-right: .5em; vertical-align: -.14em;
+  color: var(--muted);
+}
+.section-icon { color: inherit; }
+
+/* An empty list is the ordinary state: a grey tray, never a warning. */
+.empty-icon {
+  width: 1.15em; height: 1.15em; margin-right: .5em; vertical-align: -.22em;
+  opacity: .55;
+}
+
+/* The magnifier sits inside the field, so it cannot read as a button. */
+.search-wrap { position: relative; max-width: var(--measure); }
+.search-icon {
+  position: absolute; left: .75rem; top: 50%; transform: translateY(-50%);
+  width: 18px; height: 18px; color: var(--muted); pointer-events: none;
+}
+.search-wrap .field-search { width: 100%; max-width: none; padding-left: 2.5rem; }
+
+/* A quiet action, the same on an <a> or a <button>: the reset strips the
+   button's native styling. */
+.link-quiet {
+  display: inline-flex; align-items: center;
+  margin: 0; padding: 0; border: none; background: none;
+  font: inherit; font-size: .9rem; font-weight: 500;
+  color: var(--accent-dark); text-decoration: none; cursor: pointer;
+}
+.link-quiet:hover { text-decoration: underline; }
+
+/* The one irreversible action: understated, and red. */
+.btn-danger {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-height: 44px; padding: 0 1rem;
+  background: var(--surface); border: 1px solid var(--err-border);
+  border-radius: var(--radius-s); color: var(--err);
+  font: inherit; font-weight: 500; cursor: pointer;
+}
+.btn-danger:hover { background: var(--err-bg); border-color: var(--err); }
+/* A title in the text colour, underlined in the accent: forty titles read as
+   books, not links. A group's borrower is its heading, so bold instead. */
+.link-title, .link-person {
+  color: var(--text); font-weight: 400;
+  text-decoration: underline; text-decoration-color: var(--accent-border);
+  text-decoration-thickness: 2px; text-underline-offset: 4px;
+}
+.link-person { font-weight: 700; text-decoration: none; }
+.link-title:hover, .link-person:hover { text-decoration: underline; text-decoration-color: var(--accent); }
+
+/* Feedback to the user */
+.feedback { min-height: 1.5rem; margin: -.25rem 0 .75rem; font-size: 1.05rem; }
+.ok  { color: var(--ok); font-weight: 600; }
+.err { color: var(--err); font-weight: 600; }
+.empty { color: var(--muted); }
+/* The exact date and its relative label on one line, one element, so it
+   stays one value in the phone cards. */
+.when { display: inline-block; }
+.relative { margin-left: .4rem; color: var(--muted); font-size: .85rem; font-weight: 400; white-space: nowrap; }
+/* The relative label alone, the exact date under the pointer (inventory's
+   "added" column). */
+.when-ago { color: var(--muted); font-size: .85rem; white-space: nowrap; }
+.warning {
+  text-align: left; background: var(--alert-bg); border: 1px solid var(--alert-border);
+  border-radius: var(--radius-s); padding: .75rem 1rem; margin: 0 0 1.25rem;
+  max-width: var(--width-narrow); color: var(--alert);
+}
+.warning p { margin: 0 0 .35rem; font-weight: 600; }
+.warning ul { margin: 0; padding-left: 1.1rem; }
+.tip { margin: .75rem 0 0; padding: .6rem .8rem; font-size: .85rem; color: var(--muted); }
+/* Under a paged list (pager.go), centred. */
+.pager { display: flex; align-items: center; justify-content: center; gap: 1rem; margin: 1rem 0 0; }
+.pager-range { color: var(--muted); font-size: .9rem; white-space: nowrap; font-variant-numeric: tabular-nums; }
+/* A code or an ISBN: in the reading face, no chip. */
+.code {
+  color: var(--muted);
+  letter-spacing: .03em;
+  white-space: nowrap;
+}
+
+/* ====================================================================
+   Header and menus
+   ==================================================================== */
+/* One row, always: the school name ellipses instead of wrapping, since the
+   width where it would wrap depends on the name, a setting. The bar belongs to
+   the window, not to a page column, since page widths differ by screen. */
+.header {
+  display: flex;
+  align-items: stretch;
+  gap: 1.5rem;
+  flex-wrap: nowrap;
+  min-height: 64px;
+  padding: 0 1.25rem;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+/* The demonstration banner (demo.go): in the alert colours, not red.
+   Not sticky: it says what the instance is once per page. */
+.demo-banner {
+  margin: 0;
+  padding: .55rem 1.25rem;
+  background: var(--alert-bg);
+  border-bottom: 1px solid var(--alert-border);
+  color: var(--alert);
+  font-size: .9rem;
+  text-align: center;
+}
+
+.brand {
+  display: inline-flex; align-items: center; gap: .55rem; align-self: center;
+  flex: 0 1 auto; min-width: 0;
+  color: var(--accent);
+  text-decoration: none;
+}
+.logo-brand { width: 26px; height: 26px; flex: 0 0 auto; }
+/* "Bibli" over the school's name: one block, narrower than side by side, and
+   the name, a setting, is the only part that gives. */
+.brand-text { display: flex; flex-direction: column; min-width: 0; line-height: 1.15; }
+.brand-name { font-weight: 700; font-size: 1.08rem; letter-spacing: -.01em; }
+.brand-school {
+  max-width: 14rem;
+  color: var(--muted); font-weight: 400; font-size: .78rem;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+/* Just above phone width the name would be a few letters: drop it. */
+@media (min-width: 40.01rem) and (max-width: 47.99rem) {
+  .brand { flex: 0 0 auto; }
+  .brand-school { display: none; }
+}
+/* The bar never wraps or shrinks; the school name gives instead. */
+.menu { display: flex; gap: .25rem; flex-wrap: nowrap; flex: 0 0 auto; }
+/* Each entry is the bar's full height, so the mark of the current screen
+   sits on the bar's bottom edge. */
+.menu a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 64px;
+  padding: 0 .85rem;
+  color: var(--muted);
+  text-decoration: none;
+  font-weight: 500;
+}
+.menu a:hover { color: var(--text); }
+/* The current screen: the accent and a rule on the bar's edge, like a tab.
+   Sub-pages light their list (navActive). */
+.menu a[aria-current="page"] { color: var(--accent-dark); box-shadow: inset 0 -3px 0 var(--accent); }
+.menu a[aria-current="page"] .nav-icon { opacity: 1; }
+/* Desk entries carry the icons their screens use. */
+.nav-icon { width: 18px; height: 18px; margin-right: .45rem; opacity: .85; }
+/* Borrowers and inventory join the bar from 64rem, where five entries fit.
+   `.menu a.nav-wide`, not the bare class: `.menu a` sets display and outranks it. */
+.nav-wide, .menu a.nav-wide { display: none; }
+@media (min-width: 64rem) {
+  .menu a.nav-wide { display: inline-flex; }
+  .menu-admin-panel .nav-narrow { display: none; }
+  /* A hairline between the desk and management. */
+  .nav-sep { display: block; width: 1px; height: 22px; margin: 0 .5rem; background: var(--border-strong); align-self: center; }
+}
+
+/* Drop-down (top right) and hamburger (phone): one panel, one glyph.
+   Icon-only, so the label is in aria-label. */
+.menu-admin { margin-left: auto; position: relative; align-self: center; }
+.menu-admin > summary {
+  list-style: none; cursor: pointer; user-select: none;
+  min-height: 44px; display: inline-flex; align-items: center; padding: 0 .7rem;
+  border-radius: var(--radius-s); color: var(--muted);
+}
+.menu-admin > summary::-webkit-details-marker { display: none; }
+.menu-admin > summary::marker { content: ""; }
+.menu-admin > summary:hover { background: var(--bg); color: var(--text); }
+.menu-admin[open] > summary { background: var(--bg); color: var(--text); }
+.icon-chevron {
+  width: 15px; height: 15px; margin-left: .3rem;
+  transition: transform .12s;
+}
+.menu-admin[open] .icon-chevron { transform: rotate(180deg); }
+/* max-content, or the panel shrinks to the button it hangs from and wraps
+   every entry. The cap keeps a long one on screen. */
+.menu-admin-panel {
+  position: absolute; right: 0; top: 100%; margin-top: .3rem; z-index: 30;
+  min-width: 12rem; width: max-content; max-width: min(24rem, calc(100vw - 2rem));
+  padding: .35rem;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-s);
+  box-shadow: 0 8px 24px rgba(16, 24, 40, .14);
+  display: flex; flex-direction: column;
+}
+.menu-admin-panel a, .menu-admin-panel button {
+  display: flex; align-items: center; gap: .65rem;
+  width: 100%; text-align: left; min-height: 44px;
+  padding: .55rem .7rem; border-radius: 6px;
+  color: var(--text); text-decoration: none; font: inherit;
+  background: none; border: none; cursor: pointer;
+}
+/* Dimmer than the label; the accent on hover, with the row. */
+.menu-icon { width: 18px; height: 18px; color: var(--muted); }
+.menu-admin-panel a:hover .menu-icon,
+.menu-admin-panel button:hover .menu-icon { color: var(--accent); }
+.menu-admin-panel a:hover, .menu-admin-panel button:hover { background: var(--bg); }
+/* The same mark inside the drop-down and the hamburger. */
+.menu-admin-panel a[aria-current="page"] { color: var(--accent-dark); font-weight: 600; }
+.menu-admin-panel a[aria-current="page"] .menu-icon { color: var(--accent); }
+.menu-admin-panel form { margin: .25rem 0 0; padding-top: .25rem; border-top: 1px solid var(--border); }
+/* Hamburger menu groups: the desk first, management after. */
+.menu-group {
+  margin: .35rem .7rem .15rem; font-size: .8rem; font-weight: 700; color: var(--muted);
+}
+.menu-group-sep { margin-top: .5rem; padding-top: .55rem; border-top: 1px solid var(--border); }
+/* A rule between menu groups, as its own element: a border on an entry would
+   sit inside its hover background and make that row taller. */
+.menu-rule { width: 100%; height: 0; margin: .4rem 0; border: 0; border-top: 1px solid var(--border); }
+.menu-burger { display: none; position: relative; margin-left: auto; align-self: center; }
+.menu-burger > summary {
+  list-style: none; cursor: pointer; min-height: 44px;
+  display: inline-flex; align-items: center; padding: 0 .7rem;
+  border-radius: var(--radius-s); color: var(--muted);
+}
+.icon-burger { width: 24px; height: 24px; }
+.menu-burger > summary::-webkit-details-marker { display: none; }
+.menu-burger[open] > summary { background: var(--bg); color: var(--text); }
+
+/* ====================================================================
+   Home
+   ==================================================================== */
+.home-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+/* A low band, the icon beside the words. */
+.action-card {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 1rem; row-gap: .1rem;
+  align-items: center;
+  padding: 1.1rem 1.4rem;
+  text-decoration: none;
+  color: inherit;
+  min-height: 44px;
+  transition: border-color .12s;
+}
+.action-card:hover { border-color: var(--accent); }
+.action-card-icon { grid-row: span 2; width: 34px; height: 34px; color: var(--accent); }
+.action-card-title { font-size: 1.25rem; font-weight: 700; color: var(--accent-dark); }
+.action-card-sub  { color: var(--muted); font-size: .95rem; }
+
+.counters { display: flex; gap: .75rem; flex-wrap: wrap; }
+.counter {
+  position: relative;
+  flex: 1 1 8rem;
+  padding: 1rem 1.15rem;
+  text-decoration: none;
+  color: var(--muted);
+}
+/* Top right, faint: the figure is what is read. An overdue count is red on a
+   white card like the others: a tinted card would be a second alarm. */
+.counter-icon {
+  position: absolute; top: .9rem; right: 1rem;
+  width: 18px; height: 18px; color: var(--border-strong);
+}
+.counter:hover .counter-icon { color: var(--accent); }
+.counter-alert .counter-icon { color: var(--err); }
+.counter b { display: block; font-size: 2rem; line-height: 1.1; color: var(--text); }
+.counter-alert { border-color: var(--err-border); }
+.counter-alert b { color: var(--err); }
+
+/* ====================================================================
+   Tables (loans, borrowers, inventory)
+   ==================================================================== */
+/* Separate, not collapse: a collapsed table ignores its radius, and the
+   heading band would stick out square at the corners. */
+.table { width: 100%; border-collapse: separate; border-spacing: 0; background: var(--surface);
+  border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.table th, .table td { text-align: left; vertical-align: middle; padding: .8rem .75rem;
+  border-bottom: 1px solid var(--border); }
+.table tbody tr:last-child td { border-bottom: 0; }
+.table th { background: var(--sunken); font-size: .88rem; font-weight: 700; color: var(--muted);
+  border-bottom: 1px solid var(--border-strong); }
+/* Quantities right-aligned, text and identifiers left. Under .table, or the
+   rule above that left-aligns every cell outranks them. */
+.table .col-centre { text-align: center; }
+.table .col-num { text-align: right; white-space: nowrap; }
+.col-code { white-space: nowrap; }
+.col-tracking-link { white-space: nowrap; }
+/* The title column absorbs the available width. */
+.col-title { min-width: 14rem; }
+/* Titles clipped at 30ch rather than wrapped, the full title in the link's
+   title attribute. A plain length, not min(30ch, 100%): a percentage max-width is
+   dropped from a column's minimum width and the table overflows.
+   Clipped in the middle (titleHead/titleTail), so volumes of a series differ. */
+.col-title .link-title {
+  display: inline-flex; vertical-align: bottom;
+  min-width: 0; max-width: 30ch;
+}
+/* text-decoration: inherit, since flex items do not receive the link's
+   underline. white-space: pre on the head too: a trailing space is otherwise hung
+   and the two halves glue together with no ellipsis. */
+.col-title .link-title .ti-head { overflow: hidden; text-overflow: ellipsis; white-space: pre; min-width: 0; text-decoration: inherit; }
+.col-title .link-title .ti-tail { flex-shrink: 0; white-space: pre; text-decoration: inherit; }
+/* The inventory has eight columns: its titles clip sooner, so a location like
+   "Romans 10/12" shows whole and the table still fits. */
+#inventory-list .col-title { min-width: 11rem; }
+#inventory-list .col-title .link-title { max-width: 24ch; }
+/* Row actions as icons: a 44 px square whatever the icon, no border
+   until pointed at or focused. */
+.btn-icon-action {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 44px; height: 44px; padding: 0;
+  color: var(--muted); background: none;
+  border: 1px solid transparent; border-radius: var(--radius-s);
+  cursor: pointer; vertical-align: middle; text-decoration: none;
+}
+.btn-icon-action:hover { color: var(--accent-dark); background: var(--bg); border-color: var(--border); }
+/* Keyboard users get the field focus ring; they never see the tooltip. */
+.btn-icon-action:focus-visible {
+  outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-light);
+}
+/* Red on hover only: a warning about the click, not a status. */
+.btn-icon-danger:hover { color: var(--err); background: var(--err-bg); border-color: var(--err-border); }
+.action-icon { width: 20px; height: 20px; }
+/* The tick that replaces the copy icon for a moment; the icon swaps, since
+   there is no text to swap on a wide screen. */
+.action-icon-copied { width: 20px; height: 20px; display: none; }
+.btn-copy-link.is-copied { color: var(--ok); }
+.btn-copy-link.is-copied .action-icon { display: none; }
+.btn-copy-link.is-copied .action-icon-copied { display: inline-block; }
+/* The label rides in title/aria-label on a wide screen; the narrow-screen
+   block shows it as text. */
+.action-label { display: none; }
+
+.table .col-actions { white-space: nowrap; }
+.table .col-actions .link-quiet,
+.table .col-actions .btn-link { margin-right: .5rem; }
+/* Two actions, each its own form: keep the forms on one line. */
+.table .col-actions form { display: inline-flex; vertical-align: middle; }
+/* One open loan on the shared time axis (timeline.go). The capsule is the whole
+   period, its right end the due date. Over it, the loan so far as ONE shape with a
+   colour stop at the due date: two shapes cannot meet cleanly at 7 px. Four stops
+   rather than the doubled-stop shorthand, which needs Safari 12.1. */
+.col-timeline { width: 11rem; min-width: 9rem; }
+.tl { position: relative; display: block; height: 18px; }
+.tl-period, .tl-bar { position: absolute; top: 6px; height: 7px; border-radius: 4px; }
+.tl-period { background: var(--border); }
+.tl-bar {
+  background: linear-gradient(90deg,
+    var(--tl-run) 0%, var(--tl-run) var(--s, 100%),
+    var(--tl-late) var(--s, 100%), var(--tl-late) 100%);
+}
+/* Late: the granted days take the capsule's grey; the orange is the overrun. */
+.tl-bar-late { --tl-run: var(--border); }
+/* Started before the axis: it runs off the left edge. */
+.tl-clipped { border-top-left-radius: 0; border-bottom-left-radius: 0; }
+
+.overdue { color: var(--err); font-weight: 600; }
+/* Its own column on the borrower list, empty on every row that is on time. */
+.col-overdue { white-space: nowrap; }
+/* Late: red words, no pill — nothing else on the screen is red. */
+.overdue-badge { display: inline-block; margin-left: .4rem;
+  color: var(--err); font-size: .82rem; white-space: nowrap; }
+/* Beside a due date already red, the count takes the quiet weight. */
+.when .overdue-badge { color: var(--muted); font-weight: 400; }
+/* Out and current are normal states: never red. */
+/* The loan column: an icon and a word. The colour is in the icon, not a
+   pill; "out" stays neutral, red being for overdue alone. */
+.status-pill {
+  display: inline-flex; align-items: center; gap: .4em;
+  font-size: .9rem; font-weight: 500; white-space: nowrap;
+}
+.status-icon { width: 1.1em; height: 1.1em; flex: 0 0 auto; }
+/* The loan cell: the pill and what qualifies it, on one line, centred rather
+   than baseline-aligned (the pill's baseline is not where the eye expects). */
+.loan-cell { display: inline-flex; align-items: center; flex-wrap: wrap; gap: .45rem; }
+.loan-cell .link-person, .loan-cell .overdue-badge { font-size: .9rem; margin-left: 0; }
+/* When an out copy is due back: small and grey, red when late. */
+.copy-due { font-size: .85rem; color: var(--muted); white-space: nowrap; }
+.copy-due.overdue { color: var(--err); font-weight: 600; }
+/* On /inventory the pill and date stay on one line, so rows keep their height. */
+.col-loan .loan-cell { flex-wrap: nowrap; }
+/* The day of entry, shown only while filtered to a period (inventory.html). */
+.hide-added .col-added { display: none; }
+.status-shelf { color: var(--text); }
+.status-shelf .status-icon { color: var(--muted); }
+/* Out reads in the same colour as on the shelf; the date beside it is grey. */
+.status-out { color: var(--text); }
+/* An import row already on file, which will be ignored */
+.row-duplicate { color: var(--muted); }
+.row-duplicate td { font-style: italic; }
+.preview-table { max-height: 18rem; overflow: auto; margin-bottom: .75rem; }
+
+/* Editable inventory */
+/* As narrow as a shelf name; the width goes to the title. */
+.inv-location { width: 100%; min-width: 8.5rem; padding: .4rem .5rem; }
+.inv-status { padding: .4rem .5rem; }
+/* Editable in place, read far more often: no border until focused, and still
+   a filled field on a tablet, where nothing hovers. */
+.table .inv-location, .table .inv-status { border-color: transparent; background-color: var(--bg); }
+.table .inv-location:focus, .table .inv-status:focus { border-color: var(--accent); background-color: var(--surface); }
+.table .status-damaged { background-color: var(--alert-bg); border-color: var(--alert-border); }
+/* The status reads by colour first. Green in service, orange damaged, grey out
+   of circulation; no red. The colour is in the word and sign; only damaged,
+   the rare one, keeps a tint. In service carries neither colour nor sign. */
+.status-available { color: var(--text); }
+.status-damaged { color: var(--alert); background: var(--alert-bg); border-color: var(--alert-border); }
+.status-lost, .status-withdrawn { color: var(--muted); }
+/* An ISBN linking to its record: link colour, outward arrow. */
+.link-record { color: var(--accent-dark); text-decoration: none; white-space: nowrap; }
+.link-record .code { color: inherit; }
+.link-record:hover .code { text-decoration: underline; }
+/* No ISBN: said in grey, not as a fault. */
+.no-isbn { color: var(--muted); font-size: .85rem; }
+@keyframes flashok { from { background: var(--ok-bg); } to { background: transparent; } }
+.flash-ok td { animation: flashok 1.2s ease-out; }
+
+/* Inline pupil editing: first name and last name share the Borrower column. */
+.edit-field { width: 100%; max-width: 12rem; padding: .4rem .5rem; }
+.col-edition { display: flex; gap: .4rem; }
+.edit-first-name { flex: 2 1 0; }
+.edit-last-name { flex: 1 1 4rem; }
+
+/* Borrower list: search, class tabs, parent link. */
+.search { margin: 0 0 1rem; }
+.field-search { width: 100%; max-width: var(--measure); font-size: 1.05rem; padding: .6rem .8rem; }
+/* A list screen separates three kinds of control: tools, filters, and adding.
+   One row for what the screen does: tools left, its main action hard right. */
+/* A form something else opens: absent while closed, since the button is the
+   way in; open, its heading folds it away. */
+.form-on-demand { margin: 1rem 0 1.25rem; }
+.form-on-demand:not([open]) { display: none; }
+/* While it is open, the button that opened it hides. Without :has() (Safari
+   before 15.4) the button just stays. */
+.page:has(.form-on-demand[open]) .btn-open-form { display: none; }
+
+/* The filters in one bar against their table: search left, tabs right. */
+.filter-bar {
+  display: flex; flex-wrap: wrap; align-items: center;
+  gap: .6rem 1.25rem; margin: 0 0 1rem;
+  padding: .7rem .85rem;
+  background: var(--sunken);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.filter-bar .search { flex: 1 1 16rem; min-width: 0; margin: 0; }
+.filter-bar .search-wrap { max-width: none; }
+/* The inventory's filters are two lines: the search box full width, then the
+   dropdowns against the right edge. */
+.filter-row-search { flex: 1 1 100%; }
+.filter-row > .search-wrap { flex: 1 1 16rem; min-width: 0; }
+.filter-row-selects { flex: 1 1 100%; justify-content: flex-end; }
+
+/* One labelled row per filter, so they never run together. */
+.filter-row { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem .75rem; }
+.filter-label {
+  flex: 0 0 auto; min-width: 4.5rem;
+  font-size: .9rem; font-weight: 700; color: var(--muted);
+}
+.filter-form { display: flex; align-items: center; gap: .5rem; margin: 0; }
+/* A label and its control wrap as one. */
+.filter-pair { display: inline-flex; align-items: center; gap: .5rem; min-width: 0; }
+/* Classes are a dropdown, not pills: a school may have twenty. */
+.filter-select {
+  min-height: 38px; padding: 0 .6rem;
+  font: inherit; color: var(--text); background: var(--surface);
+  border: 1px solid var(--border-strong); border-radius: var(--radius-s);
+}
+.filter-select:focus {
+  outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-light);
+}
+
+/* Date and text filters borrow the dropdown's height and border. */
+/* A date field sized for its date, not as wide as a dropdown. */
+.filter-date { width: 9.5rem; }
+.filter-date {
+  min-height: 38px; padding: 0 .6rem;
+  font: inherit; color: var(--text); background: var(--surface);
+  border: 1px solid var(--border-strong); border-radius: var(--radius-s);
+}
+.filter-date:focus {
+  outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-light);
+}
+.filter-sep { color: var(--muted); }
+/* The date fields the "Ajoutés" dropdown reveals (app.js). The [hidden] rule
+   is needed: the display below would override the browser's own. */
+.filter-range { display: inline-flex; align-items: center; gap: .5rem .75rem; flex-wrap: wrap; }
+.filter-range[hidden] { display: none; }
+
+/* Inside the bar the tabs carry no margin: the bar spaces its parts. */
+.filter-bar .class-tabs { margin: 0; }
+.state-tabs .tab { background: var(--surface); }
+.state-tabs .tab-active { background: var(--accent); }
+
+.class-tabs { display: flex; flex-wrap: wrap; gap: .4rem; margin: 0 0 1rem; }
+.tab {
+  display: inline-flex; align-items: center; gap: .4rem;
+  min-height: 38px; padding: 0 .85rem;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 999px; color: var(--text); text-decoration: none; font-weight: 500;
+}
+.tab:hover { border-color: var(--accent); }
+.tab-active { background: var(--accent); border-color: var(--accent); color: #fff; }
+/* The row buttons stay on one line, so every row keeps its height. The
+   narrow-screen block lets them wrap. */
+.token-actions { display: flex; gap: .25rem; align-items: center; flex-wrap: nowrap; }
+
+/* ====================================================================
+   Statistics
+   ==================================================================== */
+/* One reading to a card. */
+.stats-card { padding: 1.1rem 1.25rem 1.25rem; margin-bottom: 1rem; }
+.stats-card > .section-title:first-child { margin-top: 0; }
+/* One cell per day: seven rows, a column a week. The column count is the only
+   number the template passes; cells are square fractions of it, so the grid fits
+   any width without scrolling. Keep the page at page-medium: wider, cells balloon. */
+.hm-months, .hm-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--weeks), 1fr);
+  gap: 2px;
+}
+.hm-months { font-size: .75rem; color: var(--muted); margin-bottom: .25rem; overflow: hidden; }
+.hm-months span { white-space: nowrap; }
+.hm-cell { aspect-ratio: 1; border-radius: 1px; background: var(--hm-0); }
+.hm-l1 { background: var(--hm-1); }
+.hm-l2 { background: var(--hm-2); }
+.hm-l3 { background: var(--hm-3); }
+.hm-l4 { background: var(--hm-4); }
+/* Outside the school year, cells are not drawn; a day not yet reached is drawn
+   faintly, so the grid keeps the year's shape. */
+.hm-pad { background: transparent; }
+.hm-ahead { background: var(--hm-ahead); }
+/* The sentence left, the scale right: darker is more, said without a hover. */
+.hm-legend {
+  margin-top: .5rem; display: flex; justify-content: space-between;
+  align-items: center; gap: 1rem .75rem; flex-wrap: wrap;
+}
+.hm-key { display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; }
+.hm-key .hm-cell { width: 11px; aspect-ratio: 1; }
+
+/* Twelve months as bars, percentages of a fixed track, in the grid's third shade. */
+.bars { display: flex; align-items: flex-end; gap: .4rem; }
+.bar { flex: 1 1 0; display: flex; flex-direction: column; gap: .3rem; min-width: 0; }
+.bar-track { display: flex; align-items: flex-end; height: 64px; }
+.bar-fill { width: 100%; background: var(--hm-3); border-radius: var(--radius-s) var(--radius-s) 0 0; }
+.bar-label {
+  font-size: .75rem; color: var(--muted); text-align: center;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.stats-lists { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; align-items: start; }
+.stats-review { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1rem; margin-bottom: 0; }
+.rank { margin: 0; padding-left: 1.25rem; }
+.rank li { margin-bottom: .35rem; }
+.rank-count { color: var(--muted); font-size: .9rem; white-space: nowrap; }
+
+/* ====================================================================
+   Borrow / Return (scan screens)
+   ==================================================================== */
+.scan-block { padding: 1.25rem; margin-bottom: 1rem; }
+.step { margin: 0 0 .6rem; font-weight: 600; color: var(--text); display: flex; align-items: center; gap: .5rem; }
+.step .num {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 1.6rem; height: 1.6rem; border-radius: 999px;
+  background: var(--accent); color: #fff; font-size: .9rem; font-weight: 700;
+}
+.scan { width: 100%; font-size: 1.5rem; padding: .85rem 1rem; border-width: 2px; }
+/* Scan field plus camera button (icon only, square) */
+.scan-row { display: flex; gap: .5rem; align-items: stretch; }
+.scan-row .scan { flex: 1; min-width: 0; }
+.btn-camera {
+  flex: 0 0 auto;
+  display: inline-flex; align-items: center; justify-content: center; gap: .35rem;
+  min-height: 44px; min-width: 48px; padding: 0;
+  font-size: 1rem; white-space: nowrap;
+}
+.btn-camera svg { display: block; }
+.indicator { display: none; margin: .5rem 0 0; color: var(--muted); }
+.indicator.htmx-request { display: block; }
+.link-manual { margin-top: .75rem; text-align: center; }
+
+/* Selected borrower */
+.borrower {
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  flex-wrap: wrap;
+  padding: .85rem 1.1rem;
+  background: var(--accent-light);
+  border: 1px solid var(--accent-border);
+  border-radius: var(--radius);
+  margin-bottom: 1rem;
+}
+
+/* What the borrower already has out: grey, the ordinary state. */
+.borrower-loans { display: inline-flex; align-items: center; gap: .35rem; color: var(--text); }
+.borrower-loans-icon { width: 1.05em; height: 1.05em; color: var(--muted); }
+.borrower-loans-none { color: var(--muted); }
+/* Something is late: the whole bar changes colour, to stop the librarian. */
+.borrower-late {
+  background: var(--err-bg);
+  border-color: var(--err-border);
+}
+.borrower-late .borrower-loans-icon { color: var(--err); }
+/* On the red bar the badge needs no box of its own. */
+.borrower-late .overdue-badge { font-weight: 600; }
+
+.borrower b { font-size: 1.1rem; }
+/* Fuzzy search for pupils or titles (typeahead while lending). */
+.borrower-results { list-style: none; padding: 0; margin: .6rem 0 0; display: flex; flex-direction: column; gap: .4rem; }
+.borrower-result {
+  display: block; width: 100%; text-align: left; min-height: 48px; padding: .6rem .9rem;
+  font: inherit; font-weight: 500; line-height: 1.45; cursor: pointer;
+  background: var(--surface); color: var(--text);
+  border: 1px solid var(--border-strong); border-radius: var(--radius-s);
+}
+.borrower-result:hover { border-color: var(--accent); background: var(--accent-light); }
+/* Arrowing through results moves focus, so the focus must read from across a desk. */
+.borrower-result:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  background: var(--accent-light);
+  box-shadow: 0 0 0 3px var(--accent-light);
+}
+.borrower-result .detail { color: var(--muted); font-size: .85rem; font-weight: 400; }
+.results-indicator { margin: .6rem 0 0; color: var(--muted); font-size: .9rem; }
+
+/* Basket: one row per book. An arriving row flashes green: that is the scan
+   confirmation. */
+.basket-count { margin-left: auto; font-weight: 500; font-size: .9rem; color: var(--muted); }
+.basket {
+  list-style: none; margin: 0 0 1rem; padding: 0;
+  border: 1px solid var(--border); border-radius: var(--radius-s); overflow: hidden;
+}
+.basket-empty::before {
+  content: "Aucun livre pour l'instant : scannez le premier.";
+  display: block; padding: .6rem .8rem; color: var(--muted); font-size: .95rem;
+}
+.basket-row {
+  display: flex; align-items: center; gap: .75rem; padding: .3rem .8rem;
+  border-bottom: 1px solid var(--border); animation: flashok 1.2s ease-out;
+}
+.basket-row:last-child { border-bottom: 0; }
+.basket-title { flex: 1; min-width: 0; font-weight: 500; }
+/* Sized by .btn-icon-action; the class is what the basket row lays out against. */
+.remove { flex: 0 0 auto; }
+.add-label { display: block; font-size: .82rem; font-weight: 600; color: var(--muted); margin: 0 0 .3rem; }
+.btn-confirm { margin-top: .25rem; min-height: 56px; font-size: 1.2rem; }
+
+/* Loan success and failure */
+.success-block, .error-block { padding: 1.5rem; text-align: center; }
+.success-block { border-color: var(--ok-border); }
+.error-block { border-color: var(--err-border); }
+.big-ok { font-size: 1.35rem; font-weight: 700; color: var(--ok); margin: 0 0 .75rem; }
+.success-title { margin: 0 0 .5rem; }
+.recap { list-style: none; padding: 0; margin: 0 auto 1rem; max-width: var(--measure); text-align: left; }
+.recap li { padding: .4rem .1rem; border-bottom: 1px dashed var(--border); }
+.due { color: var(--muted); margin-bottom: 1.25rem; }
+.err-list { text-align: left; max-width: var(--measure); margin: .5rem auto 1.25rem; color: var(--err); }
+/* Centred only inside result blocks, which are themselves centred. */
+.success-block .warning, .error-block .warning { margin-inline: auto; max-width: var(--measure); }
+.success-actions { display: flex; gap: .6rem; flex-wrap: wrap; justify-content: center; margin-top: .5rem; }
+.success-actions .btn-primary, .success-actions .btn-secondary { width: auto; }
+/* Express cataloguing of an unknown book, without leaving the lending screen */
+.new-book { text-align: left; margin-top: .5rem; padding: .9rem; border-style: dashed; border-color: var(--border-strong); }
+.new-book .field { margin-bottom: .6rem; }
+.new-book .btn-primary { margin-top: .25rem; }
+
+/* Return */
+.return-list { display: flex; flex-direction: column; gap: .5rem; }
+.return-card { padding: .85rem 1.1rem; }
+.return-card.ok  { background: var(--ok-bg);  border-color: var(--ok-border); }
+.return-card.err { background: var(--err-bg); border-color: var(--err-border); color: var(--err); }
+.return-card .by { color: var(--muted); }
+/* Choosing the copy being returned, when several copies of a title are out */
+.choice-block { border-color: var(--alert-border); background: var(--alert-bg); }
+.choice-block .step { color: var(--alert); }
+/* Putting a lost or damaged copy back in service when it comes back */
+.reinstate { margin-top: .5rem; display: flex; gap: .6rem; align-items: center;
+  flex-wrap: wrap; font-size: .9rem; color: var(--alert); }
+
+/* Camera overlay */
+.cam-overlay {
+  position: fixed; inset: 0; z-index: 50;
+  display: flex; align-items: center; justify-content: center;
+  padding: 1rem;
+  background: rgba(10, 14, 22, .85);
+}
+.cam-overlay[hidden] { display: none; } /* otherwise display:flex wins over [hidden] */
+.cam-box {
+  width: 100%; max-width: var(--measure-card);
+  display: flex; flex-direction: column; gap: .75rem;
+  text-align: center;
+}
+.cam-video {
+  width: 100%; aspect-ratio: 4 / 3; max-height: 70vh;
+  object-fit: cover; background: #000;
+  border-radius: var(--radius); border: 3px solid rgba(255, 255, 255, .85);
+}
+.cam-message { color: #fff; margin: 0; font-size: 1.05rem; }
+.cam-close {
+  align-self: center;
+  min-height: 48px; padding: 0 1.75rem;
+  font-size: 1.05rem; font-weight: 600;
+  color: var(--text); background: #fff;
+  border: none; border-radius: var(--radius-s); cursor: pointer;
+}
+
+/* ====================================================================
+   Forms (catalogue, pupils, settings)
+   ==================================================================== */
+.field { display: flex; flex-direction: column; gap: .3rem; margin-bottom: .75rem; }
+.field > span { font-size: .82rem; color: var(--muted); font-weight: 600; }
+.field input, .field select, .csv-area { width: 100%; font-size: 1.05rem; padding: .6rem .7rem; }
+/* As many columns as the row has fields, each at a readable width, dropping
+   to one column below the minimum. */
+.field-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: .75rem; }
+.form-catalogue .field:last-of-type { margin-bottom: 1rem; }
+.csv-area { resize: vertical; min-height: 6rem; }
+.field-inline { display: flex; align-items: center; gap: .6rem; margin-bottom: .75rem; }
+.field-number { width: 6rem; font-size: 1.25rem; text-align: center; padding: .6rem .5rem; border-width: 2px; }
+/* Cataloguing search log (SSE stream). */
+.log { margin: .6rem 0 0; display: flex; flex-direction: column; gap: .2rem; }
+.log-line { color: var(--muted); font-size: .9rem; }
+.log-line.err { color: var(--err); }
+
+/* Collapsible block (the add form): present without eating the top of the screen. */
+.collapsible { padding: 0 1.25rem; margin-bottom: 1rem; }
+.collapsible > summary {
+  list-style: none; cursor: pointer; user-select: none;
+  min-height: 44px; display: flex; align-items: center; gap: .5rem;
+  font-size: 1.05rem; font-weight: 600; color: var(--accent);
+}
+.collapsible > summary::-webkit-details-marker { display: none; }
+.collapsible > summary::marker { content: ""; }
+.collapsible > summary::before { content: "+"; font-size: 1.2rem; line-height: 1; }
+.collapsible[open] > summary::before { content: "−"; }
+.collapsible[open] { padding-bottom: 1.25rem; }
+
+/* A checkbox and its sentence, the whole line clickable (44 px). */
+.field-check {
+  display: flex; align-items: flex-start; gap: .6rem;
+  min-height: 44px; padding: .3rem 0; cursor: pointer; font-weight: 400;
+}
+.field-check input { width: 20px; height: 20px; margin: .15rem 0 0; flex: 0 0 auto; accent-color: var(--accent); }
+
+/* A checkbox alone in a cell: the label around it is the 44 px target. */
+.check-cell {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 44px; min-height: 44px; cursor: pointer;
+}
+.check-cell input { width: 20px; height: 20px; margin: 0; accent-color: var(--accent); }
+
+/* Settings: a white card for what can be set, muted blocks for what is observed. */
+/* One setting under the next: label, control, then its explanation, paired by
+   distance. Capped at a readable measure inside the wider card. */
+.settings-list {
+  display: flex; flex-direction: column; gap: 1.5rem;
+  max-width: var(--width-narrow); margin-bottom: 1.75rem;
+}
+/* Spacing comes from the list's gap. */
+.setting .field, .setting .field-inline { margin-bottom: 0; }
+.setting .note { margin: .35rem 0 0; }
+/* A field is as wide as what goes in it. */
+.setting .field input, .setting .field select { max-width: var(--measure); }
+/* Needed: .field input is more specific than .field-number. */
+.setting .field .field-number { width: 6rem; max-width: 6rem; }
+.note { color: var(--muted); font-size: .9rem; margin-top: 1rem; }
+.info-grid {
+  display: grid; gap: 1rem; align-items: start;
+  grid-template-columns: repeat(auto-fit, minmax(23rem, 1fr));
+}
+.info-block { padding: 1rem 1.15rem; color: var(--muted); font-size: .9rem; }
+/* A repair link inside an observed block: quiet, with a 44 px target. */
+.info-block .link-quiet { min-height: 44px; }
+.info-block h3 { font-size: .95rem; margin: 0 0 .5rem; color: var(--text); }
+.info-block p { margin: .4rem 0; }
+.info-block .code { overflow-wrap: anywhere; background: var(--surface); }
+
+/* A sortable heading: a <th>'s type and colour, button chrome removed. */
+.th-sort {
+  font: inherit; color: inherit; background: none; border: 0; padding: 0;
+  display: inline-flex; align-items: center; gap: .3rem;
+  cursor: pointer; text-align: left;
+  /* nowrap, or the heading wraps when the arrow appears. */
+  white-space: nowrap;
+  /* A button's own stylesheet sets text-transform and letter-spacing, and `font:`
+     carries neither: take them from the <th> explicitly. */
+  text-transform: inherit; letter-spacing: inherit;
+}
+.th-sort:hover { color: var(--accent-dark); }
+.th-sort:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+/* The sorting column, darker than its neighbours. */
+.th-sorted { color: var(--text); }
+/* em-sized, in proportion to the heading. */
+.sort-arrow { width: 1.15em; height: 1.15em; flex: none; }
+/* The "can be sorted" pair, in the arrow's box so the width holds. Faint but
+   visible: at .45 opacity it measured 1.6:1 against the band, no mark at all. */
+.sort-hint { opacity: .7; }
+
+/* A copy neither out nor on a shelf (lost, withdrawn): grey dash. */
+.loan-none { color: var(--muted); }
+/* Touch: the heading is a target like any other (44 px). */
+@media (pointer: coarse) { .th-sort { min-height: 44px; } }
+
+/* ====================================================================
+   Book page and cover
+   ==================================================================== */
+.page-sub { font-size: 1.1rem; color: var(--text); margin: -.5rem 0 1rem; }
+/* What a heading does not say — counts — under the back link, not in a card. */
+.page-summary { margin: -.25rem 0 1.25rem; }
+/* The loans-link buttons' swap target: a list cell, or a borrower's menu panel. */
+.token-cell .token-actions { margin: 0; }
+/* In the menu the copy entry keeps its label, which turns into "Lien copié";
+   the icon swaps for the tick. */
+.menu-admin-panel .action-label { display: inline; margin-left: 0; }
+.menu-admin-panel .btn-copy-link.is-copied { color: var(--ok); }
+/* Under the copies table: quiet links with their own 44 px target and a
+   gap wide enough that two do not read as one phrase. */
+.copy-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem 1.5rem; margin-top: .75rem; }
+.copy-actions .link-quiet { min-height: 44px; }
+/* A copy entered today: codes are random, so the row is tinted in the
+   accent and says so. */
+.row-new > td { background: var(--accent-light); }
+.badge-new {
+  display: inline-block; margin-left: .45rem; white-space: nowrap;
+  color: var(--accent-dark); font-size: .85rem; font-weight: 700;
+}
+/* Served by Bibli (cover.go), which answers a neutral image rather than a 404.
+   Sized by limits, never a fixed box, so the frame is the picture's own shape;
+   object-fit stops a narrow, tall cover from stretching. */
+.cover {
+  display: block; width: auto; height: auto;
+  min-width: 140px; max-width: 168px; max-height: 250px;
+  object-fit: contain; border-radius: var(--radius-s);
+  border: 1px solid var(--border); background: var(--surface);
+}
+.cover-small { min-width: 76px; max-width: 92px; max-height: 140px; margin: 0 0 .9rem; }
+
+/* The metadata block: the cover leads, the record beside it. */
+/* The record as it reads, the form behind a button; open, the form replaces
+   the reading (:has()). Without :has() (Safari before 15.4) both show. */
+/* The labels close in on the values, against the cover. */
+.book-facts dl {
+  display: grid; grid-template-columns: auto auto; justify-content: start;
+  gap: .3rem 1rem; margin: 0 0 .6rem;
+}
+.book-facts dt { color: var(--muted); text-align: right; }
+.book-facts dd { margin: 0; text-align: left; }
+/* Open, the form takes the reading's place, without the collapsible's chrome. */
+.metadata-fields:has(.book-edit[open]) .book-facts { display: none; }
+.book-edit {
+  margin: 0; padding: 0;
+  background: none; border: 0; box-shadow: none;
+}
+.book-edit[open] { padding-bottom: 0; }
+/* A rule between the record and its copies. */
+.panel-part { margin-top: 1.4rem; padding-top: 1.2rem; border-top: 1px solid var(--border); }
+
+.metadata-row { display: flex; gap: 1.5rem; align-items: flex-start; }
+/* Capped at the form's measure, so the cover stays beside the fields. */
+.metadata-fields { flex: 1 1 auto; min-width: 0; max-width: var(--width-narrow); }
+/* The cover leads at its own width; the record takes the rest. */
+.metadata-cover { flex: 0 0 auto; }
+
+/* ====================================================================
+   Loans, grouped
+   ==================================================================== */
+/* One class, one table; one borrower, one tbody. */
+.loans-total { color: var(--muted); margin: 0 0 1rem; }
+.loan-class { margin: 0 0 1.75rem; }
+.loan-class-head {
+  display: flex; align-items: baseline; gap: .6rem;
+  margin: 0 0 .5rem; font-size: 1.05rem;
+}
+.loan-class-name {
+  display: inline-flex; align-items: center; min-height: 30px; padding: 0 .8rem;
+  background: var(--accent); color: #fff;
+  border-radius: 999px; font-weight: 650; font-size: .95rem;
+}
+.loan-class-count { color: var(--muted); font-size: .9rem; font-weight: 400; }
+
+/* The borrower's name, once, above their books: a tinted band, in ink, with a
+   person icon, and their rows indented, so it cannot read as a title. */
+.row-borrower > td {
+  background: var(--bg);
+  border-bottom: 1px solid var(--border-strong);
+  padding: .55rem .75rem;
+  font-weight: 600;
+}
+.row-borrower .link-person { color: var(--text); font-weight: 700; }
+.row-borrower .link-person:hover { color: var(--accent-dark); }
+.borrower-icon {
+  width: 1.05em; height: 1.05em; color: var(--muted);
+  vertical-align: -.17em; margin-right: .4rem;
+}
+/* Between two borrowers, a heavier line. */
+.loan-borrower + .loan-borrower .row-borrower > td { border-top: 2px solid var(--border-strong); }
+.loan-borrower tr:not(.row-borrower) > td:first-child { padding-left: 2.1rem; }
+.loan-borrower-count { color: var(--muted); font-weight: 400; font-size: .88rem; margin-left: .4rem; }
+
+/* ====================================================================
+   Confirmation dialog
+   ==================================================================== */
+/* One dialog for every question (base.html, app.js). <dialog> brings the focus
+   trap, Escape and the backdrop. */
+.dialog {
+  width: min(var(--measure-card), calc(100vw - 2rem));
+  padding: 1.5rem;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 12px 40px rgba(16, 24, 40, .22);
+}
+.dialog::backdrop { background: rgba(16, 24, 40, .45); }
+/* A question is two lines, asking then costing: pre-line keeps the break. */
+.dialog-text { margin: 0 0 1.5rem; white-space: pre-line; font-size: 1.02rem; line-height: 1.5; }
+/* The *marked* part of the question (app.js), set apart so the dialog says
+   which row it is about at a glance. 600, the application's emphasis weight. */
+.dialog-text b { font-weight: 600; }
+/* The count some questions carry, a label and a short field on one line. The
+   [hidden] rule is needed: display:flex would win over the browser's own. */
+.dialog-number { display: flex; align-items: center; gap: .7rem; margin: -.75rem 0 1.5rem; }
+.dialog-number[hidden] { display: none; }
+.dialog-number input {
+  width: 5.5rem; min-height: 44px; padding: 0 .7rem;
+  color: var(--text); background: var(--surface);
+  border: 1px solid var(--border-strong); border-radius: var(--radius-s);
+  font: inherit; font-size: 1rem;
+}
+.dialog-number input:focus-visible {
+  outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-light);
+}
+.dialog-actions { display: flex; gap: .6rem; justify-content: flex-end; flex-wrap: wrap; }
+/* The two answers are peers: both 44 px, a shared min-width, overriding
+   .btn-primary's desk sizing. */
+.dialog-actions .btn-primary,
+.dialog-actions .btn-secondary {
+  width: auto;
+  min-height: 44px;
+  min-width: 7rem;
+  padding: 0 1.2rem;
+  font-size: 1rem;
+}
+
+/* ====================================================================
+   Standalone pages: login, public home, parent space
+   ==================================================================== */
+.page-centred { min-height: 100vh; display: flex; align-items: flex-start; justify-content: center;
+  padding: 2rem 1rem; background: var(--bg); }
+.centre-card { width: 100%; max-width: var(--measure); margin-top: 6vh; padding: 1.75rem; }
+.brand-login { color: var(--accent); font-size: 1.6rem; margin: 0; letter-spacing: -.02em; }
+.sub-login { color: var(--muted); margin: .1rem 0 1.25rem; }
+
+.landing { text-align: center; }
+/* The mark follows the card's axis: left on login, centred on the public page. */
+.landing-icon { display: block; width: 56px; height: 56px; margin: 0 0 .25rem; color: var(--accent); }
+.landing .landing-icon { margin-inline: auto; }
+.landing-intro { color: var(--text); margin: .5rem 0 1.25rem; }
+.landing .btn-primary { width: auto; padding: 0 2rem; }
+.landing-parents { margin-top: 1.5rem; padding: .9rem 1rem; text-align: left; }
+.landing-parents p { margin: .3rem 0 0; color: var(--muted); font-size: .9rem; line-height: 1.5; }
+.landing-footer { margin-top: 1.5rem; font-size: .78rem; color: var(--muted); }
+.landing-footer a { color: var(--muted); }
+
+.family-card { max-width: var(--measure-card); }
+.family-card h1 { font-size: 1.35rem; margin: 0 0 .75rem; }
+.family-card h2 { font-size: 1.05rem; margin: 1.1rem 0 .4rem; }
+.family-intro { color: var(--text); }
+.family-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: .5rem; }
+.family-list li { padding: .6rem .8rem; }
+/* The due date as a library's date stamp; overdue loans keep their red block. */
+.family-list .detail { color: var(--muted); font-size: .9rem; }
+.family-list:not(.overdue-block .family-list) .detail {
+  display: inline-block; margin-top: .45rem; padding: .15rem .55rem;
+  border: 2px solid var(--accent); border-radius: 4px;
+  color: var(--accent-dark); font-weight: 700; letter-spacing: .02em;
+}
+.overdue-block { background: var(--err-bg); border: 1px solid var(--err-border); border-radius: var(--radius); padding: .9rem 1rem; margin-bottom: 1rem; }
+.overdue-block h2 { margin-top: 0; color: var(--err); }
+.overdue-block .family-list li { border-color: var(--err-border); }
+.thanks { margin: .6rem 0 0; font-weight: 600; }
+
+/* ====================================================================
+   Footer
+   ==================================================================== */
+/* One caption-sized line under a hairline. */
+.footer {
+  max-width: var(--width-wide); margin: 3rem auto 0; padding: .9rem 1.25rem 1.5rem;
+  border-top: 1px solid var(--border);
+  display: flex; flex-wrap: wrap; justify-content: space-between; gap: .3rem 1.5rem;
+  font-size: .8rem; color: var(--muted);
+}
+.footer a { color: inherit; text-decoration: underline; text-decoration-color: var(--border-strong); text-underline-offset: 3px; }
+.footer a:hover { color: var(--text); text-decoration-color: currentColor; }
+
+/* Downloadable backups (settings): a list of days, not a table. */
+.backup-download-label { margin-bottom: .25rem; }
+.backup-list { list-style: none; margin: 0 0 .5rem; padding: 0; }
+.backup-list li { display: flex; align-items: center; justify-content: space-between;
+  gap: 1rem; padding: .2rem 0; }
+/* Size from .icon-inline; the flex gap replaces its margin. */
+.backup-list a { display: inline-flex; align-items: center; gap: .1rem; }
+.backup-list a .icon-inline { margin-right: 0; }
+.backup-size { font-size: .78rem; color: var(--muted); }
+/* Touch: each date is a 44 px target. */
+@media (pointer: coarse) { .backup-list a { min-height: 44px; } }
+
+/* ====================================================================
+   Small screens
+   ==================================================================== */
+
+/* Wide tables scroll sideways on a wrapper (a display:block table shrinks to
+   its columns) rather than push the page. Not under 40rem, where they become cards
+   and the wrapper would clip their shadows. */
+@media (min-width: 40rem) { .table-scroll { overflow-x: auto; } }
+
+@media (max-width: 40rem) {
+  /* Wrapped under the heading, the menu and its panel go full width, or the panel
+     opens off the screen. */
+  .title-row > :not(.title) { width: 100%; margin-top: 0; }
+  .page-menu > summary, .title-row > .btn-secondary { width: 100%; justify-content: center; }
+  /* Stretched between both edges. */
+  .page-menu .menu-admin-panel { left: 0; right: 0; min-width: 0; width: auto; max-width: none; }
+  /* Except the quiet one, which stays a word in the corner. */
+  .title-row > .page-menu-quiet { width: auto; margin-left: auto; }
+  .page-menu-quiet > summary { width: auto; }
+  .page-menu-quiet .menu-admin-panel { left: auto; right: 0; width: max-content; max-width: calc(100vw - 2rem); }
+
+  .page { padding: 1rem .9rem 3rem; }
+  .footer { flex-direction: column; align-items: center; text-align: center; margin-top: 1.5rem; }
+  .title { font-size: 1.35rem; }
+
+  /* Navigation: everything in the hamburger. The logo left, the hamburger right,
+     the school name in between, truncated. */
+  .menu, .menu-admin { display: none; }
+  .menu-burger { display: block; flex: 0 0 auto; }
+  .header { flex-wrap: nowrap; gap: .6rem; padding: .55rem .9rem; }
+  /* The brand takes all the room left; the ellipsis is on .brand-school. */
+  .brand { flex: 1 1 auto; }
+  .brand-school { max-width: none; }
+
+  /* Home: one action per row, counters stacked */
+  .home-actions { grid-template-columns: 1fr; }
+  .counter { flex-basis: 100%; }
+  /* The two lists stack; the heatmap and bars scale with their width. */
+  .stats-lists { grid-template-columns: 1fr; }
+  /* Every third month labelled under the bars, every other over the grid: twelve
+     labels overlap on a phone. */
+  .bar:not(:nth-child(3n+1)) .bar-label { visibility: hidden; }
+  .hm-months span:nth-child(even) { visibility: hidden; }
+
+  .loan-class-head { flex-wrap: wrap; }
+
+  /* The filter bar stacks. */
+  /* nowrap with it, or the column is as wide as its widest row and overflows. */
+  .filter-bar { flex-direction: column; flex-wrap: nowrap; align-items: stretch; padding: .7rem; }
+  .filter-bar .search { flex: 1 1 auto; }
+  /* Each filter takes a full line, label above its control. */
+  .filter-row { align-items: flex-start; }
+  /* A pair takes its own line once three no longer fit. */
+  .filter-pair { flex: 1 1 15rem; }
+  .filter-form { width: 100%; }
+  .filter-select { flex: 1 1 auto; min-width: 0; }
+
+  /* The dialog fills the width and its buttons stack. */
+  .dialog { width: calc(100vw - 1.5rem); padding: 1.25rem; }
+  /* Same two selectors as the sizing rule above, or this loses to it. */
+  .dialog-actions { flex-direction: column; }
+  .dialog-actions .btn-primary,
+  .dialog-actions .btn-secondary { width: 100%; }
+  /* The cover goes above the fields; column-reverse keeps the form first in the
+     document for screen readers and tab order. Stretched, or the fields block
+     shrinks to its content. */
+  .metadata-row { flex-direction: column; align-items: stretch; gap: 1rem; }
+  .metadata-cover { align-self: center; }
+
+  /* Scan: full-width field, camera button underneath */
+  .scan { font-size: 1.35rem; }
+  .scan-row { flex-direction: column; }
+  .scan-row .scan { width: 100%; }
+  .btn-camera { width: 100%; justify-content: center; }
+
+
+  /* Tables -> stacked cards (each value with its data-label) */
+  .table, .table tbody, .table tr, .table td { display: block; }
+  .table { border: 0; background: transparent; box-shadow: none; overflow: visible; }
+  .table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .table tr {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    box-shadow: var(--shadow); padding: .5rem .8rem; margin-bottom: .6rem;
+  }
+  .table td {
+    border: 0; padding: .35rem 0; display: flex; gap: 1rem;
+    align-items: center; justify-content: space-between; text-align: right;
+  }
+  .table td::before {
+    content: attr(data-label); text-align: left; flex: 0 0 7.5rem;
+    font-size: .8rem; font-weight: 700; color: var(--muted);
+  }
+  .table td:empty { display: none; }
+  /* Grouped loans as cards: the borrower band is a heading above them. Must stay
+     below `.table td`, which weighs the same. */
+  .row-borrower > td { display: block; border-radius: var(--radius-s); margin: .2rem 0 .5rem; }
+  .row-borrower > td::before { content: none; }
+  /* A bar has no content to size it and collapses in a flex line: give it the
+     width, and drop the table column width. */
+  .table td.col-timeline { width: auto; min-width: 0; }
+  .table td.col-timeline .tl { flex: 1 1 auto; }
+  /* No indent in cards: the group heading names the borrower. */
+  .loan-borrower tr:not(.row-borrower) > td:first-child { padding-left: 0; }
+  /* A cell holding a field: the field fills the line, the label gives up its
+     fixed column. Not max-width: 60%, which resolves against the field's own form. */
+  .table td.col-field::before,
+  .table td.col-loan::before { flex: 0 1 auto; }
+  .table td form { flex: 1 1 auto; min-width: 0; }
+  .inv-location, .inv-status { width: 100%; max-width: none; }
+  /* The status and when it comes back stay on one line where they can. */
+  .col-loan .loan-cell { flex-wrap: wrap; justify-content: flex-end; }
+  /* "Ajouté aujourd'hui" takes its own line under the code: a nowrap badge beside
+     it pushed the page sideways. */
+  .row-new td:first-child { flex-wrap: wrap; }
+  .badge-new { flex: 0 0 100%; text-align: right; margin-left: 0; }
+  /* The tint on the card, not the cells, or a white ring shows inside the border. */
+  .table tr.row-new { background: var(--accent-light); }
+  .row-new > td { background: none; }
+  /* The page turner: the range above, the buttons at the two edges under it. */
+  .pager { flex-wrap: wrap; justify-content: space-between; gap: .6rem; }
+  .pager-range { order: -1; width: 100%; text-align: center; }
+  /* No pointer, no tooltip: the hidden label comes back as text. */
+  .action-label { display: inline; margin-left: .5rem; }
+
+  /* Every control in a card: a 44 px box, label centred, wrapping when needed. */
+  .table td .btn-icon-action,
+  .table td.col-actions > * {
+    display: inline-flex; align-items: center; justify-content: center;
+    flex: 1 1 auto; width: auto; min-height: 44px; margin: 0; padding: 0 .8rem;
+    border-radius: var(--radius-s); text-decoration: none;
+  }
+  .table td .btn-icon-action { border-color: var(--border-strong); }
+  .table td.col-actions .link-quiet { border: 1px solid var(--border-strong); }
+  /* A form is a wrapper: it takes the share, its button fills it. */
+  .table td.col-actions form { padding: 0; }
+  .table td.col-actions form .btn-icon-action { width: 100%; }
+  .table td.col-actions, .table td.col-tracking-link { flex-wrap: wrap; gap: .5rem; }
+  .table td.col-actions::before { content: none; }
+  /* Three labelled buttons take a line of their own. */
+  .table td.col-tracking-link .token-actions { flex: 1 1 100%; flex-wrap: wrap; gap: .5rem; }
+}
+
+/* Book page, three zones under small headings: where it goes back (tinted, first),
+   what it is (label over value), and, open, the form in their place. */
+.book-zone-title {
+  margin: 0 0 .5rem; font-size: .78rem; font-weight: 700; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--muted);
+}
+.book-shelf {
+  flex: 0 0 16.5rem; margin: 0 0 0 auto; padding: .8rem 1rem;
+  background: var(--accent-light); border: 1px solid var(--accent-border); border-radius: var(--radius-s);
+}
+.book-shelf-mark { margin: 0 0 .6rem; font-size: 1.15rem; }
+.shelf-places { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: .3rem; }
+.shelf-places li { display: flex; align-items: baseline; justify-content: space-between; gap: .75rem; }
+.shelf-count { flex: none; font-size: .9rem; color: var(--muted); white-space: nowrap; }
+.shelf-mark {
+  font-weight: 800; letter-spacing: .08em; padding: .15rem .6rem;
+  background: var(--surface); border: 2px solid var(--text); border-radius: .3rem;
+}
+.shelf-place { font-weight: 700; overflow-wrap: anywhere; }
+.shelf-none { font-weight: 500; color: var(--muted); }
+.facts {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+  gap: .75rem 1.5rem; margin: 0 0 .5rem; padding: 0; list-style: none;
+}
+.facts li { display: flex; flex-direction: column; gap: .1rem; min-width: 0; }
+.fact-label { font-size: .82rem; color: var(--muted); }
+.fact-value { overflow-wrap: anywhere; }
+/* The lookup menu, small at the foot of the record: as wide as its button,
+   the panel opening under it. */
+.book-lookup { display: inline-block; margin-left: -.75rem; }
+.book-lookup .menu-admin-panel { left: 0; right: auto; }
+.book-lookup > summary { font-size: .9rem; min-height: 44px; }
+/* The form's own summary is not shown: the Modifier button opens it, Annuler
+   closes it. */
+.book-edit > summary { display: none; }
+.book-edit-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: .5rem 1rem; }
+.book-edit-head form { margin: 0; }
+.book-edit-head .link-quiet { min-height: 44px; gap: .3rem; }
+.book-edit-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem 1.25rem; margin-top: 1.25rem; }
+.book-edit-actions .btn-primary { width: auto; min-width: 10rem; }
+.book-edit-actions .btn-danger { margin-left: auto; }
+.book-edit-note { margin: .75rem 0 0; }
+@media (max-width: 40rem) {
+  /* On a phone the row stacks: where it goes back comes right under the cover. */
+  .book-shelf { flex: none; margin: 0; order: -1; }
+  .metadata-cover { order: -2; }
+}

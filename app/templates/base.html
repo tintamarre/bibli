@@ -1,0 +1,113 @@
+{{define "base"}}<!DOCTYPE html>
+<html lang="{{lang}}" data-theme="{{theme}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="{{themeColor}}">
+<title>{{.Title}} · Bibli{{with school}} · {{.}}{{end}}</title>
+<link rel="icon" type="image/svg+xml" href="{{asset "/static/favicon.svg"}}">
+<link rel="stylesheet" href="{{asset "/static/app.css"}}">
+<script src="{{asset "/static/vendor/htmx.min.js"}}" defer></script>
+<script src="{{asset "/static/vendor/zxing.min.js"}}" defer></script>
+<script src="{{asset "/static/vendor/jsbarcode.min.js"}}" defer></script>
+<script src="{{asset "/static/scan-camera.js"}}" defer></script>
+{{/* app.js is cached a year under one URL for every language, so its strings
+     travel with the page instead (handlers.go, jsKeys). */}}
+<script>window.BIBLI_TEXTS = {{jsTexts}};</script>
+<script src="{{asset "/static/app.js"}}" defer></script>
+</head>
+<body>
+<header class="header">
+  {{/* The school's name is part of the home link: on a phone it is the only way
+       home short of the menu. */}}
+  <a class="brand" href="/" aria-label="{{T "nav.home_aria"}}">{{template "logo" "logo-brand"}}<span class="brand-text"><span class="brand-name">Bibli</span>{{with school}}<span class="brand-school">{{.}}</span>{{end}}</span></a>
+
+  {{/* The desk, then from 64rem the two management screens after a divider;
+       below that width they live in the drop-down only (.nav-wide). */}}
+  <nav class="menu">
+    <a href="/borrow"{{if navActive .Path "/borrow"}} aria-current="page"{{end}}>{{template "icon-borrow" "nav-icon"}}{{T "nav.borrow"}}</a>
+    <a href="/return"{{if navActive .Path "/return"}} aria-current="page"{{end}}>{{template "icon-return" "nav-icon"}}{{T "nav.return"}}</a>
+    <a href="/loans"{{if navActive .Path "/loans"}} aria-current="page"{{end}}>{{template "icon-loans" "nav-icon"}}{{T "nav.loans"}}</a>
+    <span class="nav-sep nav-wide" aria-hidden="true"></span>
+    <a class="nav-wide" href="/borrowers"{{if navActive .Path "/borrowers"}} aria-current="page"{{end}}>{{template "icon-borrowers" "nav-icon"}}{{T "nav.borrowers"}}</a>
+    <a class="nav-wide" href="/inventory"{{if or (navActive .Path "/inventory") (navActive .Path "/book")}} aria-current="page"{{end}}>{{template "icon-inventory" "nav-icon"}}{{T "nav.inventory"}}</a>
+  </nav>
+  <details class="menu-admin" data-autoclose>
+    <summary aria-label="{{T "nav.menu"}}">{{template "icon-menu" "icon-burger"}}</summary>
+    <div class="menu-admin-panel">
+      <a href="/catalogue"{{if navActive .Path "/catalogue"}} aria-current="page"{{end}}>{{template "icon-catalogue" "menu-icon"}}<span>{{T "nav.catalogue"}}</span></a>
+      <a class="nav-narrow" href="/borrowers"{{if navActive .Path "/borrowers"}} aria-current="page"{{end}}>{{template "icon-borrowers" "menu-icon"}}<span>{{T "nav.borrowers"}}</span></a>
+      <a class="nav-narrow" href="/inventory"{{if or (navActive .Path "/inventory") (navActive .Path "/book")}} aria-current="page"{{end}}>{{template "icon-inventory" "menu-icon"}}<span>{{T "nav.inventory"}}</span></a>
+      <a href="/stats"{{if navActive .Path "/stats"}} aria-current="page"{{end}}>{{template "icon-stats" "menu-icon"}}<span>{{T "nav.stats"}}</span></a>
+      <a href="/settings"{{if navActive .Path "/settings"}} aria-current="page"{{end}}>{{template "icon-settings" "menu-icon"}}<span>{{T "nav.settings"}}</span></a>
+      <a href="/about"{{if navActive .Path "/about"}} aria-current="page"{{end}}>{{template "icon-about" "menu-icon"}}<span>{{T "nav.about"}}</span></a>
+      <form method="post" action="/logout"><button type="submit">{{template "icon-signout" "menu-icon"}}<span>{{T "nav.sign_out"}}</span></button></form>
+    </div>
+  </details>
+
+  <details class="menu-burger" data-autoclose>
+    <summary aria-label="{{T "nav.menu"}}">{{template "icon-menu" "icon-burger"}}</summary>
+    <div class="menu-admin-panel">
+      <p class="menu-group">{{T "nav.group_counter"}}</p>
+      <a href="/borrow"{{if navActive .Path "/borrow"}} aria-current="page"{{end}}>{{template "icon-borrow" "menu-icon"}}<span>{{T "nav.borrow"}}</span></a>
+      <a href="/return"{{if navActive .Path "/return"}} aria-current="page"{{end}}>{{template "icon-return" "menu-icon"}}<span>{{T "nav.return"}}</span></a>
+      <a href="/loans"{{if navActive .Path "/loans"}} aria-current="page"{{end}}>{{template "icon-loans" "menu-icon"}}<span>{{T "nav.loans"}}</span></a>
+      <p class="menu-group menu-group-sep">{{T "nav.group_manage"}}</p>
+      <a href="/catalogue"{{if navActive .Path "/catalogue"}} aria-current="page"{{end}}>{{template "icon-catalogue" "menu-icon"}}<span>{{T "nav.catalogue"}}</span></a>
+      <a href="/borrowers"{{if navActive .Path "/borrowers"}} aria-current="page"{{end}}>{{template "icon-borrowers" "menu-icon"}}<span>{{T "nav.borrowers"}}</span></a>
+      <a href="/inventory"{{if or (navActive .Path "/inventory") (navActive .Path "/book")}} aria-current="page"{{end}}>{{template "icon-inventory" "menu-icon"}}<span>{{T "nav.inventory"}}</span></a>
+      <a href="/stats"{{if navActive .Path "/stats"}} aria-current="page"{{end}}>{{template "icon-stats" "menu-icon"}}<span>{{T "nav.stats"}}</span></a>
+      <a href="/settings"{{if navActive .Path "/settings"}} aria-current="page"{{end}}>{{template "icon-settings" "menu-icon"}}<span>{{T "nav.settings"}}</span></a>
+      <a href="/about"{{if navActive .Path "/about"}} aria-current="page"{{end}}>{{template "icon-about" "menu-icon"}}<span>{{T "nav.about"}}</span></a>
+      <form method="post" action="/logout"><button type="submit">{{template "icon-signout" "menu-icon"}}<span>{{T "nav.sign_out"}}</span></button></form>
+    </div>
+  </details>
+</header>
+{{/* The demonstration instance says so, under the header (demo.go). */}}
+{{if demo}}<p class="demo-banner">{{T "demo.banner"}}</p>{{end}}
+{{/* Each page may redefine "width" (app.css). Full width by default. */}}
+<main class="page{{block "width" .}}{{end}}" data-area="{{area .Path}}">
+  {{/* A page names its icon by redefining "title_icon"; without one, a plain
+       title. */}}
+  {{/* A page may hang one more thing off the title: the book page puts the
+       author there. */}}
+  {{/* The way back, above the heading. */}}
+  {{block "back_link" .}}{{end}}
+  {{/* The heading, and hard right what the page as a whole can do (print,
+       export). */}}
+  <div class="title-row">
+    <h1 class="title">{{block "title_icon" .}}{{end}}{{.Title}}{{block "title_aside" .}}{{end}}</h1>
+    {{block "title_actions" .}}{{end}}
+  </div>
+  {{template "content" .}}
+</main>
+<footer class="footer">
+  {{/* The version and licence at one end, thanks at the other; stacked on a
+       phone. */}}
+  <span class="footer-meta"><span class="footer-build" title="{{T "footer.version_title"}}">Bibli {{version}}</span> · <span class="footer-copyleft">{{T "common.free_software"}} <a href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank" rel="noopener">AGPL-3.0</a> · <a href="{{sourceURL}}" target="_blank" rel="noopener">{{T "common.source_code"}}</a></span></span>
+  {{/* The heart lives inside each catalogue's sentence, so a translator places
+       it; grey, not red. */}}
+  <span class="footer-credit">{{T "footer.credit"}}</span>
+</footer>
+
+{{/* One confirmation dialog for the whole application (app.js). The buttons are
+     plain buttons, not a form with method="dialog": that form's submit would
+     reach the document-level data-confirm handler and fire a second submit. */}}
+<dialog id="confirm" class="dialog" aria-labelledby="confirm-text">
+  <p class="dialog-text" id="confirm-text"></p>
+  {{/* A count some questions need (days to extend a loan by), shown only when
+       the form names data-confirm-field; bounded like the loan period. */}}
+  <label class="dialog-number" id="confirm-number-row" hidden>
+    <span id="confirm-number-label"></span>
+    <input type="number" id="confirm-number" inputmode="numeric" min="1" max="365" step="1">
+  </label>
+  {{/* Cancel holds the focus: the desk scanner ends every code with Enter, and
+       a question it answers on its own must be answered no. */}}
+  <div class="dialog-actions">
+    <button type="button" id="confirm-no" class="btn-secondary" autofocus>{{T "common.cancel"}}</button>
+    <button type="button" id="confirm-yes" class="btn-primary btn-auto">{{T "common.confirm"}}</button>
+  </div>
+</dialog>
+</body>
+</html>{{end}}
+

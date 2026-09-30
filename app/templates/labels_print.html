@@ -1,0 +1,73 @@
+{{define "document"}}<!DOCTYPE html>
+<html lang="{{lang}}">
+<head>
+{{template "sheet_head" (T "labels.title")}}
+<script src="{{asset "/static/vendor/jsbarcode.min.js"}}"></script>
+{{template "sticker_style"}}
+<style>
+  .sticker .title { font-weight: 600; font-size: 7pt; line-height: 1.2; width: 100%;
+    height: 2.4em; overflow: hidden; overflow-wrap: anywhere;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .sticker .isbn { font-family: ui-monospace, monospace; font-size: 5.5pt; line-height: 1.1; color: #777; }
+  /* The code is for the scanner, the mark for whoever puts the book back on
+     the shelf — so the mark is the one printed large. */
+  .sticker .foot { display: flex; align-items: baseline; justify-content: space-between; gap: 2mm; width: 100%; }
+  .sticker .mark { font-weight: 800; font-size: 10pt; line-height: 1; letter-spacing: .08em; }
+  body.no-isbn .sticker .isbn { display: none; }
+  /* One line: the head takes the ellipsis, the tail is pinned so it never
+     clips — a middle truncation CSS has no property for. Centred while the
+     whole title fits, then the head shrinks to nothing before the tail does.
+     On two lines the spans stay inline and rejoin as plain text. */
+  body.one-line .sticker .title { height: 1.2em; -webkit-line-clamp: 1;
+    display: flex; justify-content: center; }
+  /* pre, not nowrap: a trailing space would be hung rather than drawn. */
+  body.one-line .sticker .ti-head { overflow: hidden; text-overflow: ellipsis; white-space: pre; min-width: 0; }
+  body.one-line .sticker .ti-tail { flex-shrink: 0; white-space: pre; }
+</style>
+</head>
+{{/* The body starts in the state the boxes show: one line of title, no ISBN, the school shown, no cut lines. */}}
+<body class="one-line no-isbn">
+<div class="toolbar toolbar-sticker">
+  <div class="tb-row">
+    {{/* The selection is made on /inventory; this links back with its filter.
+         Absent on the sheet the catalogue screen opens for the codes it just
+         created. */}}
+    {{with .Filter}}<a class="btn-secondary" href="{{.URL "/inventory"}}">{{template "icon-back" "btn-icon"}}{{T "labels.change_selection"}}</a>{{end}}
+    {{if .Rows}}<p class="tb-summary"><strong>{{Tn "labels.sheet_count" (len .Rows)}}</strong>{{if .Chronological}}<span>{{T "labels.order_catalogued"}}</span>{{end}}</p>{{end}}
+    <div class="tb-actions">{{template "sheet_print"}}{{template "sheet_close"}}</div>
+  </div>
+  <div class="tb-options">
+    <div class="tb-group">{{template "sticker_controls"}}</div>
+    <div class="tb-group">
+    <label class="opt"><input type="checkbox"
+      onchange="document.body.classList.toggle('no-isbn', !this.checked)"> {{T "labels.opt_isbn"}}</label>
+    <label class="opt"><input type="checkbox" checked
+      onchange="document.body.classList.toggle('one-line', this.checked)"> {{T "labels.opt_one_line"}}</label>
+    {{if school}}<label class="opt"><input type="checkbox" checked
+      onchange="document.body.classList.toggle('no-school', !this.checked)"> {{T "labels.opt_school"}}</label>{{end}}
+    </div>
+  </div>
+  {{template "sticker_note"}}
+</div>
+<div class="sheet">
+  {{range .Rows}}
+  <div class="sticker">
+    {{with school}}<span class="school">{{.}}</span>{{end}}
+    {{/* Two spans so a one-line label clips the MIDDLE of a title, keeping a
+         series' tome. No whitespace between the tags: head and tail must rejoin
+         seamlessly. */}}
+    <span class="title">{{if .Title}}<span class="ti-head">{{titleHead .Title}}</span><span class="ti-tail">{{titleTail .Title}}</span>{{else}}&nbsp;{{end}}</span>
+    {{/* The ISBN, for a book whose jacket is gone. The line is kept when empty
+         so a row of labels lines up. */}}
+    <span class="isbn">{{if .ISBN}}{{.ISBN}}{{else}}&nbsp;{{end}}</span>
+    <svg class="cb" data-code="{{.Code}}"></svg>
+    <span class="foot"><span class="code">{{.Code}}</span><span class="mark">{{.Mark}}</span></span>
+  </div>
+  {{else}}
+  <p>{{T "labels.empty"}}</p>
+  {{end}}
+</div>
+{{template "sticker_script"}}
+{{template "sheet_script"}}
+</body>
+</html>{{end}}

@@ -1,0 +1,11 @@
+.git
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+*.backup
+backups/
+.DS_Store
+README.md
+cache/

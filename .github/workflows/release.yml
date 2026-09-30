@@ -1,0 +1,252 @@
+name: Release
+run-name: Release ${{ inputs.version_bump }}
+on:
+  workflow_dispatch:
+    inputs:
+      version_bump:
+        description: 'Version bump (auto = deduced from the conventional commits)'
+        required: true
+        default: 'auto'
+        type: choice
+        options:
+          - auto
+          - patch
+          - minor
+          - major
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  # Computes the version and pushes the tags: everything after it reads them.
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      last_tag: ${{ steps.last_tag.outputs.tag }}
+      version: ${{ steps.version.outputs.version }}
+      date: ${{ steps.version.outputs.date }}
+      minor_tag: ${{ steps.tags.outputs.minor_tag }}
+      major_tag: ${{ steps.tags.outputs.major_tag }}
+    steps:
+      - name: Checkout (full history)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Last version tag
+        id: last_tag
+        run: |
+          # grep with no match exits non-zero, which pipefail + -e would turn
+          # into a failed step before the fallback: hence "|| true".
+          LAST_TAG=$(git tag -l "v*.*.*" | grep -E "^v[0-9]+\.[0-9]+\.[0-9]+$" | sort -V | tail -n1 || true)
+          if [ -z "$LAST_TAG" ]; then LAST_TAG="v0.0.0"; fi
+          echo "tag=$LAST_TAG" >> "$GITHUB_OUTPUT"
+          echo "Last tag: $LAST_TAG"
+
+      - name: Compute the new version (conventional commits)
+        id: version
+        run: |
+          LAST_TAG="${{ steps.last_tag.outputs.tag }}"
+          VERSION=${LAST_TAG#v}
+          MAJOR=$(echo $VERSION | cut -d. -f1)
+          MINOR=$(echo $VERSION | cut -d. -f2)
+          PATCH=$(echo $VERSION | cut -d. -f3)
+
+          if [ "$LAST_TAG" = "v0.0.0" ]; then
+            COMMITS=$(git log --pretty=format:"%s")
+          else
+            COMMITS=$(git log ${LAST_TAG}..HEAD --pretty=format:"%s")
+          fi
+
+          BUMP_TYPE="${{ inputs.version_bump }}"
+          if [ "$BUMP_TYPE" = "auto" ]; then
+            if echo "$COMMITS" | grep -qE "^(feat|fix|refactor|perf|docs|style|test|build|ci|chore)(\(.+\))?!:|BREAKING CHANGE:"; then
+              BUMP_TYPE="major"
+            elif echo "$COMMITS" | grep -qE "^feat(\(.+\))?:"; then
+              BUMP_TYPE="minor"
+            else
+              BUMP_TYPE="patch"
+            fi
+          fi
+
+          case $BUMP_TYPE in
+            major) MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0 ;;
+            minor) MINOR=$((MINOR + 1)); PATCH=0 ;;
+            patch) PATCH=$((PATCH + 1)) ;;
+          esac
+
+          NEW_VERSION="v${MAJOR}.${MINOR}.${PATCH}"
+          echo "version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
+          echo "date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+          echo "New version: $NEW_VERSION ($BUMP_TYPE)"
+
+      - name: Create and push the tags
+        id: tags
+        run: |
+          NEW_VERSION="${{ steps.version.outputs.version }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$NEW_VERSION" -m "Release $NEW_VERSION"
+          git push origin "$NEW_VERSION"
+
+          VERSION=${NEW_VERSION#v}
+          MAJOR=$(echo $VERSION | cut -d. -f1); MINOR=$(echo $VERSION | cut -d. -f2)
+          MINOR_TAG="v${MAJOR}.${MINOR}"; MAJOR_TAG="v${MAJOR}"
+          git tag -fa "$MINOR_TAG" -m "Latest ${MINOR_TAG}.x"; git push origin "$MINOR_TAG" --force
+
+          HIGHEST=$(git tag -l "v${MAJOR}.*.*" | grep -E "^v${MAJOR}\.[0-9]+\.[0-9]+$" | sort -V | tail -n1 || true)
+          if [ -z "$HIGHEST" ] || [ "$NEW_VERSION" = "$HIGHEST" ]; then
+            git tag -fa "$MAJOR_TAG" -m "Latest ${MAJOR_TAG}.x.x"; git push origin "$MAJOR_TAG" --force
+            echo "major_tag=$MAJOR_TAG" >> "$GITHUB_OUTPUT"
+          else
+            echo "major_tag=" >> "$GITHUB_OUTPUT"
+          fi
+          echo "minor_tag=$MINOR_TAG" >> "$GITHUB_OUTPUT"
+
+  release:
+    needs: version
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (full history)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Write the changelog
+        run: |
+          LAST_TAG="${{ needs.version.outputs.last_tag }}"
+          NEW_VERSION="${{ needs.version.outputs.version }}"
+          if [ "$LAST_TAG" = "v0.0.0" ]; then
+            COMMITS=$(git log --pretty=format:"%H %s")
+          else
+            COMMITS=$(git log ${LAST_TAG}..HEAD --pretty=format:"%H %s")
+          fi
+          FEATURES=""; FIXES=""; OTHERS=""
+          while IFS= read -r line; do
+            [ -z "$line" ] && continue
+            HASH=$(echo "$line" | cut -d' ' -f1 | cut -c1-7)
+            MSG=$(echo "$line" | cut -d' ' -f2-)
+            if echo "$MSG" | grep -qE "^feat(\(.+\))?:"; then FEATURES="${FEATURES}- ${MSG} (${HASH})\n"
+            elif echo "$MSG" | grep -qE "^fix(\(.+\))?:"; then FIXES="${FIXES}- ${MSG} (${HASH})\n"
+            else OTHERS="${OTHERS}- ${MSG} (${HASH})\n"; fi
+          done <<< "$COMMITS"
+          CHANGELOG="## Bibli ${NEW_VERSION}\n\n"
+          [ -n "$FEATURES" ] && CHANGELOG="${CHANGELOG}### Features\n${FEATURES}\n"
+          [ -n "$FIXES" ] && CHANGELOG="${CHANGELOG}### Fixes\n${FIXES}\n"
+          [ -n "$OTHERS" ] && CHANGELOG="${CHANGELOG}### Other\n${OTHERS}\n"
+          echo -e "$CHANGELOG" > changelog.md
+          cat changelog.md
+
+      - name: Create the GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          NEW_VERSION="${{ needs.version.outputs.version }}"
+          gh release create "$NEW_VERSION" \
+            --title "Bibli ${NEW_VERSION}" \
+            --notes-file changelog.md
+
+  docker:
+    needs: version
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Docker tag list
+        id: docker_tags
+        run: |
+          REG="ghcr.io/${{ github.repository }}"
+          TAGS="${REG}:stable,${REG}:${{ needs.version.outputs.version }},${REG}:${{ needs.version.outputs.minor_tag }}"
+          MAJOR_TAG="${{ needs.version.outputs.major_tag }}"
+          [ -n "$MAJOR_TAG" ] && TAGS="${TAGS},${REG}:${MAJOR_TAG}"
+          echo "tags=$TAGS" >> "$GITHUB_OUTPUT"
+          echo "Docker tags: $TAGS"
+
+      - name: Write app/build-info.json
+        run: scripts/build-info.sh "${{ needs.version.outputs.version }}" "${{ needs.version.outputs.date }}"
+        env:
+          BUILD_SHA: ${{ github.sha }}
+          BUILD_BRANCH: ${{ github.ref_name }}
+          BUILD_REPOSITORY: ${{ github.repository }}
+          BUILD_RUN: ${{ github.run_number }}
+          BUILD_PIPELINE_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+      # arm64 for a Raspberry Pi, next to amd64 — QEMU emulates the arm build.
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push the image (:stable + version, amd64 + arm64)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.docker_tags.outputs.tags }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # A failure here leaves the release out with the Docker image alone; rerun
+  # this job, or attach the apps by hand from scripts/macos-app.sh,
+  # windows-app.sh and linux-app.sh.
+  apps:
+    needs: [version, release]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (full history, for the tag the apps report)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Write app/build-info.json
+        run: scripts/build-info.sh "${{ needs.version.outputs.version }}" "${{ needs.version.outputs.date }}"
+        env:
+          BUILD_SHA: ${{ github.sha }}
+          BUILD_BRANCH: ${{ github.ref_name }}
+          BUILD_REPOSITORY: ${{ github.repository }}
+          BUILD_RUN: ${{ github.run_number }}
+          BUILD_PIPELINE_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+      - name: Set up Go (desktop apps)
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.27'
+          cache-dependency-path: go.sum
+
+      # After build-info.json, so the apps report the release's version.
+      - name: Build the Mac, Windows and Linux apps
+        run: |
+          SUDO=$(command -v sudo || true)
+          if ! command -v zip > /dev/null || ! command -v python3 > /dev/null; then
+            $SUDO apt-get update -qq && $SUDO apt-get install -y -qq zip python3
+          fi
+          scripts/macos-app.sh dist
+          scripts/windows-app.sh dist
+          scripts/linux-app.sh dist
+          ls -la dist
+
+      - name: Attach the Mac, Windows and Linux apps
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          NEW_VERSION="${{ needs.version.outputs.version }}"
+          cp dist/Bibli-macos.zip "Bibli-${NEW_VERSION}-macos.zip"
+          cp dist/Bibli-windows.zip "Bibli-${NEW_VERSION}-windows.zip"
+          cp dist/Bibli-linux.tar.gz "Bibli-${NEW_VERSION}-linux.tar.gz"
+          gh release upload "$NEW_VERSION" \
+            "Bibli-${NEW_VERSION}-macos.zip" \
+            "Bibli-${NEW_VERSION}-windows.zip" \
+            "Bibli-${NEW_VERSION}-linux.tar.gz" \
+            --clobber

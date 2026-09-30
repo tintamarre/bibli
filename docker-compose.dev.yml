@@ -1,0 +1,15 @@
+# Bibli — development: builds the image from the local sources.
+#   docker compose -f docker-compose.dev.yml up --build
+
+services:
+  bibli:
+    build: .
+    container_name: bibli-dev
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/data
+    environment:
+      - TZ=Europe/Brussels
+      - BIBLI_ADMIN_PASSWORD=${BIBLI_ADMIN_PASSWORD:-dev}

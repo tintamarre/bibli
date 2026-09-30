@@ -1,0 +1,39 @@
+{{define "document"}}<!DOCTYPE html>
+<html lang="{{lang}}">
+<head>
+{{template "sheet_head" (T "nav.inventory")}}
+<style>
+  /* Eight columns to the page: a size down from the other sheets. */
+  body { font-size: 12px; }
+  th, td { padding: 1.2mm 2mm; }
+  th { font-size: .72rem; }
+</style>
+</head>
+<body>
+<div class="toolbar">{{template "sheet_print"}}{{template "sheet_close"}}</div>
+<h1>{{T "inventory_print.heading"}}</h1>
+<p class="date">{{with school}}{{.}} — {{end}}{{Tn "inventory_print.copies" .Total}} — {{T "common.as_of" .Date}}</p>
+<table>
+  <thead><tr><th>{{T "inventory.col_mark"}}</th><th>{{T "inventory.col_title"}}</th><th>{{T "inventory_print.col_authors"}}</th><th>{{T "inventory.col_isbn"}}</th><th>{{T "inventory.col_code"}}</th><th>{{T "inventory_print.col_condition"}}</th><th>{{T "inventory.col_location"}}</th><th>{{T "inventory_print.col_status"}}</th></tr></thead>
+  <tbody>
+  {{range .Rows}}
+    <tr>
+      <td class="code">{{.Mark}}</td>
+      <td>{{.Title}}</td>
+      <td>{{.Authors}}</td>
+      <td class="code">{{.ISBN}}</td>
+      <td class="code">{{.Code}}</td>
+      <td>{{statusWording .Status}}</td>
+      <td>{{.Location}}</td>
+      {{/* Lost and withdrawn copies are neither out nor on a shelf; the
+           condition column two to the left says which. */}}
+      <td class="{{if .Out}}late{{end}}">{{if .Out}}{{T "inventory.out"}}{{else if onShelf .Status}}{{T "inventory.on_shelf"}}{{else}}&mdash;{{end}}</td>
+    </tr>
+  {{else}}
+    <tr><td colspan="8">{{T "inventory_print.empty"}}</td></tr>
+  {{end}}
+  </tbody>
+</table>
+{{template "sheet_script"}}
+</body>
+</html>{{end}}

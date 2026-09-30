@@ -1,0 +1,19 @@
+{{define "title_icon"}}{{template "icon-about" "title-icon"}}{{end}}
+{{define "content"}}
+<section class="scan-block form-measured">
+  <h2 class="subtitle">{{template "icon-about" "subtitle-icon"}}{{T "about.heading"}}</h2>
+  <table class="table">
+    <tbody>
+      <tr><td data-label="{{T "about.version"}}">{{T "about.version"}}</td><td>{{version}}</td></tr>
+      {{with .B.Commit}}<tr><td data-label="{{T "about.commit"}}">{{T "about.commit"}}</td><td><span class="code">{{.}}</span></td></tr>{{end}}
+      {{with .B.CommitDate}}<tr><td data-label="{{T "about.commit_date"}}">{{T "about.commit_date"}}</td><td>{{.}}</td></tr>{{end}}
+      {{with .B.Branch}}<tr><td data-label="{{T "about.branch"}}">{{T "about.branch"}}</td><td>{{.}}</td></tr>{{end}}
+      {{with .B.Date}}<tr><td data-label="{{T "about.build"}}">{{T "about.build"}}</td><td>{{.}}</td></tr>{{end}}
+      <tr><td data-label="{{T "common.source_code"}}">{{T "common.source_code"}}</td><td><a href="{{sourceURL}}" target="_blank" rel="noopener">{{sourceURL}}</a></td></tr>
+      {{with .B.PipelineURL}}<tr><td data-label="{{T "about.pipeline"}}">{{T "about.pipeline"}}</td><td><a href="{{.}}" target="_blank" rel="noopener">{{.}}</a></td></tr>{{end}}
+    </tbody>
+  </table>
+  <p class="note"><a href="/build-info.json" target="_blank" rel="noopener">build-info.json</a> · {{T "about.free_software"}}
+    <a href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank" rel="noopener">AGPL-3.0</a></p>
+</section>
+{{end}}

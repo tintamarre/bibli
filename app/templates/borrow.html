@@ -1,0 +1,240 @@
+{{define "title_icon"}}{{template "icon-borrow" "title-icon"}}{{end}}
+{{define "width"}} page-narrow{{end}}
+{{define "content"}}
+  {{template "borrow_step1" .}}
+{{end}}
+
+{{/* Shown again as is when the card is unknown: nothing has started yet. */}}
+{{define "borrow_step1"}}
+<section id="loan" class="scan-block">
+  {{template "borrow_card_form" .}}
+</section>
+{{end}}
+
+{{/* Reused under a completed loan's summary, so the scanner moves on. hx-sync
+     drops a pending search, which would land on a target that no longer exists. */}}
+{{define "borrow_card_form"}}
+<form hx-post="/borrow/borrower" hx-target="#loan" hx-swap="outerHTML">
+  <p class="step"><span class="num">1</span>
+    {{with .Prompt}}{{.}}{{else}}{{T "loan.step1_prompt"}}{{end}}</p>
+  <input class="scan" name="code" type="text" autocomplete="off" autocapitalize="off"
+         spellcheck="false" enterkeyhint="search" autofocus placeholder="{{T "loan.step1_placeholder"}}"
+         hx-post="/borrow/search" hx-trigger="keyup changed delay:250ms"
+         hx-target="#borrower-results" hx-swap="innerHTML" hx-sync="closest form:abort">
+  {{with .Error}}<p class="err">{{.}}</p>{{end}}
+</form>
+<div id="borrower-results">{{template "borrower_results" .}}</div>
+{{end}}
+
+{{define "borrower_results"}}
+{{if .TooMany}}
+  <p class="results-indicator">{{T "loan.too_many_borrowers"}}</p>
+{{else if .Results}}
+  <ul class="borrower-results">
+    {{range .Results}}
+    <li>
+      <button type="button" class="borrower-result"
+              hx-post="/borrow/borrower-id" hx-vals='{"borrower_id": "{{.ID}}"}'
+              hx-target="#loan" hx-swap="outerHTML">
+        {{.FirstName}} {{.LastInitial}}{{with .Class}} · {{.}}{{end}}
+      </button>
+    </li>
+    {{end}}
+  </ul>
+{{else if .Search}}
+  <p class="results-indicator">{{T "loan.no_borrower"}}</p>
+{{end}}
+{{end}}
+
+{{/* Two sibling forms, since <form> cannot be nested: #form-confirm carries the
+     basket (filled by OOB swap), #form-book adds to it. The confirm button
+     attaches with form=. */}}
+{{define "borrow_section"}}
+<section id="loan">
+  {{/* What this borrower has out: the count grey, only the overdue part
+       red. Nothing out is said in words. */}}
+  <div class="borrower{{if .Borrower.OverdueCount}} borrower-late{{end}}">
+    {{/* Opens in a new tab: the basket exists only in this page, and leaving it
+         loses every book scanned. */}}
+    <span>{{T "loan.borrower_label"}}
+      <a class="link-person borrower-link" href="/borrowers/{{.Borrower.ID}}"
+         target="_blank" rel="noopener"
+         title="{{T "loan.open_borrower"}}"><b>{{.Borrower.FirstName}} {{.Borrower.LastInitial}}</b></a>{{with .Borrower.Class}} · {{.}}{{end}}</span>
+    <span class="borrower-loans">
+      {{if .Borrower.OutCount}}
+        {{template "icon-borrow" "borrower-loans-icon"}}<b>{{Tn "loan.borrower_out" .Borrower.OutCount}}</b>
+        {{if .Borrower.OverdueCount}}<span class="overdue-badge">{{Tn "borrower.loans_overdue" .Borrower.OverdueCount}}</span>{{end}}
+      {{else}}
+        <span class="borrower-loans-none">{{T "loan.borrower_none"}}</span>
+      {{end}}
+    </span>
+    <a href="/borrow" class="link-quiet">{{T "loan.change_borrower"}}</a>
+  </div>
+
+  <div class="scan-block">
+    <p class="step"><span class="num">2</span> {{T "loan.step2_heading"}}
+      <span id="basket-count" class="basket-count"></span></p>
+
+    <form id="form-confirm" hx-post="/borrow/confirm" hx-target="#loan" hx-swap="outerHTML">
+      <input type="hidden" name="borrower_id" value="{{.Borrower.ID}}">
+      <ul id="basket" class="basket basket-empty"></ul>
+    </form>
+
+    {{/* hx-include sends the basket, which lives only in this page, so the
+         search strikes out copies already in it and offers the next free one.
+         One scan at a time: an unknown ISBN can hold the request for seconds,
+         and htmx would send a queued scan only after the reset had emptied the
+         field. The field is disabled until the answer is drawn, then refocused; not
+         inherited, or the live search would disable it between keystrokes. */}}
+    <form id="form-book"
+          hx-post="/borrow/add"
+          hx-include="#basket"
+          hx-target="#scan-feedback" hx-swap="innerHTML"
+          hx-indicator="#emp-indic"
+          hx-sync="this:drop" hx-disabled-elt="#scan-book" hx-disinherit="hx-disabled-elt"
+          hx-on::after-request="if (event.target === this) { this.reset(); refocusScan(); }">
+      <input type="hidden" name="borrower_id" value="{{.Borrower.ID}}">
+      <label class="add-label" for="scan-book">{{T "loan.add_book"}}</label>
+      {{/* Live search against a read-only endpoint: /borrow/add commits, so it
+           stays behind Enter. hx-sync drops a pending search on submit, so the
+           scanner's Enter wins. hx-indicator points at the field itself so the
+           form's "searching…" line does not flash on every keystroke. The reset
+           after an add bubbles: the guard keeps a search from clearing the
+           field mid-word. */}}
+      <input id="scan-book" class="scan" name="code" type="text" autocomplete="off" autocapitalize="off"
+             spellcheck="false" enterkeyhint="search" autofocus placeholder="{{T "loan.add_book_placeholder"}}"
+             hx-post="/borrow/book-search" hx-trigger="keyup changed delay:250ms"
+             hx-target="#scan-feedback" hx-swap="innerHTML"
+             hx-include="#basket"
+             hx-sync="closest form:abort" hx-indicator="this">
+    </form>
+    <p id="emp-indic" class="indicator">{{T "loan.searching"}}</p>
+    <div id="scan-feedback" class="feedback" aria-live="polite"></div>
+    {{with .Error}}<p class="err">{{.}}</p>{{end}}
+
+    <button id="btn-confirm" type="submit" form="form-confirm" class="btn-primary btn-confirm" disabled>
+      {{T "loan.scan_to_start"}}
+    </button>
+  </div>
+</section>
+{{end}}
+
+{{/* The row flashes green on arrival: that is the confirmation. The <ul>
+     carries the swap, not the <li>: with a positional hx-swap-oob HTMX inserts
+     the CHILDREN of the marked element. */}}
+{{define "borrow_add_ok"}}
+<ul hx-swap-oob="beforeend:#basket">
+  <li id="basket-{{.CopyID}}" class="basket-row">
+    <input type="hidden" name="copy_id" value="{{.CopyID}}">
+    <span class="basket-title">{{.Title}}</span>
+    <span class="code">{{.Code}}</span>
+    <button type="button" class="btn-icon-action btn-icon-danger remove"
+            title="{{T "loan.remove"}}" aria-label="{{T "loan.remove"}}"
+            onclick="this.closest('li').remove(); updateConfirmButton();"
+      >{{template "icon-close" "action-icon"}}<span class="action-label">{{T "loan.remove"}}</span></button>
+  </li>
+</ul>
+{{end}}
+
+{{/* A result goes back through /borrow/add, so through every check of a scan. */}}
+{{define "borrow_book_results"}}
+{{if .TooMany}}
+  <p class="results-indicator">{{T "loan.too_many_books" .Search}}</p>
+{{else}}
+<div class="new-book">
+  <p class="step">{{T "loan.which_book"}}</p>
+  <ul class="borrower-results">
+    {{range .Results}}
+    <li>
+      <button type="button" class="borrower-result"
+              hx-post="/borrow/add" hx-vals='{"code": "{{.Code}}"}'
+              hx-target="#scan-feedback" hx-swap="innerHTML">
+        <b>{{.Title}}</b>{{with .Authors}}<br><span class="detail">{{.}}</span>{{end}}
+        <br><span class="detail"><span class="code">{{.Code}}</span>{{if gt .Available 1}}
+          · {{Tn "loan.copies_on_shelf" .Available}}{{end}}</span>
+      </button>
+    </li>
+    {{end}}
+  </ul>
+</div>
+{{end}}
+{{end}}
+
+{{define "borrow_add_err"}}<span class="err">{{.}}</span>{{end}}
+
+{{/* Every copy is out: offer to add one and lend it. */}}
+{{define "borrow_add_copy"}}
+<div class="new-book">
+  <p class="err">{{T "loan.all_copies_out" .Title}}</p>
+  <form hx-post="/borrow/copy" hx-target="#scan-feedback" hx-swap="innerHTML"
+        hx-confirm="{{T "loan.confirm_add_copy" .Title}}">
+    <input type="hidden" name="book_id" value="{{.BookID}}">
+    <button type="submit" class="btn-primary" data-focus>{{T "loan.add_copy_and_lend"}}</button>
+  </form>
+</div>
+{{end}}
+
+{{/* Express cataloguing of one copy, then into the basket. No network call:
+     automatic enrichment stays on the cataloguing screen. */}}
+{{define "borrow_new_book"}}
+<form class="new-book" hx-post="/borrow/catalogue"
+      hx-target="#scan-feedback" hx-swap="innerHTML">
+  {{/* The book under .N, as catalogue_form has it: one struct builds both
+       forms. */}}
+  {{if .Found}}
+  <p class="ok">{{T "loan.book_found" (sourceWording .N.Source)}}</p>
+  {{else if .Silent}}
+  <p class="err">{{T "loan.catalogues_silent"}}</p>
+  {{else}}
+  <p class="err">{{T "loan.book_unknown"}}</p>
+  {{end}}
+  <input type="hidden" name="isbn13" value="{{.N.ISBN13}}">
+  <input type="hidden" name="isbn10" value="{{.N.ISBN10}}">
+  {{/* Without these, the metadata the catalogue supplied is lost. */}}
+  <input type="hidden" name="subtitle" value="{{.N.Subtitle}}">
+  <input type="hidden" name="publisher" value="{{.N.Publisher}}">
+  <input type="hidden" name="year" value="{{if .N.Year}}{{.N.Year}}{{end}}">
+  <input type="hidden" name="language" value="{{.N.Language}}">
+  <input type="hidden" name="source_metadata" value="{{.N.Source}}">
+  <input type="hidden" name="source_url" value="{{.N.URL}}">
+  <input type="hidden" name="source_payload" value="{{.N.Payload}}">
+  <label class="field"><span>{{T "catalogue.f_title"}}</span>
+    <input name="title" value="{{.N.Title}}" data-focus required></label>
+  <label class="field"><span>{{T "loan.f_authors_optional"}}</span>
+    <input name="authors" value="{{.N.Authors}}"></label>
+  {{with .Error}}<p class="err">{{.}}</p>{{end}}
+  <button type="submit" class="btn-primary">{{T "loan.create_and_add"}}</button>
+  {{if .N.ISBN13}}<p class="note">{{T "catalogue.isbn_label"}} <span class="code">{{.N.ISBN13}}</span></p>{{end}}
+</form>
+{{end}}
+
+{{/* The next borrower's scan field follows the summary, or the next card is
+     typed into nothing. */}}
+{{define "borrow_success"}}
+<section id="loan">
+  <div class="success-block">
+    <p class="big-ok">✓ {{Tn "loan.books_lent" (len .Titles) .Borrower.FirstName}}</p>
+    <ul class="recap">
+      {{range .Titles}}<li>{{.}}</li>{{end}}
+    </ul>
+    <p class="due">{{T "loan.due_prefix"}} <b>{{relativeDate .DueOn}}</b>{{T "loan.due_suffix" (shortDate .DueOn)}}</p>
+    {{if .Conflicts}}
+    <div class="warning">
+      <p>{{T "loan.not_lent"}}</p>
+      <ul>{{range .Conflicts}}<li>{{.}}</li>{{end}}</ul>
+    </div>
+    {{end}}
+  </div>
+  <div class="scan-block">{{template "borrow_card_form" .}}</div>
+</section>
+{{end}}
+
+{{define "borrow_conflict"}}
+<section id="loan">
+  <div class="error-block">
+    <p class="err">{{T "loan.none_lent"}}</p>
+    <ul class="err-list">{{range .Conflicts}}<li>{{.}}</li>{{end}}</ul>
+  </div>
+  <div class="scan-block">{{template "borrow_card_form" .}}</div>
+</section>
+{{end}}

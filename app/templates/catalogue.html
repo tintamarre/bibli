@@ -1,0 +1,95 @@
+{{define "title_icon"}}{{template "icon-catalogue" "title-icon"}}{{end}}
+{{/* The narrow, centred column of the other scanning screens. */}}
+{{define "width"}} page-narrow{{end}}
+{{define "content"}}
+<section id="catalogue">
+  {{template "catalogue_scan" .}}
+</section>
+{{end}}
+
+{{define "catalogue_scan"}}
+<div class="scan-block">
+  {{/* The search goes through the SSE stream; without JavaScript it reloads the
+       screen. */}}
+  <form onsubmit="return catalogueSearch(event)">
+    <p class="step">{{T "catalogue.scan_prompt"}}</p>
+    <input class="scan" name="isbn" type="text" autocomplete="off" autocapitalize="off"
+           spellcheck="false" enterkeyhint="search" autofocus placeholder="{{T "catalogue.scan_placeholder"}}">
+  </form>
+  <div id="cat-log" class="log" aria-live="polite"></div>
+  <p class="link-manual">
+    <a class="link-quiet" href="/catalogue/manual"
+       hx-get="/catalogue/manual" hx-target="#catalogue" hx-swap="innerHTML">
+      {{T "catalogue.manual_entry"}}
+    </a>
+  </p>
+  {{if googleKeyMissing}}
+  <p class="tip">{{T "catalogue.google_tip"}}</p>
+  {{end}}
+</div>
+{{end}}
+
+{{define "catalogue_form"}}
+<form class="scan-block form-catalogue" hx-post="/catalogue/save"
+      hx-target="#catalogue" hx-swap="innerHTML">
+  {{if .Exists}}
+  <p class="warning">{{Tn "catalogue.already_known" .Current}} {{T "catalogue.already_known_more"}}</p>
+  {{else if and .N.ISBN13 (not .Found)}}
+  <p class="note">{{T "catalogue.no_record"}}</p>
+  {{end}}
+  {{if .Silent}}<p class="err">{{T "catalogue.err_catalogues_silent"}}</p>{{end}}
+  {{with .Error}}<p class="err">{{.}}</p>{{end}}
+
+  <input type="hidden" name="isbn13" value="{{.N.ISBN13}}">
+  <input type="hidden" name="isbn10" value="{{.N.ISBN10}}">
+  <input type="hidden" name="source_metadata" value="{{.N.Source}}">
+  <input type="hidden" name="source_url" value="{{.N.URL}}">
+  <input type="hidden" name="source_payload" value="{{.N.Payload}}">
+
+  {{if .N.ISBN13}}
+  {{/* The fastest check that the right book was scanned. */}}
+  <img class="cover cover-small" src="/cover/{{.N.ISBN13}}" alt="" loading="lazy">
+  {{end}}
+  <label class="field"><span>{{T "catalogue.f_title"}}</span>
+    <input name="title" value="{{.N.Title}}" required autofocus></label>
+  <label class="field"><span>{{T "catalogue.f_subtitle"}}</span>
+    <input name="subtitle" value="{{.N.Subtitle}}"></label>
+  <label class="field"><span>{{T "catalogue.f_authors"}}</span>
+    <input name="authors" value="{{.N.Authors}}" placeholder="{{T "catalogue.f_authors_placeholder"}}"></label>
+
+  <div class="field-grid">
+    <label class="field"><span>{{T "catalogue.f_publisher"}}</span><input name="publisher" value="{{.N.Publisher}}"></label>
+    <label class="field"><span>{{T "catalogue.f_year"}}</span>
+      <input name="year" type="number" inputmode="numeric" value="{{if .N.Year}}{{.N.Year}}{{end}}"></label>
+    <label class="field"><span>{{T "catalogue.f_language"}}</span><input name="language" value="{{.N.Language}}" maxlength="5"></label>
+  </div>
+  <div class="field-grid">
+    <label class="field"><span>{{T "inventory.col_location"}}</span>
+      <input name="location" placeholder="{{T "catalogue.f_location_placeholder"}}"></label>
+    <label class="field"><span>{{T "catalogue.f_copies"}}</span>
+      <input name="copies" type="number" inputmode="numeric" min="1" max="100" value="{{.Copies}}" required></label>
+  </div>
+
+  {{if .N.ISBN13}}
+  <p class="note">{{T "catalogue.isbn_label"}} <span class="code">{{.N.ISBN13}}</span>{{if .Found}} · {{T "catalogue.source" (sourceWording .N.Source)}}{{end}}</p>
+  {{end}}
+
+  <button type="submit" class="btn-primary">{{T "catalogue.add"}}</button>
+  <p class="link-manual"><a class="link-quiet" href="/catalogue">{{T "common.cancel"}}</a></p>
+</form>
+{{end}}
+
+{{define "catalogue_success"}}
+<section class="success-block">
+  <p class="big-ok">✓ {{Tn "catalogue.copies_created" (len .Codes)}}</p>
+  <p class="success-title"><b>{{.Title}}</b></p>
+  <ul class="recap">{{range .Codes}}<li><span class="code">{{.}}</span></li>{{end}}</ul>
+  {{/* Without an ISBN there is no barcode on the book: the label is the only one. */}}
+  <p class="due">{{if .HasISBN}}{{T "catalogue.no_label_needed"}}{{else}}{{T "catalogue.label_needed"}}{{end}}</p>
+  <div class="success-actions">
+    <a href="/catalogue" class="btn-primary" autofocus>{{T "catalogue.another"}}</a>
+    <a href="/print/labels?codes={{range $i, $c := .Codes}}{{if $i}},{{end}}{{$c}}{{end}}"
+       class="btn-secondary" target="_blank" rel="noopener">{{template "icon-print" "btn-icon"}}{{if .HasISBN}}{{T "catalogue.labels_optional"}}{{else}}{{T "catalogue.labels_print"}}{{end}}</a>
+  </div>
+</section>
+{{end}}

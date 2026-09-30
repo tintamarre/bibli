@@ -1,0 +1,52 @@
+{{/* The loans link's controls, for the borrower list and a borrower's page.
+     Parsed into the shared layout (loadTemplatesFor), not a page. Icons, the
+     wording in title/aria-label. The holder carries .token-cell, which the
+     buttons swap; view=menu returns the menu's shape. The creation question is
+     where the link is explained. */}}
+{{define "token_cell"}}
+{{if .Token}}
+  <div class="token-actions">
+    <button type="button" class="btn-icon-action btn-copy-link"
+            title="{{T "borrowers.copy_link"}}" aria-label="{{T "borrowers.copy_link"}}"
+            data-link="/family/{{.Token}}" onclick="copyLink(this)"
+      >{{template "icon-copy" "action-icon"}}{{template "icon-check" "action-icon-copied"}}<span class="action-label">{{T "borrowers.copy_link"}}</span></button>
+    <button type="button" class="btn-icon-action"
+            title="{{T "borrowers.regenerate"}}" aria-label="{{T "borrowers.regenerate"}}"
+            hx-post="/borrowers/{{.ID}}/token" hx-target="closest .token-cell" hx-swap="innerHTML"
+            hx-confirm="{{T "borrowers.confirm_regenerate"}}"
+      >{{template "icon-refresh" "action-icon"}}<span class="action-label">{{T "borrowers.regenerate"}}</span></button>
+    <button type="button" class="btn-icon-action btn-icon-danger"
+            title="{{T "borrowers.revoke"}}" aria-label="{{T "borrowers.revoke"}}"
+            hx-post="/borrowers/{{.ID}}/token/revoke" hx-target="closest .token-cell" hx-swap="innerHTML"
+            hx-confirm="{{T "borrowers.confirm_revoke"}}"
+      >{{template "icon-revoke" "action-icon"}}<span class="action-label">{{T "borrowers.revoke"}}</span></button>
+  </div>
+{{else}}
+  <button type="button" class="btn-icon-action"
+          title="{{T "borrowers.create_link"}}" aria-label="{{T "borrowers.create_link"}}"
+          hx-post="/borrowers/{{.ID}}/token" hx-target="closest .token-cell" hx-swap="innerHTML"
+          hx-confirm="{{T "borrowers.confirm_create"}}"
+    >{{template "icon-link" "action-icon"}}<span class="action-label">{{T "borrowers.create_link"}}</span></button>
+{{end}}
+{{end}}
+
+{{define "token_menu"}}
+{{if .Token}}
+  <button type="button" class="btn-copy-link" data-link="/family/{{.Token}}" onclick="copyLink(this)"
+    >{{template "icon-copy" "menu-icon action-icon"}}{{template "icon-check" "menu-icon action-icon-copied"}}<span class="action-label">{{T "borrowers.copy_link"}}</span></button>
+  <button type="button"
+          hx-post="/borrowers/{{.ID}}/token" hx-vals='{"view": "menu"}' hx-target="closest .token-cell" hx-swap="innerHTML"
+          hx-confirm="{{T "borrowers.confirm_regenerate"}}"
+    >{{template "icon-refresh" "menu-icon"}}<span>{{T "borrowers.regenerate"}}</span></button>
+  <hr class="menu-rule">
+  <button type="button"
+          hx-post="/borrowers/{{.ID}}/token/revoke" hx-vals='{"view": "menu"}' hx-target="closest .token-cell" hx-swap="innerHTML"
+          hx-confirm="{{T "borrowers.confirm_revoke"}}"
+    >{{template "icon-revoke" "menu-icon"}}<span>{{T "borrowers.revoke"}}</span></button>
+{{else}}
+  <button type="button"
+          hx-post="/borrowers/{{.ID}}/token" hx-vals='{"view": "menu"}' hx-target="closest .token-cell" hx-swap="innerHTML"
+          hx-confirm="{{T "borrowers.confirm_create"}}"
+    >{{template "icon-link" "menu-icon"}}<span>{{T "borrowers.create_link"}}</span></button>
+{{end}}
+{{end}}

@@ -1,0 +1,37 @@
+{{define "document"}}<!DOCTYPE html>
+<html lang="{{lang}}">
+<head>
+{{if .OverdueOnly}}{{template "sheet_head" (T "loans_print.title")}}{{else}}{{template "sheet_head" (T "loans.title")}}{{end}}
+<style>
+  h2 { font-size: 1.05rem; margin: 6mm 0 2mm; border-bottom: 2px solid #333; padding-bottom: 1mm; }
+  table { break-inside: avoid; }
+</style>
+</head>
+<body>
+<div class="toolbar">{{template "sheet_print"}}{{template "sheet_close"}}</div>
+{{/* The loans screen on paper, with its tab and class (reports.go). */}}
+<h1>{{if .OverdueOnly}}{{T "loans_print.heading"}}{{else}}{{T "loans.title"}}{{end}}{{with .Class}} — {{.}}{{end}}</h1>
+<p class="date">{{with school}}{{.}} — {{end}}{{T "common.as_of" $.Date}}</p>
+{{range .Groups}}
+  <h2>{{.Class}}</h2>
+  <table>
+    <thead><tr><th>{{T "loans.col_borrower"}}</th><th>{{T "loans.col_book"}}</th><th>{{T "loans.col_code"}}</th><th>{{T "loans.col_due"}}</th><th class="num">{{T "loans_print.col_overdue"}}</th></tr></thead>
+    <tbody>
+    {{range .Rows}}
+      <tr>
+        <td>{{.FirstName}} {{.LastInitial}}</td>
+        <td>{{.Title}}</td>
+        <td class="code">{{.Code}}</td>
+        <td>{{.DueOn}}</td>
+        {{/* A row that is not late says nothing: red is for overdue only. */}}
+        <td class="late num">{{if gt .Days 0}}{{T "loans_print.days_short" .Days}}{{end}}</td>
+      </tr>
+    {{end}}
+    </tbody>
+  </table>
+{{else}}
+  <p>{{if .OverdueOnly}}{{T "loans_print.none"}} 🎉{{else}}{{T "loans_print.none_all"}}{{end}}</p>
+{{end}}
+{{template "sheet_script"}}
+</body>
+</html>{{end}}

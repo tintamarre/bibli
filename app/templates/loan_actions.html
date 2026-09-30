@@ -1,0 +1,23 @@
+{{/* Close or extend an open loan, one partial for both screens that list them.
+     Icons, the wording in title/aria-label and shown as text on a narrow
+     screen. Two forms, since each asks its own question. The count rides in a
+     hidden field the dialog writes into (data-confirm-field), so the form works
+     with JavaScript off. */}}
+{{define "loan_actions"}}
+<form method="post" action="/loan/{{.LoanID}}/return"
+      data-confirm="{{T "loans.confirm_return" .Title .FirstName .LastInitial}}">
+  <input type="hidden" name="back" value="{{.Back}}">
+  <button type="submit" class="btn-icon-action"
+          title="{{T "nav.return"}}" aria-label="{{T "nav.return"}}"
+    >{{template "icon-return" "action-icon"}}<span class="action-label">{{T "nav.return"}}</span></button>
+</form>
+<form method="post" action="/loan/{{.LoanID}}/extend"
+      data-confirm="{{T "loans.confirm_extend" .Title .FirstName .LastInitial}}"
+      data-confirm-field="days" data-confirm-label="{{T "loans.extend_days"}}">
+  <input type="hidden" name="back" value="{{.Back}}">
+  <input type="hidden" name="days" value="{{.Days}}">
+  <button type="submit" class="btn-icon-action"
+          title="{{T "loans.extend"}}" aria-label="{{T "loans.extend"}}"
+    >{{template "icon-extend" "action-icon"}}<span class="action-label">{{T "loans.extend"}}</span></button>
+</form>
+{{end}}

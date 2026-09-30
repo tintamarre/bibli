@@ -1,0 +1,61 @@
+{{define "title_icon"}}{{template "icon-return" "title-icon"}}{{end}}
+{{define "width"}} page-narrow{{end}}
+{{define "content"}}
+<section class="scan-block">
+  <form hx-post="/return" hx-target="#retour-choix" hx-swap="innerHTML"
+        hx-on::after-request="this.reset()">
+    <p class="step">{{T "return.scan_prompt"}}</p>
+    <input class="scan" name="code" type="text" autocomplete="off" autocapitalize="off"
+           spellcheck="false" enterkeyhint="search" autofocus placeholder="{{T "return.scan_placeholder"}}">
+  </form>
+</section>
+{{/* Each answer replaces the question; recorded returns reach the log by OOB
+     swap. */}}
+<div id="retour-choix"></div>
+<div id="retour-feedback" class="return-list" aria-live="polite"></div>
+{{end}}
+
+{{/* Recording "the oldest" would close another child's loan. So we ask. */}}
+{{define "return_choice"}}
+<div class="scan-block choice-block">
+  <p class="step">{{T "return.which_copy" .Title}}</p>
+  <ul class="borrower-results">
+    {{range .Loans}}
+    <li>
+      <button type="button" class="borrower-result"
+              hx-post="/return" hx-vals='{"loan_id": "{{.LoanID}}"}'
+              hx-target="#retour-choix" hx-swap="innerHTML">
+        <b>{{.Who}}</b> — <span class="code">{{.Code}}</span>,
+        {{T "return.borrowed_on" (relativeDate .LoanedOn) (shortDate .LoanedOn)}}
+      </button>
+    </li>
+    {{end}}
+  </ul>
+</div>
+{{end}}
+
+{{/* The wrapper carries the swap, not the card: HTMX inserts the children of
+     the element bearing a positional hx-swap-oob. */}}
+{{define "return_ok"}}
+<div hx-swap-oob="afterbegin:#retour-feedback">
+<div class="return-card ok">
+  {{T "return.returned"}} <b>{{.Title}}</b> <span class="code">{{.Code}}</span>
+  {{with .Borrower}}<span class="by">— {{T "return.returned_by" .}}</span>{{end}}
+  {{/* Marked lost or damaged: without this it stays invisible to lending. */}}
+  {{if ne .Status "available"}}
+  <div class="reinstate">
+    {{T "return.marked_prefix"}} <b>{{.StatusWording}}</b> {{T "return.marked_suffix"}}
+    <button type="button" class="btn-secondary btn-small"
+            hx-post="/copy/{{.CopyID}}/reinstate"
+            hx-target="closest .reinstate" hx-swap="outerHTML">{{T "return.reinstate"}}</button>
+  </div>
+  {{end}}
+</div>
+</div>
+{{end}}
+
+{{define "return_reinstated"}}<div class="reinstate"><span class="ok">{{T "return.reinstated"}} ✓</span></div>{{end}}
+
+{{define "return_err"}}
+<div hx-swap-oob="afterbegin:#retour-feedback"><div class="return-card err">{{.}}</div></div>
+{{end}}

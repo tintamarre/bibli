@@ -1,0 +1,48 @@
+{{define "document"}}<!DOCTYPE html>
+<html lang="{{lang}}" data-theme="{{theme}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>{{T "login.title"}} · Bibli{{with school}} · {{.}}{{end}}</title>
+<link rel="icon" type="image/svg+xml" href="{{asset "/static/favicon.svg"}}">
+<link rel="stylesheet" href="{{asset "/static/app.css"}}">
+</head>
+<body class="page-centred">
+<main class="centre-card">
+  {{template "logo" "landing-icon"}}
+  <h1 class="brand-login">Bibli</h1>
+  {{with school}}<p class="sub-login">{{.}}</p>{{end}}
+  <form method="post" action="/login">
+    <input type="hidden" name="next" value="{{.Next}}">
+    <label class="field"><span>{{T "login.password"}}</span>
+      {{/* Reveals the shared password to check it; hidden by default. The input
+           is the first labelable child, so the label labels it, not the button. */}}
+      <span class="field-reveal">
+        <input id="pw" class="scan" type="password" name="password" autocomplete="current-password"
+               autofocus required>
+        <button type="button" id="reveal" class="reveal" aria-pressed="false"
+                aria-label="{{T "login.show_password"}}"
+                data-show="{{T "login.show_password"}}" data-hide="{{T "login.hide_password"}}"
+                >{{template "icon-eye" "reveal-eye"}}{{template "icon-eye-off" "reveal-eye-off"}}</button>
+      </span></label>
+    {{with .Error}}<p class="err">{{.}}</p>{{end}}
+    <button class="btn-primary" type="submit">{{T "login.submit"}}</button>
+  </form>
+</main>
+{{/* A few lines here rather than loading app.js and its strings for one button. */}}
+<script>
+(function () {
+  var btn = document.getElementById("reveal"), input = document.getElementById("pw");
+  if (!btn || !input) return;
+  btn.addEventListener("click", function () {
+    var reveal = input.type === "password";
+    input.type = reveal ? "text" : "password";
+    btn.setAttribute("aria-pressed", reveal ? "true" : "false");
+    btn.setAttribute("aria-label", reveal ? btn.dataset.hide : btn.dataset.show);
+    input.focus();
+  });
+})();
+</script>
+</body>
+</html>{{end}}
