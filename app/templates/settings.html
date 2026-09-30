@@ -84,6 +84,8 @@
         <input name="google_key" maxlength="200" autocomplete="off" spellcheck="false"
                {{if .GoogleFromEnv}}disabled placeholder="{{T "settings.google_key_env"}}"
                {{else if not googleKeyMissing}}placeholder="{{T "settings.google_key_saved"}}"{{end}}></label>
+      <p class="note">{{T "settings.google_label"}}
+        {{if googleKeyMissing}}<b>{{T "settings.google_limited"}}</b>{{else}}<b class="ok">{{T "settings.google_on"}}</b>{{end}}</p>
       {{if and (not .GoogleFromEnv) (not googleKeyMissing)}}
       <label class="field-check">
         <input type="checkbox" name="google_key_remove" value="1">
@@ -135,8 +137,6 @@
 
   <section class="info-block">
     <h3>{{T "settings.cataloguing"}}</h3>
-    <p>{{T "settings.google_label"}}
-      {{if googleKeyMissing}}<b>{{T "settings.google_limited"}}</b> {{T "settings.google_limited_help"}}{{else}}<b>{{T "settings.google_on"}}</b> {{T "settings.google_on_help"}}{{end}}</p>
     {{with .Cache}}
     <p>{{if .Active}}{{T "settings.cache_label"}} <b>{{.Count}}</b> {{T "settings.cache_note" .Size}}
     {{else}}{{T "settings.cache_off_prefix"}} <b>{{T "settings.cache_off_word"}}</b> {{T "settings.cache_off_suffix"}}{{end}}</p>
