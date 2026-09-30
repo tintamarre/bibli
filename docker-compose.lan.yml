@@ -1,0 +1,58 @@
+# Bibli — one PC on the school's local network, no reverse proxy.
+#
+# The library's laptop or mini-PC runs Bibli; teachers reach it from their own
+# device over plain HTTP at http://<the machine's IP>:8080. Borrow and return
+# with a USB scanner (douchette) at the desk; the tablet camera needs HTTPS, so
+# it is not available in this mode — the docs say which setup adds it.
+#
+#   1. copy .env.example to .env and set a strong admin password;
+#   2. docker compose -f docker-compose.lan.yml up -d
+#   3. open http://<the machine's IP>:8080 — the Settings screen shows that
+#      address (under "Accès local") to give the teachers;
+#   4. to update:  docker compose -f docker-compose.lan.yml pull && \
+#                  docker compose -f docker-compose.lan.yml up -d
+#
+# Reserve a FIXED IP for the machine in the router, or the address changes one
+# day and every device loses Bibli.
+#
+# The database lives in ./data on the host. NEVER put it on a network share
+# (NFS/CIFS): SQLite locking is broken there and the database corrupts. Bibli
+# backs itself up in ./data/backups; copy ./data off-site regularly.
+
+services:
+  bibli:
+    image: ghcr.io/tintamarre/bibli:stable
+    container_name: bibli
+    restart: always
+    # Published on every interface so other devices on the LAN can connect.
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/data
+    # No -trust-proxy: there is no proxy, so the sign-in throttle uses the real
+    #   client address. -secure-cookies=false: plain HTTP on the LAN, otherwise
+    #   the browser silently drops the session cookie and the login loops.
+    command:
+      - "-db"
+      - "/data/biblio.db"
+      - "-addr"
+      - ":8080"
+      - "-backup-dir"
+      - "/data/backups"
+      - "-cache-dir"
+      - "/data/cache"
+      - "-secure-cookies=false"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/healthcheck"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    environment:
+      - TZ=Europe/Brussels
+      # Librarian password (protects the whole application). Set it in .env.
+      # At least 12 characters on a networked instance; a passphrase is easiest.
+      - BIBLI_ADMIN_PASSWORD=${BIBLI_ADMIN_PASSWORD:?set BIBLI_ADMIN_PASSWORD in .env}
+      # Optional: Google Books API key (raises the enrichment quota, avoids 429s).
+      # It can be pasted in /settings instead; set here, it wins over that field.
+      - BIBLI_GOOGLE_BOOKS_KEY=${BIBLI_GOOGLE_BOOKS_KEY:-}

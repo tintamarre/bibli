@@ -104,6 +104,21 @@
 <div class="info-grid">
 
   <section class="info-block">
+    <h3>{{T "settings.access_heading"}}</h3>
+    {{if .AccessLocal}}
+    <p class="note">{{T "settings.access_loopback"}}</p>
+    {{else}}
+    <p>{{T "settings.access_intro"}}</p>
+    <p class="access-line">
+      <input class="access-url" readonly value="{{.AccessURL}}" onclick="this.select()"
+             aria-label="{{T "settings.access_heading"}}">
+      <button type="button" class="btn-secondary btn-copy" data-copy>{{T "settings.access_copy"}}</button>
+    </p>
+    <p class="note">{{T "settings.access_hint"}}</p>
+    {{end}}
+  </section>
+
+  <section class="info-block">
     <h3>{{T "settings.backup"}}</h3>
     {{with .Backup}}
     {{if not .Active}}

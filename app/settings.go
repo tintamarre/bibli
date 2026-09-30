@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/fs"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -142,7 +143,33 @@ func (a *app) settingsData(r *http.Request, schoolName, lang, theme string) map[
 		"GoogleFromEnv": googleKeyFromEnv(),
 		"Backup":        backupView(r, a.dbPath, a.backupDir),
 		"Cache":         a.cacheView(requestLang(r)),
+		"AccessURL":     accessURL(r),
+		"AccessLocal":   accessIsLoopback(r.Host),
 	}
+}
+
+// accessURL is the address a teacher on the network types to reach this
+// instance: the very address the browser used to open the page. Behind Docker
+// the server cannot see the host's LAN IP, so the request's Host is the honest
+// source — open Bibli by the machine's address and the settings screen shows it.
+func accessURL(r *http.Request) string {
+	scheme := "http"
+	if isHTTPS(r) {
+		scheme = "https"
+	}
+	return scheme + "://" + r.Host
+}
+
+// accessIsLoopback is true when the page was opened on the machine itself
+// (localhost), which no other device can reach: the shown address would not
+// help a teacher, so the screen says to open Bibli by the machine's LAN address.
+func accessIsLoopback(host string) bool {
+	h := host
+	if hostOnly, _, err := net.SplitHostPort(host); err == nil {
+		h = hostOnly
+	}
+	h = strings.Trim(h, "[]")
+	return h == "localhost" || h == "127.0.0.1" || h == "::1" || strings.HasSuffix(h, ".localhost")
 }
 
 // offeredLang is a language offered by the settings screen, named in itself.

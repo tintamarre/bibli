@@ -571,6 +571,11 @@
   "rollover.no_class": "Aucune classe active.",
   "rollover.summary": "{0}, {1}.",
 
+  "settings.access_copy": "Copier",
+  "settings.access_heading": "Accès local",
+  "settings.access_hint": "Valable tant que Bibli tourne à cette adresse. Réservez une IP fixe à la machine pour qu'elle ne change pas.",
+  "settings.access_intro": "Adresse à donner aux enseignants pour se connecter depuis leur appareil, sur le réseau de l'école :",
+  "settings.access_loopback": "Bibli est ouvert en local (localhost) : cette adresse ne vaut que sur cette machine. Pour la partager, ouvrez Bibli par l'adresse réseau de l'ordinateur (par ex. http://192.168.1.42:8080), puis revenez ici.",
   "settings.backup": "Sauvegarde",
   "settings.backup_download": "Télécharger une sauvegarde",
   "settings.backup_download_note": "Le fichier contient toute la collection et tous les emprunteurs : gardez-le comme vous garderiez le registre de la bibliothèque.",

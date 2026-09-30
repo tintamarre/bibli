@@ -133,13 +133,12 @@ Mettre à jour : remplacer `/opt/bibli/biblio` par la nouvelle version, puis `su
 
 Le `docker-compose.yml` fourni est prévu pour tourner **derrière un reverse proxy** : Bibli n'écoute que sur `127.0.0.1:8087` et lit `X-Forwarded-For` (`-trust-proxy`). Le proxy s'adresse donc à `127.0.0.1:8087` (voir [Reverse proxy](#reverse-proxy)).
 
-**Sans proxy, en HTTP sur le réseau local**, modifier trois lignes du fichier :
+**Un seul PC sur le réseau de l'école, sans proxy** (le cas le plus courant : le portable de la bibliothèque, une douchette au comptoir, les enseignants qui se connectent depuis leur appareil) : utiliser le fichier prêt à l'emploi `docker-compose.lan.yml`.
 
-- sous `ports:`, remplacer `"127.0.0.1:8087:8080"` par `"8080:8080"` ;
-- sous `command:`, retirer `- "-trust-proxy"` ;
-- sous `command:`, ajouter `- "-secure-cookies=false"`.
+    cp .env.example .env
+    docker compose -f docker-compose.lan.yml up -d
 
-Bibli répond alors sur `http://IP-de-la-machine:8080`.
+Bibli répond alors sur `http://IP-de-la-machine:8080`, en clair sur le réseau local. L'écran **Réglages** affiche cette adresse (bloc « Accès local ») à donner aux enseignants. La caméra des tablettes n'est pas disponible en HTTP (voir [HTTPS ou réseau local](#https-ou-réseau-local--choisir-le-bon-mode)) ; la douchette du comptoir, si.
 
 La base vit dans `./data` sur l'hôte, avec les sauvegardes (`./data/backups`) et les couvertures (`./data/cache`). **Ne jamais** placer ce dossier sur un partage réseau (NFS/CIFS) : le verrouillage SQLite y est cassé et la base se corrompt.
 

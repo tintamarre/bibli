@@ -217,3 +217,31 @@ func TestListBackupsGroupsByDay(t *testing.T) {
 		t.Errorf("backups disabled and %d rows offered", len(n))
 	}
 }
+
+// The access block turns the request's own address into what a teacher types,
+// and recognises a localhost-only opening (which no other device can reach).
+func TestAccessAddress(t *testing.T) {
+	loadForTest(t)
+	a := &app{db: testDB(t), covers: newCoverCache(t.TempDir())}
+
+	lan := httptest.NewRequest("GET", "/settings", nil)
+	lan.Host = "192.168.1.42:8080"
+	d := a.settingsData(lan, "", "fr", defaultTheme)
+	if d["AccessURL"] != "http://192.168.1.42:8080" {
+		t.Errorf("AccessURL = %v, want the request's own http address", d["AccessURL"])
+	}
+	if d["AccessLocal"] != false {
+		t.Error("a LAN address must not be flagged as loopback")
+	}
+
+	for _, host := range []string{"localhost:8080", "127.0.0.1:8765", "[::1]:8080", "bibli.localhost"} {
+		if !accessIsLoopback(host) {
+			t.Errorf("accessIsLoopback(%q) = false, want true", host)
+		}
+	}
+	for _, host := range []string{"192.168.1.42:8080", "bibli.school.be", "10.0.0.5:8080"} {
+		if accessIsLoopback(host) {
+			t.Errorf("accessIsLoopback(%q) = true, want false", host)
+		}
+	}
+}

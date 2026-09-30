@@ -571,6 +571,11 @@
   "rollover.no_class": "Geen actieve klas.",
   "rollover.summary": "{0}, {1}.",
 
+  "settings.access_copy": "Kopiëren",
+  "settings.access_heading": "Lokale toegang",
+  "settings.access_hint": "Geldig zolang Bibli op dit adres draait. Reserveer een vast IP-adres voor de machine zodat het niet verandert.",
+  "settings.access_intro": "Het adres dat je leerkrachten geeft om verbinding te maken vanaf hun eigen toestel op het schoolnetwerk:",
+  "settings.access_loopback": "Bibli is lokaal geopend (localhost): dit adres werkt alleen op deze machine. Om het te delen, open Bibli via het netwerkadres van de computer (bijv. http://192.168.1.42:8080) en kom dan hier terug.",
   "settings.backup": "Back-up",
   "settings.backup_download": "Een back-up downloaden",
   "settings.backup_download_note": "Het bestand bevat de hele collectie en alle ontleners: bewaar het zoals u het uitleenregister zou bewaren.",

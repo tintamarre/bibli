@@ -1524,3 +1524,13 @@ button, input, select, textarea { font-family: inherit; }
   .book-shelf { flex: none; margin: 0; order: -1; }
   .metadata-cover { order: -2; }
 }
+
+/* The local access address on the settings screen: a readonly field a teacher's
+   address is easy to select, with a copy button that flashes when it fires. */
+.access-line { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; margin: .3rem 0; }
+.access-url {
+  flex: 1 1 15rem; min-width: 0; font-family: ui-monospace, monospace; font-size: 1rem;
+  padding: .5rem .6rem; border: 1px solid var(--border-strong); border-radius: 8px;
+  background: var(--surface); color: var(--text);
+}
+.btn-copy.copied { background: var(--ok-bg); border-color: var(--ok-border); color: var(--ok); }

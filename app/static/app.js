@@ -453,4 +453,23 @@ document.addEventListener("change", function (ev) {
   document.addEventListener("htmx:afterRequest", function (e) {
     if (e.detail.elt && e.detail.elt.id === "form-book") { stop(); }
   });
+
+  // Copy the address a teacher connects to. The button sits next to a readonly
+  // input holding the URL; the brief "copied" class is the only feedback, so no
+  // text is needed here (app.js carries none).
+  document.querySelectorAll("[data-copy]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var input = btn.parentNode.querySelector("input");
+      if (!input) { return; }
+      input.focus();
+      input.select();
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(input.value).catch(function () {});
+      } else {
+        try { document.execCommand("copy"); } catch (e) { /* selected for a manual copy */ }
+      }
+      btn.classList.add("copied");
+      setTimeout(function () { btn.classList.remove("copied"); }, 1200);
+    });
+  });
 })();
