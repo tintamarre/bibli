@@ -6,7 +6,7 @@
 Project bibli {
   database_type: 'SQLite'
   Note: '''
-    Library management for a primary school.
+    Library management for a school (primary or secondary).
     Up to ~20000 copies and ~1000 pupils, a few dozen loans a week.
     One SQLite file, one writer: backup is copying that file (with VACUUM INTO).
   '''

@@ -192,7 +192,7 @@ Une tâche quotidienne **anonymise** par ailleurs les prêts rendus et les empru
 
 ## Capacité
 
-Bibli est **testé jusqu'à 50 000 exemplaires et 2 500 élèves**, avec cinq ans de prêts (plus de 400 000), soit bien au-delà d'une école primaire. Mesures sur une base de cette taille (184 Mo), servie par un ordinateur de bureau récent :
+Bibli est **testé jusqu'à 50 000 exemplaires et 2 500 élèves**, avec cinq ans de prêts (plus de 400 000), soit bien au-delà d'une école, primaire ou secondaire. Mesures sur une base de cette taille (184 Mo), servie par un ordinateur de bureau récent :
 
 | Écran ou tâche | Temps |
 |---|---|

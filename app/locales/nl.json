@@ -626,7 +626,7 @@
   "settings.retention_help": "Na {0} jaar wordt een ingeleverd boek losgekoppeld van het kind dat het ontleend had, en verliest een leerling die de school verlaten heeft voornaam, klas, kaart en uitleenlink. Er wordt niets verwijderd: het boek behoudt zijn aantal uitleningen, en zolang de termijn niet verstreken is, blijft alles omkeerbaar.",
   "settings.saved": "Opgeslagen.",
   "settings.school_name": "Naam van de school",
-  "settings.school_name_placeholder": "Gemeentelijke basisschool",
+  "settings.school_name_placeholder": "Naam van de school",
   "settings.theme": "Thema",
   "settings.theme_help": "De kleuren van de schermen, voor de hele school. Afdrukken blijven zwart-wit.",
   "settings.years": "jaar",

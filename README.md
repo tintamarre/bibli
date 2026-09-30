@@ -7,7 +7,7 @@
 
 [![L'accueil de Bibli : emprunter, rendre, et les livres en rayon, en prêt et en retard](docs/img/home.png)](https://www.youtube.com/watch?v=Yo_IYGwo8sM)
 
-*English: Bibli is a library app for primary schools, run by volunteers. The interface speaks French, Dutch and English; this documentation is in French.*
+*English: Bibli is a library app for schools (primary or secondary), run by volunteers. The interface speaks French, Dutch and English; this documentation is in French.*
 
 ## Ce que fait Bibli
 

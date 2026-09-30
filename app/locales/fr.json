@@ -626,7 +626,7 @@
   "settings.retention_help": "Passé {0} ans, un livre rendu cesse d'être rattaché à l'enfant qui l'avait emprunté, et un élève sorti de l'école perd prénom, classe, carte et lien de suivi. Rien n'est supprimé : le livre garde son nombre d'emprunts, et tant que le délai n'est pas écoulé tout reste réversible.",
   "settings.saved": "Enregistré.",
   "settings.school_name": "Nom de l'école",
-  "settings.school_name_placeholder": "École communale",
+  "settings.school_name_placeholder": "Nom de l'école",
   "settings.theme": "Thème",
   "settings.theme_help": "Les couleurs des écrans, pour toute l'école. Les impressions restent en noir et blanc.",
   "settings.years": "ans",

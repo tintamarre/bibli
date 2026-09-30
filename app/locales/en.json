@@ -626,7 +626,7 @@
   "settings.retention_help": "After {0} years, a returned book stops being tied to the child who borrowed it, and a pupil who has left the school loses first name, class, card and loans link. Nothing is deleted: the book keeps its loan count, and as long as the period has not elapsed everything is reversible.",
   "settings.saved": "Saved.",
   "settings.school_name": "School name",
-  "settings.school_name_placeholder": "Primary school",
+  "settings.school_name_placeholder": "School name",
   "settings.theme": "Theme",
   "settings.theme_help": "The colours of the screens, for the whole school. Printouts stay black and white.",
   "settings.years": "years",
