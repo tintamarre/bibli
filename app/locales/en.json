@@ -413,6 +413,7 @@
   "loan.searching": "Looking for the book…",
   "loan.step1_placeholder": "Card, or “P1 ag”…",
   "loan.step1_prompt": "Scan the borrower's card, or type a name / class",
+  "loan.step1_question": "Who is borrowing?",
   "loan.step2_heading": "Books to borrow",
   "loan.too_many_books": "Too many books match “{0}” — narrow the title down.",
   "loan.too_many_borrowers": "Too many results — narrow it down (class and/or first name).",
