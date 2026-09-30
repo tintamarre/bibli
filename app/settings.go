@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"io/fs"
 	"log"
@@ -222,8 +223,8 @@ func (a *app) settingsSave(w http.ResponseWriter, r *http.Request) {
 	}
 
 	schoolName := strings.TrimSpace(r.FormValue("school_name"))
-	if len(schoolName) > 120 {
-		schoolName = schoolName[:120]
+	if r := []rune(schoolName); len(r) > 120 {
+		schoolName = string(r[:120]) // by runes, so an accented letter is not split
 	}
 
 	lang := strings.TrimSpace(r.FormValue("language"))
@@ -258,103 +259,77 @@ func (a *app) settingsSave(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if _, err := a.db.Exec(
-		`UPDATE setting SET value = ?, updated_at = datetime('now') WHERE key = 'loan_days'`,
-		strconv.Itoa(n),
-	); err != nil {
-		log.Printf("settings/save (loan duration): %v", err)
-		internalError(w, r)
-		return
-	}
-	if _, err := a.db.Exec(
-		`UPDATE setting SET value = ?, updated_at = datetime('now') WHERE key = 'school_name'`,
-		schoolName,
-	); err != nil {
-		log.Printf("settings/save (school): %v", err)
-		internalError(w, r)
-		return
-	}
-	if _, err := a.db.Exec(
-		`UPDATE setting SET value = ?, updated_at = datetime('now')
-		  WHERE key = 'retention_years'`, strconv.Itoa(retention),
-	); err != nil {
-		log.Printf("settings/save (retention): %v", err)
-		internalError(w, r)
-		return
-	}
-	if _, err := a.db.Exec(
-		`UPDATE setting SET value = ?, updated_at = datetime('now') WHERE key = 'language'`,
-		lang,
-	); err != nil {
-		log.Printf("settings/save (language): %v", err)
-		internalError(w, r)
-		return
-	}
-	if _, err := a.db.Exec(
-		`UPDATE setting SET value = ?, updated_at = datetime('now') WHERE key = 'theme'`,
-		theme,
-	); err != nil {
-		log.Printf("settings/save (theme): %v", err)
-		internalError(w, r)
-		return
-	}
 	// A cleared checkbox sends nothing, so absence means off.
 	express := "0"
 	if r.FormValue("express_catalogue") != "" {
 		express = "1"
 	}
-	if _, err := a.db.Exec(
-		`UPDATE setting SET value = ?, updated_at = datetime('now')
-		  WHERE key = 'express_catalogue'`, express,
-	); err != nil {
-		log.Printf("settings/save (express catalogue): %v", err)
-		internalError(w, r)
-		return
+	writes := []settingWrite{
+		{"loan_days", strconv.Itoa(n), "Default loan period, in days"},
+		{"school_name", schoolName, "School name, shown in the header and on printouts"},
+		{"retention_years", strconv.Itoa(retention), "Years before returned loans and departed pupils are anonymised"},
+		{"language", lang, "Language of the interface, the printouts and the exports"},
+		{"theme", theme, "Colour theme of the screens (themes.go); printouts ignore it"},
+		{"express_catalogue", express, "Allow cataloguing an unknown book from the lending desk"},
 	}
 	// A disabled checkbox sends nothing either: keep the stored choice.
 	family := familyLinks()
 	if familyLinksOffered() {
 		family = r.FormValue("family_links") != ""
-		v := "0"
-		if family {
-			v = "1"
-		}
-		if _, err := a.db.Exec(
-			`INSERT INTO setting (key, value, label)
-			 VALUES ('family_links', ?, 'Offer the secret loans links for families (family.go)')
-			 ON CONFLICT (key) DO UPDATE SET value = excluded.value, updated_at = datetime('now')`,
-			v,
-		); err != nil {
-			log.Printf("settings/save (loans links): %v", err)
+		writes = append(writes, settingWrite{"family_links", boolSetting(family),
+			"Offer the secret loans links for families (family.go)"})
+	}
+
+	// One transaction: a failure part-way leaves no half-saved settings.
+	tx, err := a.db.Begin()
+	if err != nil {
+		log.Printf("settings/save (tx): %v", err)
+		internalError(w, r)
+		return
+	}
+	defer tx.Rollback()
+	for _, s := range writes {
+		if err := setSetting(tx, s); err != nil {
+			log.Printf("settings/save (%s): %v", s.key, err)
 			internalError(w, r)
 			return
 		}
 	}
 	// BIBLI_GOOGLE_BOOKS_KEY wins, so the field is disabled and nothing is written.
+	googleChange := ""
 	if !googleKeyFromEnv() {
 		switch {
 		case googleKeyIn != "":
-			if _, err := a.db.Exec(
-				`INSERT INTO setting (key, value, label)
-				 VALUES ('google_books_key', ?, 'Google Books API key, never shown once saved')
-				 ON CONFLICT (key) DO UPDATE SET value = excluded.value, updated_at = datetime('now')`,
-				googleKeyIn,
-			); err != nil {
+			if err := setSetting(tx, settingWrite{"google_books_key", googleKeyIn,
+				"Google Books API key, never shown once saved"}); err != nil {
 				log.Printf("settings/save (Google Books key): %v", err)
 				internalError(w, r)
 				return
 			}
-			setGoogleKey(googleKeyIn)
-			log.Print("Google Books: API key saved in /settings")
+			googleChange = "saved"
 		case removeGoogleKey:
-			if _, err := a.db.Exec(`DELETE FROM setting WHERE key = 'google_books_key'`); err != nil {
+			if _, err := tx.Exec(`DELETE FROM setting WHERE key = 'google_books_key'`); err != nil {
 				log.Printf("settings/save (Google Books key): %v", err)
 				internalError(w, r)
 				return
 			}
-			setGoogleKey("")
-			log.Print("Google Books: API key removed in /settings")
+			googleChange = "removed"
 		}
+	}
+	if err := tx.Commit(); err != nil {
+		log.Printf("settings/save (commit): %v", err)
+		internalError(w, r)
+		return
+	}
+
+	// In-memory caches and logs only once the durable write has committed.
+	switch googleChange {
+	case "saved":
+		setGoogleKey(googleKeyIn)
+		log.Print("Google Books: API key saved in /settings")
+	case "removed":
+		setGoogleKey("")
+		log.Print("Google Books: API key removed in /settings")
 	}
 	setSchool(schoolName)
 	setLang(lang)
@@ -366,6 +341,26 @@ func (a *app) settingsSave(w http.ResponseWriter, r *http.Request) {
 	syncAnonymousName(a.db)
 
 	http.Redirect(w, r, "/settings?ok=1", http.StatusSeeOther)
+}
+
+// settingWrite is one row for setSetting; label is used only when the row is
+// created (the seeded rows keep the migration's label, untouched by ON CONFLICT).
+type settingWrite struct{ key, value, label string }
+
+// setSetting upserts one setting inside the caller's transaction.
+func setSetting(tx *sql.Tx, s settingWrite) error {
+	_, err := tx.Exec(
+		`INSERT INTO setting (key, value, label) VALUES (?, ?, ?)
+		 ON CONFLICT (key) DO UPDATE SET value = excluded.value, updated_at = datetime('now')`,
+		s.key, s.value, s.label)
+	return err
+}
+
+func boolSetting(on bool) string {
+	if on {
+		return "1"
+	}
+	return "0"
 }
 
 // backupDownload hands over one backup the daily task wrote with VACUUM INTO —

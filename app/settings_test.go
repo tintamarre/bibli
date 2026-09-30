@@ -1,12 +1,15 @@
 package main
 
 import (
+	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
+	"unicode/utf8"
 )
 
 // Each language is named in itself.
@@ -243,5 +246,39 @@ func TestAccessAddress(t *testing.T) {
 		if accessIsLoopback(host) {
 			t.Errorf("accessIsLoopback(%q) = true, want false", host)
 		}
+	}
+}
+
+// A very long school name is cut to 120 runes, not 120 bytes: cutting mid-rune
+// would store invalid UTF-8. The transactional save must still land it.
+func TestSettingsSaveCutsTheSchoolNameByRunes(t *testing.T) {
+	loadForTest(t)
+	restoreSettings(t)
+	a, h := testHandler(t)
+	c := signedIn(t, a)
+	form := url.Values{
+		"school_name":     {strings.Repeat("é", 200)}, // 200 runes, 400 bytes
+		"language":        {"fr"},
+		"theme":           {defaultTheme},
+		"loan_days":       {"14"},
+		"retention_years": {"3"},
+	}
+	r := httptest.NewRequest(http.MethodPost, "/settings", strings.NewReader(form.Encode()))
+	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	r.AddCookie(c)
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, r)
+	if w.Code != http.StatusSeeOther {
+		t.Fatalf("save = %d, want 303", w.Code)
+	}
+	var got string
+	if err := a.db.QueryRow(`SELECT value FROM setting WHERE key = 'school_name'`).Scan(&got); err != nil {
+		t.Fatal(err)
+	}
+	if !utf8.ValidString(got) {
+		t.Error("the stored school name is not valid UTF-8 — a rune was split")
+	}
+	if n := utf8.RuneCountInString(got); n != 120 {
+		t.Errorf("stored %d runes, want 120", n)
 	}
 }
