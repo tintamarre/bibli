@@ -72,7 +72,7 @@
 {{/* The demonstration instance says so, under the header (demo.go). */}}
 {{if demo}}<p class="demo-banner">{{T "demo.banner"}}</p>{{end}}
 {{/* Each page may redefine "width" (app.css). Full width by default. */}}
-<main class="page{{block "width" .}}{{end}}" data-area="{{area .Path}}">
+<main class="page{{block "width" .}}{{end}}">
   {{/* A page names its icon by redefining "title_icon"; without one, a plain
        title. */}}
   {{/* A page may hang one more thing off the title: the book page puts the

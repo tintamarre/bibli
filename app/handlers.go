@@ -29,7 +29,6 @@ func templateFuncs(lang string) template.FuncMap {
 		"school":           school,
 		"theme":            instanceTheme,
 		"themeColor":       func() string { return themeColor[instanceTheme()] },
-		"area":             pageArea,
 		"googleKeyMissing": func() bool { return googleKey() == "" },
 		"familyLinks":      familyLinks,
 		"demo":             func() bool { return demoEvery > 0 },

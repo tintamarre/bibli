@@ -23,7 +23,7 @@ var (
 	reCSSBlock   = regexp.MustCompile(`([^{}]+)\{([^{}]*)\}`)
 	reCSSDecl    = regexp.MustCompile(`(--[a-z0-9-]+)\s*:\s*([^;]+);`)
 	reThemeSel   = regexp.MustCompile(`^:root\[data-theme="([a-z]+)"\]$`)
-	reAreaSel    = regexp.MustCompile(`^:root\[data-theme="([a-z]+)"\] :is\(\[data-area="([a-z]+)"\]`)
+	reAreaSel    = regexp.MustCompile(`^:root\[data-theme="([a-z]+)"\] :is\(\.header, \.home-actions\) :is\(a\[href="/([a-z]+)"\]`)
 	reThemeAny   = regexp.MustCompile(`data-theme="([a-z]+)"`)
 	reHexColour  = regexp.MustCompile(`^#[0-9a-fA-F]{6}$`)
 )
@@ -58,7 +58,7 @@ func fixedToken(name string) bool {
 }
 
 // The tokens an area of the Crayons theme gives its own value.
-var areaTokens = []string{"--accent", "--accent-dark", "--accent-light", "--accent-border", "--accent-hover", "--sunken"}
+var areaTokens = []string{"--accent", "--accent-dark", "--accent-light", "--accent-border", "--accent-hover"}
 
 type themeSheet struct {
 	root   map[string]string            // :root, the base theme's palette
@@ -152,7 +152,7 @@ func TestEveryThemeDefinesEveryColour(t *testing.T) {
 			}
 			for name := range decls {
 				if !slicesContains(areaTokens, name) {
-					t.Errorf("theme %q, area %q defines %s; an area only recolours its accent and its bands", th, area, name)
+					t.Errorf("theme %q, area %q defines %s; an area only recolours its accent", th, area, name)
 				}
 			}
 		}
@@ -168,47 +168,21 @@ func slicesContains(list []string, s string) bool {
 	return false
 }
 
-// Every area pageArea can name has its colours in each theme that colours
-// areas, and no theme colours an area no page is ever in.
-func TestAreasMatchThePages(t *testing.T) {
+// The areas are the header's coloured entries: each theme that colours areas
+// gives every one its colours, and colours no other link.
+func TestAreasMatchTheMenu(t *testing.T) {
 	s := readThemes(t)
-	named := map[string]bool{}
-	for _, p := range []string{"/borrow", "/return", "/loans", "/borrowers", "/inventory", "/book/1", "/catalogue"} {
-		named[pageArea(p)] = true
-	}
+	menu := []string{"borrow", "return", "loans", "borrowers", "inventory"}
 	for th, areas := range s.areas {
-		for area := range named {
+		for _, area := range menu {
 			if _, ok := areas[area]; !ok {
 				t.Errorf("theme %q gives no colour to area %q", th, area)
 			}
 		}
 		for area := range areas {
-			if !named[area] {
-				t.Errorf("theme %q colours area %q, which no page is in", th, area)
+			if !slicesContains(menu, area) {
+				t.Errorf("theme %q colours a link to /%s, which is no menu entry", th, area)
 			}
-		}
-	}
-}
-
-func TestPageArea(t *testing.T) {
-	cases := map[string]string{
-		"/borrow":         "borrow",
-		"/borrow/add":     "borrow",
-		"/borrowers":      "borrowers",
-		"/borrowers/12":   "borrowers",
-		"/return":         "return",
-		"/loans":          "loans",
-		"/inventory":      "inventory",
-		"/book/3":         "inventory",
-		"/catalogue":      "inventory",
-		"/":               "",
-		"/settings":       "",
-		"/stats":          "",
-		"/borrowerscards": "",
-	}
-	for path, want := range cases {
-		if got := pageArea(path); got != want {
-			t.Errorf("pageArea(%q) = %q, want %q", path, got, want)
 		}
 	}
 }

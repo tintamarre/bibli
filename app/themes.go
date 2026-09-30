@@ -87,22 +87,3 @@ func offeredThemes(lang, selected string) []offeredTheme {
 	}
 	return out
 }
-
-// pageArea is the part of the application a path belongs to, for themes that
-// colour each part (<main data-area>). Books and cataloguing are the inventory's.
-func pageArea(path string) string {
-	for _, a := range []struct{ prefix, area string }{
-		{"/borrowers", "borrowers"},
-		{"/borrow", "borrow"},
-		{"/return", "return"},
-		{"/loans", "loans"},
-		{"/inventory", "inventory"},
-		{"/book", "inventory"},
-		{"/catalogue", "inventory"},
-	} {
-		if navActive(path, a.prefix) {
-			return a.area
-		}
-	}
-	return ""
-}

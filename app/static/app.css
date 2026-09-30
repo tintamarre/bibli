@@ -97,23 +97,24 @@
 :root[data-theme="ink"] .nav-sep { background: rgba(255, 255, 255, .35); }
 :root[data-theme="ink"] .header :is(a, summary):focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
 
-/* Crayons: one colour per part of the application, for its entry, icons,
-   buttons and table bands. None is red or orange (the inventory's is the brown
-   of a wooden shelf, too dark to read as either), and each holds white text.
-   The base (home, settings, statistics) is slate, so the areas are the only
-   saturated colours; the heatmap counts loans made, in Borrow's green. */
+/* Crayons: the slate base on every screen, the colours kept for what leads
+   to a part of the application: its menu entry (icon and current-screen
+   underline, the label stays slate) and its home card, plus the dashes under
+   the name. None is red or orange (the inventory's is the brown of a wooden
+   shelf, too dark to read as either), and each holds white text. The heatmap
+   counts loans made, in Borrow's green. */
 :root[data-theme="crayons"] {
-  --bg:            #f3f4f7;
+  --bg:            #e8ebf0;
   --surface:       #ffffff;
-  --border:        #e0e3ea;
-  --border-strong: #c6ccd7;
-  --sunken:        #eaedf3;
-  --text:          #1a1f2b;
-  --muted:         #4a5362;
+  --border:        #cbd1db;
+  --border-strong: #a0a9b8;
+  --sunken:        #dce1e9;
+  --text:          #121724;
+  --muted:         #3c4453;
   --accent:        #3d4a5c;
   --accent-dark:   #2e3847;
   --accent-light:  #eef1f5;
-  --accent-border: #d3d9e2;
+  --accent-border: #b9c2cf;
   --accent-hover:  #e2e7ee;
   --tl-run:        #9cc0f0;
   --hm-0:          #e2e6ed;
@@ -122,32 +123,41 @@
   --hm-2:          #bfe3cc;
   --hm-3:          #8fcca6;
   --hm-4:          #3f9a66;
-  --shadow:        0 1px 2px rgba(16, 24, 40, .06), 0 1px 3px rgba(16, 24, 40, .04);
+  --shadow:        0 1px 2px rgba(16, 24, 40, .10), 0 2px 6px rgba(16, 24, 40, .07);
 }
-/* An area is a page's content (<main data-area>, pageArea) or a link to it,
-   so header entries carry their colour on every screen. */
-:root[data-theme="crayons"] :is([data-area="borrow"], a[href="/borrow"]) {
+/* A link to an area, in the header or on the home page, carries its colour. */
+:root[data-theme="crayons"] :is(.header, .home-actions) :is(a[href="/borrow"]) {
   --accent: #1f7a4a; --accent-dark: #17613a; --accent-light: #e9f6ee;
-  --accent-border: #bfe3cc; --accent-hover: #daf0e2; --sunken: #e3f1e8;
+  --accent-border: #bfe3cc; --accent-hover: #daf0e2;
 }
-:root[data-theme="crayons"] :is([data-area="return"], a[href="/return"]) {
+:root[data-theme="crayons"] :is(.header, .home-actions) :is(a[href="/return"]) {
   --accent: #0e7490; --accent-dark: #0b5d74; --accent-light: #e6f5f9;
-  --accent-border: #b7e1ec; --accent-hover: #d5eef5; --sunken: #e0eff3;
+  --accent-border: #b7e1ec; --accent-hover: #d5eef5;
 }
-:root[data-theme="crayons"] :is([data-area="loans"], a[href="/loans"]) {
+:root[data-theme="crayons"] :is(.header, .home-actions) :is(a[href="/loans"]) {
   --accent: #2457c5; --accent-dark: #1c46a0; --accent-light: #ebf1fd;
-  --accent-border: #c5d6f7; --accent-hover: #dce7fb; --sunken: #e4ebf8;
+  --accent-border: #c5d6f7; --accent-hover: #dce7fb;
 }
-:root[data-theme="crayons"] :is([data-area="borrowers"], a[href="/borrowers"]) {
+:root[data-theme="crayons"] :is(.header, .home-actions) :is(a[href="/borrowers"]) {
   --accent: #7c3aad; --accent-dark: #642c8e; --accent-light: #f4ecfa;
-  --accent-border: #dcc6ee; --accent-hover: #ebdef6; --sunken: #efe6f5;
+  --accent-border: #dcc6ee; --accent-hover: #ebdef6;
 }
-:root[data-theme="crayons"] :is([data-area="inventory"], a[href="/inventory"], a[href="/catalogue"]) {
+:root[data-theme="crayons"] :is(.header, .home-actions) :is(a[href="/inventory"], a[href="/catalogue"]) {
   --accent: #7a5230; --accent-dark: #634225; --accent-light: #f7f0e8;
-  --accent-border: #e5d3bf; --accent-hover: #efe3d5; --sunken: #f1e8de;
+  --accent-border: #e5d3bf; --accent-hover: #efe3d5;
 }
 /* Here the icons are the colour code, drawn at full strength. */
 :root[data-theme="crayons"] :is(.nav-icon, .menu-icon, .title-icon) { color: var(--accent); opacity: 1; }
+/* Every menu label in the same slate: only the underline takes the colour. */
+:root[data-theme="crayons"] .menu a[aria-current="page"] { color: var(--text); }
+/* Five dashes under the name, one per area, in menu order. */
+:root[data-theme="crayons"] .brand-name {
+  align-self: flex-start; padding-bottom: 5px;
+  background: linear-gradient(to right,
+    #1f7a4a 0 17%, transparent 17% 21%, #0e7490 21% 38%, transparent 38% 42%,
+    #2457c5 42% 59%, transparent 59% 63%, #7c3aad 63% 80%, transparent 80% 84%,
+    #7a5230 84% 100%) bottom / 100% 3px no-repeat;
+}
 
 /* Phone breakpoint: 40rem everywhere, in the final block. The one exception
    (76rem, --width-wide) is commented in place. */
