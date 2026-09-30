@@ -11,6 +11,12 @@ import (
 	"strings"
 )
 
+// redirectBook sends the browser back to a book's page, with an optional query
+// (e.g. "?ok=1"); the See Other keeps a POST from being replayed on refresh.
+func redirectBook(w http.ResponseWriter, r *http.Request, id int64, query string) {
+	http.Redirect(w, r, "/book/"+strconv.FormatInt(id, 10)+query, http.StatusSeeOther)
+}
+
 // A work's page: editable metadata, enrichment, copies, external links and loan
 // statistics. The history names borrowers — minimised data, visible only to the
 // signed-in librarian, purged past the retention period.
@@ -244,7 +250,7 @@ func (f BookPage) ShelvedCopies() int {
 }
 
 func (a *app) bookScreen(w http.ResponseWriter, r *http.Request) {
-	id, _ := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	id := pathID(r)
 	f, err := a.loadBookPage(id)
 	if err == sql.ErrNoRows {
 		a.notFoundScreen(w, r)
@@ -275,14 +281,14 @@ func (a *app) bookScreen(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *app) bookSave(w http.ResponseWriter, r *http.Request) {
-	id, _ := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	id := pathID(r)
 	if err := r.ParseForm(); err != nil {
 		badRequest(w, r)
 		return
 	}
 	title := strings.TrimSpace(r.FormValue("title"))
 	if title == "" {
-		http.Redirect(w, r, "/book/"+strconv.FormatInt(id, 10)+"?err=title", http.StatusSeeOther)
+		redirectBook(w, r, id, "?err=title")
 		return
 	}
 	year, _ := strconv.Atoi(strings.TrimSpace(r.FormValue("year")))
@@ -297,7 +303,7 @@ func (a *app) bookSave(w http.ResponseWriter, r *http.Request) {
 		internalError(w, r)
 		return
 	}
-	http.Redirect(w, r, "/book/"+strconv.FormatInt(id, 10)+"?ok=1", http.StatusSeeOther)
+	redirectBook(w, r, id, "?ok=1")
 }
 
 // errBookHasLoans is a work somebody has borrowed, which is never deleted.
@@ -343,13 +349,13 @@ func (a *app) deleteBook(id int64) error {
 }
 
 func (a *app) bookDelete(w http.ResponseWriter, r *http.Request) {
-	id, _ := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	id := pathID(r)
 	switch err := a.deleteBook(id); {
 	case err == nil:
 		// The page it was called from no longer exists.
 		http.Redirect(w, r, "/inventory", http.StatusSeeOther)
 	case errors.Is(err, errBookHasLoans):
-		http.Redirect(w, r, "/book/"+strconv.FormatInt(id, 10)+"?err=loans", http.StatusSeeOther)
+		redirectBook(w, r, id, "?err=loans")
 	case errors.Is(err, sql.ErrNoRows):
 		a.notFoundScreen(w, r)
 	default:
@@ -360,14 +366,14 @@ func (a *app) bookDelete(w http.ResponseWriter, r *http.Request) {
 
 // bookEnrich fills the empty fields from the catalogues. Non-destructive.
 func (a *app) bookEnrich(w http.ResponseWriter, r *http.Request) {
-	id, _ := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	id := pathID(r)
 	f, err := a.loadBookPage(id)
 	if err != nil {
 		a.notFoundScreen(w, r)
 		return
 	}
 	if f.ISBN13 == "" {
-		http.Redirect(w, r, "/book/"+strconv.FormatInt(id, 10), http.StatusSeeOther)
+		redirectBook(w, r, id, "")
 		return
 	}
 	// An explicit request: forget record and thumbnail so the catalogues are asked again.
@@ -384,7 +390,7 @@ func (a *app) bookEnrich(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			outcome = "silent"
 		}
-		http.Redirect(w, r, "/book/"+strconv.FormatInt(id, 10)+"?enriched="+outcome, http.StatusSeeOther)
+		redirectBook(w, r, id, "?enriched="+outcome)
 		return
 	}
 
@@ -422,18 +428,18 @@ func (a *app) bookEnrich(w http.ResponseWriter, r *http.Request) {
 		internalError(w, r)
 		return
 	}
-	http.Redirect(w, r, "/book/"+strconv.FormatInt(id, 10)+"?enriched=1", http.StatusSeeOther)
+	redirectBook(w, r, id, "?enriched=1")
 }
 
 func (a *app) bookAddCopy(w http.ResponseWriter, r *http.Request) {
-	id, _ := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	id := pathID(r)
 	if _, _, err := a.addCopy(id); err != nil {
 		log.Printf("book/add-copy: %v", err)
 		internalError(w, r)
 		return
 	}
 	// The page finds today's copies for itself.
-	http.Redirect(w, r, "/book/"+strconv.FormatInt(id, 10), http.StatusSeeOther)
+	redirectBook(w, r, id, "")
 }
 
 func (a *app) bookCopyStatus(w http.ResponseWriter, r *http.Request) {
@@ -466,7 +472,7 @@ func (a *app) bookCopyStatus(w http.ResponseWriter, r *http.Request) {
 // A book declared lost or damaged has come back after all. Answers with a
 // fragment for the return screen, where the action starts.
 func (a *app) copyReinstate(w http.ResponseWriter, r *http.Request) {
-	id, _ := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	id := pathID(r)
 	if _, err := a.updateCopy(id, "available", nil); err != nil {
 		log.Printf("copy/reinstate: %v", err)
 		internalError(w, r)

@@ -67,7 +67,7 @@ func (p OpenLoan) Who() string {
 const openLoanColumns = `l.id, c.id, c.code, c.status, b.title,
 	br.first_name, br.last_initial, COALESCE(br.class, ''), l.loaned_on`
 
-func scanOpenLoan(sc interface{ Scan(...any) error }, p *OpenLoan) error {
+func scanOpenLoan(sc rowScanner, p *OpenLoan) error {
 	return sc.Scan(&p.LoanID, &p.CopyID, &p.Code, &p.Status, &p.Title,
 		&p.FirstName, &p.LastInitial, &p.Class, &p.LoanedOn)
 }
@@ -869,7 +869,7 @@ func (a *app) loanReturn(w http.ResponseWriter, r *http.Request) {
 		badRequest(w, r)
 		return
 	}
-	id, _ := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	id := pathID(r)
 	if _, err := a.db.Exec(
 		`UPDATE loan SET returned_on = date('now') WHERE id = ? AND returned_on IS NULL`, id,
 	); err != nil {
@@ -889,7 +889,7 @@ func (a *app) loanExtend(w http.ResponseWriter, r *http.Request) {
 		badRequest(w, r)
 		return
 	}
-	id, _ := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	id := pathID(r)
 	if err := a.extendLoan(id, extendDays(r.FormValue("days"), extendDefaultDays)); err != nil {
 		log.Printf("loan/extend: %v", err)
 		internalError(w, r)

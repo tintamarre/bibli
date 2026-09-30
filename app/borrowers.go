@@ -44,7 +44,7 @@ const borrowerColumns = `br.id, br.first_name, br.last_initial, COALESCE(br.clas
 	(SELECT COUNT(*) FROM loan l WHERE l.borrower_id = br.id AND l.returned_on IS NULL) AS out_count,
 	(SELECT COUNT(*) FROM loan l WHERE l.borrower_id = br.id AND l.returned_on IS NULL AND l.due_on < date('now')) AS overdue_count`
 
-func scanBorrower(sc interface{ Scan(...any) error }, e *BorrowerRow) error {
+func scanBorrower(sc rowScanner, e *BorrowerRow) error {
 	var active int
 	err := sc.Scan(&e.ID, &e.FirstName, &e.LastInitial, &e.Class, &e.Kind, &e.CardCode, &e.Token, &active,
 		&e.TotalCount, &e.OutCount, &e.OverdueCount)
@@ -340,7 +340,7 @@ type BorrowerLoan struct {
 
 // The books a borrower has, and their history.
 func (a *app) borrowerDetail(w http.ResponseWriter, r *http.Request) {
-	id, _ := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	id := pathID(r)
 	e, err := a.loadBorrower(id)
 	if err != nil {
 		a.notFoundScreen(w, r)
@@ -413,7 +413,7 @@ func (a *app) borrowerDetail(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *app) borrowerEdit(w http.ResponseWriter, r *http.Request) {
-	id, _ := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	id := pathID(r)
 	e, err := a.loadBorrower(id)
 	if err != nil {
 		a.notFoundScreen(w, r)
@@ -423,7 +423,7 @@ func (a *app) borrowerEdit(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *app) borrowerRow(w http.ResponseWriter, r *http.Request) {
-	id, _ := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	id := pathID(r)
 	e, err := a.loadBorrower(id)
 	if err != nil {
 		a.notFoundScreen(w, r)
@@ -433,7 +433,7 @@ func (a *app) borrowerRow(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *app) borrowerUpdate(w http.ResponseWriter, r *http.Request) {
-	id, _ := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	id := pathID(r)
 	if err := r.ParseForm(); err != nil {
 		badRequest(w, r)
 		return
@@ -485,7 +485,7 @@ func (a *app) borrowerUpdate(w http.ResponseWriter, r *http.Request) {
 
 // Removes a borrower from the active list without deleting their history.
 func (a *app) borrowersDeactivate(w http.ResponseWriter, r *http.Request) {
-	id, _ := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	id := pathID(r)
 
 	// Refuse while they still have books: they would vanish from the list, their
 	// loans would stay open, and their parent page would stop answering.
@@ -515,7 +515,7 @@ func (a *app) borrowersDeactivate(w http.ResponseWriter, r *http.Request) {
 // A rollover mistake, or a pupil who comes back. Not the sentinel, which is
 // not a person, nor an anonymised borrower, who has nothing left to bring back.
 func (a *app) borrowerReactivate(w http.ResponseWriter, r *http.Request) {
-	id, _ := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	id := pathID(r)
 	if id == anonymousBorrowerID(a.db) {
 		a.borrowersFragment(w, r, tr(r, "borrowers.err_reactivate_sentinel", tr(r, "borrower.anonymised_name")), true)
 		return

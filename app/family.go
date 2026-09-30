@@ -6,7 +6,6 @@ import (
 	"encoding/base64"
 	"log"
 	"net/http"
-	"strconv"
 )
 
 // Parent space: one secret link per pupil shows their open loans, with the
@@ -94,7 +93,7 @@ func (a *app) borrowerTokenCreate(w http.ResponseWriter, r *http.Request) {
 		a.notFoundScreen(w, r)
 		return
 	}
-	id, _ := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	id := pathID(r)
 	token, err := generateToken()
 	if err != nil {
 		log.Printf("token (generation): %v", err)
@@ -115,7 +114,7 @@ func (a *app) borrowerTokenCreate(w http.ResponseWriter, r *http.Request) {
 
 // borrowerTokenRevoke deletes the parent token, so the old link stops working.
 func (a *app) borrowerTokenRevoke(w http.ResponseWriter, r *http.Request) {
-	id, _ := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	id := pathID(r)
 	if _, err := a.db.Exec(`UPDATE borrower SET family_token = NULL WHERE id = ?`, id); err != nil {
 		log.Printf("token (revoke): %v", err)
 		internalError(w, r)

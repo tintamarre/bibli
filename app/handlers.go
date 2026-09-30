@@ -6,6 +6,7 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -149,6 +150,14 @@ func jsTexts(lang string) map[string]string {
 // Assets are immutable for a year, so every URL carries the fingerprint.
 func asset(path string) string {
 	return path + "?v=" + assetFingerprint
+}
+
+// pathID reads the {id} path segment. A malformed id yields 0, which matches no
+// row, so the handler renders "not found" rather than erroring — the one place
+// that intent lives.
+func pathID(r *http.Request) int64 {
+	id, _ := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	return id
 }
 
 // Loan is one row of v_active_loan. The class can be NULL, hence *string.

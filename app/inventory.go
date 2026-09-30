@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"net/url"
 	"slices"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -520,7 +519,7 @@ func (a *app) inventorySearch(w http.ResponseWriter, r *http.Request) {
 // inventoryUpdate saves a copy's status and location, then returns the updated
 // row with a confirmation highlight.
 func (a *app) inventoryUpdate(w http.ResponseWriter, r *http.Request) {
-	id, _ := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	id := pathID(r)
 	if err := r.ParseForm(); err != nil {
 		badRequest(w, r)
 		return
