@@ -254,7 +254,8 @@
   "filter.range_from": "from",
   "filter.range_to": "to",
   "filter.show": "Show",
-  "footer.credit": "Built with ♥",
+  "footer.credit": "Built with",
+  "footer.credit_heart": "love",
   "footer.version_title": "software version",
 
   "format.datetime": "{0} at {1}",

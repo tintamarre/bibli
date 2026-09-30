@@ -254,7 +254,8 @@
   "filter.range_from": "du",
   "filter.range_to": "au",
   "filter.show": "Afficher",
-  "footer.credit": "Développé avec ♥",
+  "footer.credit": "Développé avec",
+  "footer.credit_heart": "amour",
   "footer.version_title": "version du logiciel",
 
   "format.datetime": "{0} à {1}",

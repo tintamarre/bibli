@@ -254,7 +254,8 @@
   "filter.range_from": "van",
   "filter.range_to": "tot",
   "filter.show": "Tonen",
-  "footer.credit": "Gemaakt met ♥",
+  "footer.credit": "Gemaakt met",
+  "footer.credit_heart": "liefde",
   "footer.version_title": "versie van de software",
 
   "format.datetime": "{0} om {1}",
