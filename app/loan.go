@@ -20,14 +20,22 @@ var (
 // which of three cases: nil, an available copy; errNoCopyAvailable, the work
 // exists but every copy is out or unusable, so offer to add one; sql.ErrNoRows,
 // the ISBN is unknown and express cataloguing takes over.
+// bookByISBN finds a work by either form of a scanned ISBN. The "isbn10 IS NOT
+// NULL" guard stops a book without an ISBN-10 (a NULL column) from matching a
+// caller's empty i10. sql.ErrNoRows means the ISBN is not in the catalogue.
+func (a *app) bookByISBN(i13, i10 string) (workID int64, title string, err error) {
+	err = a.db.QueryRow(
+		`SELECT id, title FROM book WHERE isbn13 = ? OR (isbn10 IS NOT NULL AND isbn10 = ?)`,
+		i13, i10).Scan(&workID, &title)
+	return
+}
+
 func (a *app) copyForISBN(scan string) (exID, workID int64, code, status, title string, err error) {
 	i13, i10, e := ISBNForms(scan)
 	if e != nil {
 		return 0, 0, "", "", "", sql.ErrNoRows // neither an internal code nor a valid ISBN
 	}
-	if err = a.db.QueryRow(
-		`SELECT id, title FROM book WHERE isbn13 = ? OR (isbn10 IS NOT NULL AND isbn10 = ?)`,
-		i13, i10).Scan(&workID, &title); err != nil {
+	if workID, title, err = a.bookByISBN(i13, i10); err != nil {
 		return 0, 0, "", "", "", err // sql.ErrNoRows = unknown ISBN
 	}
 	err = a.db.QueryRow(
@@ -108,11 +116,8 @@ func (a *app) openLoansByISBN(scan string) ([]OpenLoan, string, error) {
 	if e != nil {
 		return nil, "", sql.ErrNoRows // neither an internal code nor a valid ISBN
 	}
-	var workID int64
-	var title string
-	if err := a.db.QueryRow(
-		`SELECT id, title FROM book WHERE isbn13 = ? OR (isbn10 IS NOT NULL AND isbn10 = ?)`,
-		i13, i10).Scan(&workID, &title); err != nil {
+	workID, title, err := a.bookByISBN(i13, i10)
+	if err != nil {
 		return nil, "", err // sql.ErrNoRows = ISBN unknown to the catalogue
 	}
 
