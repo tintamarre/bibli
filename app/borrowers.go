@@ -488,26 +488,30 @@ func (a *app) borrowersDeactivate(w http.ResponseWriter, r *http.Request) {
 	id := pathID(r)
 
 	// Refuse while they still have books: they would vanish from the list, their
-	// loans would stay open, and their parent page would stop answering.
-	var count int
-	if err := a.db.QueryRow(
-		`SELECT COUNT(*) FROM loan WHERE borrower_id = ? AND returned_on IS NULL`, id,
-	).Scan(&count); err != nil {
-		log.Printf("borrowers/deactivate (loans): %v", err)
-		internalError(w, r)
-		return
-	}
-	if count > 0 {
-		e, _ := a.loadBorrower(id)
-		a.borrowersFragment(w, r, trn(r, "borrowers.err_still_has_books", count, e.FirstName, e.LastInitial), false)
-		return
-	}
-
-	// Only the active: deactivating again would restart the retention clock.
-	if _, err := a.db.Exec(`UPDATE borrower SET active = 0, deactivated_on = date('now') WHERE id = ? AND active = 1`, id); err != nil {
+	// loans would stay open, and their parent page would stop answering. The
+	// no-open-loan test is part of the UPDATE, so a loan recorded at another desk
+	// between a check and the write cannot slip a book past it. active = 1 keeps
+	// a second deactivation from restarting the retention clock.
+	res, err := a.db.Exec(
+		`UPDATE borrower SET active = 0, deactivated_on = date('now')
+		  WHERE id = ? AND active = 1
+		    AND NOT EXISTS (SELECT 1 FROM loan WHERE borrower_id = borrower.id AND returned_on IS NULL)`, id)
+	if err != nil {
 		log.Printf("borrowers/deactivate: %v", err)
 		internalError(w, r)
 		return
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		// Nothing changed: either they still have books, or they were already
+		// inactive. Only the first is worth a message.
+		var count int
+		if err := a.db.QueryRow(
+			`SELECT COUNT(*) FROM loan WHERE borrower_id = ? AND returned_on IS NULL`, id,
+		).Scan(&count); err == nil && count > 0 {
+			e, _ := a.loadBorrower(id)
+			a.borrowersFragment(w, r, trn(r, "borrowers.err_still_has_books", count, e.FirstName, e.LastInitial), false)
+			return
+		}
 	}
 	a.borrowersFragment(w, r, "", false)
 }

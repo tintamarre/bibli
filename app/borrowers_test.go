@@ -1205,3 +1205,48 @@ func TestImportTemplateRoundTrips(t *testing.T) {
 		}
 	}
 }
+
+// Deactivating is refused while a borrower still has a book out — and the check
+// is part of the UPDATE, so it holds even against a loan recorded at the very
+// same moment (the old code counted, then updated, with a gap between).
+func TestDeactivationRefusedWhileBooksAreOut(t *testing.T) {
+	loadForTest(t)
+	restoreSettings(t)
+	a := testApp(t)
+	sets, err := loadTemplates()
+	if err != nil {
+		t.Fatalf("loading the templates: %v", err)
+	}
+	a.pages = sets
+	setAnonymousID(anonymousBorrowerID(a.db))
+
+	deactivate := func(id int64) {
+		t.Helper()
+		r := httptest.NewRequest("POST", fmt.Sprintf("/borrowers/%d/deactivate", id), nil)
+		r.SetPathValue("id", fmt.Sprint(id))
+		w := httptest.NewRecorder()
+		a.borrowersDeactivate(w, r)
+		if w.Code != 200 {
+			t.Fatalf("deactivate %d: status %d", id, w.Code)
+		}
+	}
+	active := func(id int64) bool {
+		t.Helper()
+		var on bool
+		if err := a.db.QueryRow(`SELECT active FROM borrower WHERE id = ?`, id).Scan(&on); err != nil {
+			t.Fatal(err)
+		}
+		return on
+	}
+
+	// Léa (101) has copy 3 out: deactivation must not go through.
+	deactivate(101)
+	if !active(101) {
+		t.Error("a borrower with a book out was deactivated")
+	}
+	// Zoé (103) has nothing out: deactivation succeeds.
+	deactivate(103)
+	if active(103) {
+		t.Error("a borrower with no books out was not deactivated")
+	}
+}
