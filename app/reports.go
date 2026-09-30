@@ -6,7 +6,6 @@ import (
 	"log"
 	"net/http"
 	"strings"
-	"time"
 )
 
 // Operations: paper output (overdue lists, inventory) and CSV export.
@@ -87,7 +86,7 @@ func (a *app) printLoans(w http.ResponseWriter, r *http.Request) {
 		"Groups":      groups,
 		"OverdueOnly": overdueOnly,
 		"Class":       printedClass,
-		"Date":        shortDate(requestLang(r), time.Now().Format("2006-01-02")),
+		"Date":        shortDate(requestLang(r), today().Format("2006-01-02")),
 	})
 }
 
@@ -129,7 +128,7 @@ func (a *app) printInventory(w http.ResponseWriter, r *http.Request) {
 	a.renderDoc(w, r, "inventory_print", map[string]any{
 		"Rows":  list,
 		"Total": len(list),
-		"Date":  shortDate(requestLang(r), time.Now().Format("2006-01-02")),
+		"Date":  shortDate(requestLang(r), today().Format("2006-01-02")),
 	})
 }
 
@@ -249,7 +248,7 @@ func (a *app) exportXLSX(w http.ResponseWriter, r *http.Request) {
 
 // Both files carry the same name and the same date; only the extension differs.
 func exportBasename() string {
-	return "bibli-export-" + time.Now().Format("2006-01-02")
+	return "bibli-export-" + today().Format("2006-01-02")
 }
 
 // statusColumn is the copy status, the one column translated rather than copied

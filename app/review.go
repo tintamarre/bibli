@@ -8,7 +8,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"time"
 )
 
 // The yearly collection review, downloaded from /stats: one row per work,
@@ -158,7 +157,7 @@ func (r reviewRow) cells() []string {
 }
 
 func reviewBasename() string {
-	return "bibli-collection-" + time.Now().Format("2006-01-02")
+	return "bibli-collection-" + today().Format("2006-01-02")
 }
 
 // reviewCSV is RFC 4180 with English column names, like /export.csv.
