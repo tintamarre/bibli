@@ -72,8 +72,8 @@
   </div>
 
   <div class="scan-block">
-    <p class="step"><span class="num">2</span>{{template "icon-book" "step-icon"}} {{T "loan.step2_heading"}}
-      <span id="basket-count" class="basket-count"></span></p>
+    <h2 class="lend-question">{{template "icon-book" "lend-q-icon"}} {{T "loan.step2_question"}}
+      <span id="basket-count" class="basket-count"></span></h2>
 
     <form id="form-confirm" hx-post="/borrow/confirm" hx-target="#loan" hx-swap="outerHTML">
       <input type="hidden" name="borrower_id" value="{{.Borrower.ID}}">

@@ -414,7 +414,7 @@
   "loan.step1_placeholder": "Kaart, of “L1 ag”…",
   "loan.step1_prompt": "Scan de kaart van de ontlener, of typ naam / klas",
   "loan.step1_question": "Wie ontleent?",
-  "loan.step2_heading": "Boeken om te ontlenen",
+  "loan.step2_question": "Welke boeken?",
   "loan.too_many_books": "Te veel boeken passen bij “{0}” — geef de titel preciezer op.",
   "loan.too_many_borrowers": "Te veel resultaten — geef het preciezer op (klas en/of voornaam).",
   "loan.which_book": "Welk boek?",

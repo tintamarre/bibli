@@ -1535,9 +1535,6 @@ button, input, select, textarea { font-family: inherit; }
 }
 .btn-copy.copied { background: var(--ok-bg); border-color: var(--ok-border); color: var(--ok); }
 
-/* A card icon on step 1, a book icon on step 2 of the lending screen, so a
-   glance says whether the box wants a reader's card or a book — not just a number. */
-.step .step-icon { width: 1.2em; height: 1.2em; color: var(--accent); flex: none; }
 
 /* Step 1 of the lending screen framed as a question, so it reads as "the person"
    and not "the books": a bold heading with a card icon, the how-to underneath. */
