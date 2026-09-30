@@ -1095,10 +1095,11 @@ button, input, select, textarea { font-family: inherit; }
 .note { color: var(--muted); font-size: .9rem; margin-top: 1rem; }
 .info-grid {
   display: grid; gap: 1rem; align-items: start;
-  grid-template-columns: repeat(auto-fit, minmax(23rem, 1fr));
+  /* min(): on a phone the 23rem column would be wider than the screen. */
+  grid-template-columns: repeat(auto-fit, minmax(min(23rem, 100%), 1fr));
 }
 /* The install-state blocks: white cards, like the settings form above them. */
-.info-col { display: flex; flex-direction: column; gap: 1rem; }
+.info-col { display: flex; flex-direction: column; gap: 1rem; min-width: 0; }
 .info-block { padding: 1rem 1.15rem; color: var(--muted); font-size: .9rem; background: var(--surface); }
 /* A repair link inside an observed block: quiet, with a 44 px target. */
 .info-block .link-quiet { min-height: 44px; }
