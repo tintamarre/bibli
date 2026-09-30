@@ -454,6 +454,22 @@ document.addEventListener("change", function (ev) {
     if (e.detail.elt && e.detail.elt.id === "form-book") { stop(); }
   });
 
+  // Settings tabs: the wrapper's data-tab selects the panel (CSS); a click moves
+  // it, and aria-selected follows so a screen reader tracks the active tab.
+  document.querySelectorAll(".settings-tabs-wrap").forEach(function (wrap) {
+    var tabs = wrap.querySelectorAll("[role=tab]");
+    function select(name) {
+      wrap.dataset.tab = name;
+      tabs.forEach(function (t) {
+        t.setAttribute("aria-selected", t.dataset.tab === name ? "true" : "false");
+      });
+    }
+    tabs.forEach(function (t) {
+      t.addEventListener("click", function () { select(t.dataset.tab); });
+    });
+    select(wrap.dataset.tab); // initialise aria from the server-set tab
+  });
+
   // Copy the address a teacher connects to. The button sits next to a readonly
   // input holding the URL; the brief "copied" class is the only feedback, so no
   // text is needed here (app.js carries none).

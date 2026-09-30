@@ -243,18 +243,20 @@ func (a *app) settingsSave(w http.ResponseWriter, r *http.Request) {
 	googleKeyIn := strings.TrimSpace(r.FormValue("google_key"))
 	removeGoogleKey := r.FormValue("google_key_remove") != ""
 
-	errMsg := ""
+	errMsg, errTab := "", ""
 	if err != nil || n < 1 || n > maxLoanDays {
-		errMsg = tr(r, "settings.err_loan_days")
+		errMsg, errTab = tr(r, "settings.err_loan_days"), "prets"
 	} else if errR != nil || retention < 1 || retention > maxRetentionYears {
-		errMsg = tr(r, "settings.err_retention", maxRetentionYears)
+		errMsg, errTab = tr(r, "settings.err_retention", maxRetentionYears), "prets"
 	} else if len(googleKeyIn) > 200 || strings.ContainsAny(googleKeyIn, " \t\r\n") {
-		errMsg = tr(r, "settings.err_google_key")
+		errMsg, errTab = tr(r, "settings.err_google_key"), "catalogue"
 	}
 	if errMsg != "" {
-		// Keep the name as typed, so what was right is not typed again.
+		// Keep the name as typed, so what was right is not typed again, and open
+		// the tab the faulty field is on.
 		d := a.settingsData(r, schoolName, lang, theme)
 		d["Error"] = errMsg
+		d["ErrorTab"] = errTab
 		a.render(w, r, "settings", d)
 		return
 	}
