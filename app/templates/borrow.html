@@ -15,7 +15,7 @@
      drops a pending search, which would land on a target that no longer exists. */}}
 {{define "borrow_card_form"}}
 <form hx-post="/borrow/borrower" hx-target="#loan" hx-swap="outerHTML">
-  <p class="step"><span class="num">1</span>
+  <p class="step"><span class="num">1</span>{{template "icon-card" "step-icon"}}
     {{with .Prompt}}{{.}}{{else}}{{T "loan.step1_prompt"}}{{end}}</p>
   <input class="scan" name="code" type="text" autocomplete="off" autocapitalize="off"
          spellcheck="false" enterkeyhint="search" autofocus placeholder="{{T "loan.step1_placeholder"}}"
@@ -72,7 +72,7 @@
   </div>
 
   <div class="scan-block">
-    <p class="step"><span class="num">2</span> {{T "loan.step2_heading"}}
+    <p class="step"><span class="num">2</span>{{template "icon-book" "step-icon"}} {{T "loan.step2_heading"}}
       <span id="basket-count" class="basket-count"></span></p>
 
     <form id="form-confirm" hx-post="/borrow/confirm" hx-target="#loan" hx-swap="outerHTML">
