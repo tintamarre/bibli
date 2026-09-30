@@ -616,23 +616,10 @@ func (a *app) borrowCatalogue(w http.ResponseWriter, r *http.Request) {
 	}
 	title := strings.TrimSpace(r.FormValue("title"))
 	i13, i10, isbnErr := FormISBNs(r.FormValue("isbn13"), r.FormValue("isbn10"))
-	source := strings.TrimSpace(r.FormValue("source_metadata"))
-	if source == "" {
-		source = sourceManual
-	}
 	year, _ := strconv.Atoi(strings.TrimSpace(r.FormValue("year")))
-	n := Record{
-		ISBN13:    i13,
-		ISBN10:    i10,
-		Title:     title,
-		Subtitle:  r.FormValue("subtitle"),
-		Authors:   r.FormValue("authors"),
-		Publisher: r.FormValue("publisher"),
-		Year:      year,
-		Language:  r.FormValue("language"),
-		Source:    source,
-		URL:       r.FormValue("source_url"),
-		Payload:   r.FormValue("source_payload"),
+	n := recordFromForm(r, i13, i10, title, year)
+	if strings.TrimSpace(n.Source) == "" {
+		n.Source = sourceManual // an express-catalogued book is a manual entry
 	}
 	// Handed back with everything already typed: the record is built first so
 	// this cannot drift from the one that gets saved.

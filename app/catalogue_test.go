@@ -318,3 +318,29 @@ func TestCatalogueSaveChecksTheISBN(t *testing.T) {
 		t.Errorf("stored %q / %q, want the pair rebuilt from the ISBN-10", i13, i10)
 	}
 }
+
+// The form redrawn after a rejected save keeps the fields the save would store,
+// the source URL included — it once dropped it, so a corrected re-save lost the
+// catalogue link.
+func TestCatalogueSaveRedisplayKeepsTheSourceURL(t *testing.T) {
+	a, h := testHandler(t)
+	c := signedIn(t, a)
+	form := url.Values{
+		"title":      {""}, // empty: forces the redisplay
+		"isbn13":     {"9782070408504"},
+		"source_url": {"https://catalogue.bnf.fr/ark:/12148/cb123"},
+		"copies":     {"1"},
+	}
+	r := httptest.NewRequest("POST", "/catalogue/save", strings.NewReader(form.Encode()))
+	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	r.Header.Set("Sec-Fetch-Site", "same-origin")
+	r.AddCookie(c)
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, r)
+	if w.Code != http.StatusOK {
+		t.Fatalf("POST = %d, want 200", w.Code)
+	}
+	if !strings.Contains(w.Body.String(), "https://catalogue.bnf.fr/ark:/12148/cb123") {
+		t.Error("the redisplayed form dropped the source URL")
+	}
+}

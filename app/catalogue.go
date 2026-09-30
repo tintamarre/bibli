@@ -230,6 +230,26 @@ func (a *app) addCopy(workID int64) (code string, exID int64, err error) {
 	return code, exID, tx.Commit()
 }
 
+// recordFromForm builds a Record from the cataloguing form's hidden and typed
+// fields. The ISBN pair, title and year are parsed by the caller; the rest are
+// read here, in one place, so the copy shown again on an error and the copy that
+// gets saved can never drift (they once did: the error redraw dropped the URL).
+func recordFromForm(r *http.Request, i13, i10, title string, year int) Record {
+	return Record{
+		ISBN13:    i13,
+		ISBN10:    i10,
+		Title:     title,
+		Subtitle:  r.FormValue("subtitle"),
+		Authors:   r.FormValue("authors"),
+		Publisher: r.FormValue("publisher"),
+		Year:      year,
+		Language:  r.FormValue("language"),
+		Source:    r.FormValue("source_metadata"),
+		URL:       r.FormValue("source_url"),
+		Payload:   r.FormValue("source_payload"),
+	}
+}
+
 func (a *app) catalogueSave(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
 		badRequest(w, r)
@@ -247,22 +267,9 @@ func (a *app) catalogueSave(w http.ResponseWriter, r *http.Request) {
 		count = 100
 	}
 
+	n := recordFromForm(r, i13, i10, title, year)
 	redisplay := func(msg string) {
-		a.fragment(w, r, "catalogue", "catalogue_form", catalogueForm{
-			N: Record{
-				ISBN13: i13, ISBN10: i10,
-				Title:     title,
-				Subtitle:  r.FormValue("subtitle"),
-				Authors:   r.FormValue("authors"),
-				Publisher: r.FormValue("publisher"),
-				Year:      year,
-				Language:  r.FormValue("language"),
-				Source:    r.FormValue("source_metadata"),
-				Payload:   r.FormValue("source_payload"),
-			},
-			Copies: count,
-			Error:  msg,
-		})
+		a.fragment(w, r, "catalogue", "catalogue_form", catalogueForm{N: n, Copies: count, Error: msg})
 	}
 	if isbnErr != nil {
 		redisplay(tr(r, "catalogue.err_bad_isbn"))
@@ -271,20 +278,6 @@ func (a *app) catalogueSave(w http.ResponseWriter, r *http.Request) {
 	if title == "" {
 		redisplay(tr(r, "common.err_title_required"))
 		return
-	}
-
-	n := Record{
-		ISBN13:    i13,
-		ISBN10:    i10,
-		Title:     title,
-		Subtitle:  r.FormValue("subtitle"),
-		Authors:   r.FormValue("authors"),
-		Publisher: r.FormValue("publisher"),
-		Year:      year,
-		Language:  r.FormValue("language"),
-		Source:    r.FormValue("source_metadata"),
-		URL:       r.FormValue("source_url"),
-		Payload:   r.FormValue("source_payload"),
 	}
 
 	tx, err := a.db.Begin()
