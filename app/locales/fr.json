@@ -510,6 +510,7 @@
   "return.err_unknown_code": "Code inconnu : {0}",
   "return.marked_prefix": "Cet exemplaire est marqué",
   "return.marked_suffix": ": il ne sera pas reprêté.",
+  "return.question": "Quel livre revient ?",
   "return.reinstate": "Remettre en service",
   "return.reinstated": "Remis en service",
   "return.returned": "Rendu :",

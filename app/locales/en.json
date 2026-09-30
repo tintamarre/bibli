@@ -510,6 +510,7 @@
   "return.err_unknown_code": "Unknown code: {0}",
   "return.marked_prefix": "This copy is marked",
   "return.marked_suffix": ": it will not be lent out again.",
+  "return.question": "Which book is coming back?",
   "return.reinstate": "Put back in service",
   "return.reinstated": "Back in service",
   "return.returned": "Returned:",

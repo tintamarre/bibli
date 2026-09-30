@@ -510,6 +510,7 @@
   "return.err_unknown_code": "Onbekende code: {0}",
   "return.marked_prefix": "Dit exemplaar is gemarkeerd als",
   "return.marked_suffix": ": het wordt niet opnieuw uitgeleend.",
+  "return.question": "Welk boek komt terug?",
   "return.reinstate": "Opnieuw in gebruik nemen",
   "return.reinstated": "Opnieuw in gebruik",
   "return.returned": "Ingeleverd:",

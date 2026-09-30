@@ -4,7 +4,8 @@
 <section class="scan-block">
   <form hx-post="/return" hx-target="#retour-choix" hx-swap="innerHTML"
         hx-on::after-request="this.reset()">
-    <p class="step">{{T "return.scan_prompt"}}</p>
+    <h2 class="lend-question">{{template "icon-return" "lend-q-icon"}} {{T "return.question"}}</h2>
+    <p class="lend-sub">{{T "return.scan_prompt"}}</p>
     <input class="scan" name="code" type="text" autocomplete="off" autocapitalize="off"
            spellcheck="false" enterkeyhint="search" autofocus placeholder="{{T "return.scan_placeholder"}}">
   </form>
