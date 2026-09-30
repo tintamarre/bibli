@@ -442,6 +442,8 @@
   "loans.print_overdue": "Imprimer les retards",
   "loans.print_list": "Imprimer la liste",
   "loans.tab_all_classes": "Toutes",
+  "loans.gauge_late": "+{0} j",
+  "loans.gauge_of": "/ {0} j",
   "loans.timeline_label": "Emprunté le {0}, à rendre le {1}",
   "loans.tab_current": "En cours",
   "loans.tab_overdue": "En retard",

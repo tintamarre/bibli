@@ -395,18 +395,11 @@ func (a *app) borrowerDetail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// The axis for the bars beside the open loans, as on the loans list.
-	dates := make([]string, 0, len(out)*2)
-	for _, l := range out {
-		dates = append(dates, l.LoanedOn, l.DueOn)
-	}
-
 	a.render(w, r, "borrower", map[string]any{
 		"Title":      e.FirstName + " " + e.LastInitial,
 		"E":          e,
 		"Out":        out,
 		"Past":       past,
-		"Timeline":   newTimeline(todayISO(), dates...),
 		"ExtendDays": extendDefaultDays, // what the extend dialog opens on, as on /loans
 		"Stats":      a.borrowerStats(id),
 	})

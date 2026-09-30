@@ -442,6 +442,8 @@
   "loans.print_overdue": "Print the overdue list",
   "loans.print_list": "Print the list",
   "loans.tab_all_classes": "All",
+  "loans.gauge_late": "+{0} d",
+  "loans.gauge_of": "/ {0} d",
   "loans.timeline_label": "Borrowed on {0}, due on {1}",
   "loans.tab_current": "Out",
   "loans.tab_overdue": "Overdue",

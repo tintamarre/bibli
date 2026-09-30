@@ -36,7 +36,7 @@ func templateFuncs(lang string) template.FuncMap {
 		"jsTexts":          func() map[string]string { return jsTexts(lang) },
 		"sortCol":          sortCol,
 		"sortColDesc":      sortColDesc,
-		"loanBar":          loanBar,
+		"loanGauge":        loanGaugeToday,
 		"loanActions":      loanActions,
 		"navActive":        navActive,
 		"titleHead":        titleHead,
@@ -362,10 +362,8 @@ func (a *app) loans(w http.ResponseWriter, r *http.Request) {
 		extra["overdue"] = "1"
 	}
 	a.render(w, r, "loans", map[string]any{
-		"Title":  title,
-		"Groups": groupLoans(loans),
-		// One axis for every bar on the screen (timeline.go).
-		"Timeline":     newTimeline(todayISO(), loanDates(loans)...),
+		"Title":        title,
+		"Groups":       groupLoans(loans),
 		"Total":        len(loans),
 		"Classes":      classes,
 		"Overdue":      overdueOnly,
@@ -405,15 +403,6 @@ func (a *app) loanClasses(view string) ([]ClassCount, error) {
 // rows. borrower_id separates namesakes; the CASE puts the classless last.
 const loansOrderForGrouping = ` ORDER BY CASE WHEN COALESCE(class, '') = '' THEN 1 ELSE 0 END,
 	       class, last_initial, first_name, borrower_id, due_on`
-
-// loanDates hands the timeline every date it has to fit.
-func loanDates(loans []Loan) []string {
-	dates := make([]string, 0, len(loans)*2)
-	for _, l := range loans {
-		dates = append(dates, l.LoanedOn, l.DueOn)
-	}
-	return dates
-}
 
 // BorrowerLoans is one borrower and the books they have out; ClassLoans gathers
 // the borrowers of one class.

@@ -442,6 +442,8 @@
   "loans.print_overdue": "De te late boeken afdrukken",
   "loans.print_list": "De lijst afdrukken",
   "loans.tab_all_classes": "Alle",
+  "loans.gauge_late": "+{0} d",
+  "loans.gauge_of": "/ {0} d",
   "loans.timeline_label": "Ontleend op {0}, terug tegen {1}",
   "loans.tab_current": "Uitgeleend",
   "loans.tab_overdue": "Te laat",

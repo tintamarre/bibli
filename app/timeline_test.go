@@ -1,142 +1,60 @@
 package main
 
-import (
-	"math"
-	"testing"
-)
+import "testing"
 
-// Date arithmetic behind the timeline bars.
+// Date arithmetic behind the loan gauges.
 
-func TestNewTimelineCoversEveryDateItIsGiven(t *testing.T) {
-	tl := newTimeline("2026-09-14", "2026-09-01", "2026-09-22", "2026-08-20", "2026-09-10")
-	if tl.Start != "2026-08-20" {
-		t.Errorf("Start = %s, want the earliest date given", tl.Start)
+func TestGaugeOnTime(t *testing.T) {
+	g := gaugeOn("2026-09-14", "2026-09-01", "2026-09-22")
+	if !g.Valid || g.Overdue {
+		t.Fatalf("gauge = %+v, want a valid loan on time", g)
 	}
-	if tl.End != "2026-09-22" {
-		t.Errorf("End = %s, want the latest date given", tl.End)
+	if g.Used != 13 || g.Period != 21 || g.Late != 0 || g.Over != 0 {
+		t.Errorf("used %d / %d, late %d, over %v; want 13 / 21, not late", g.Used, g.Period, g.Late, g.Over)
 	}
-	if tl.Span != 33 {
-		t.Errorf("Span = %v days, want 33", tl.Span)
+	if g.Fill != 61.9 {
+		t.Errorf("Fill = %v%%, want 61.9", g.Fill)
 	}
 }
 
-// Today is always on the axis, because that is where every bar ends. A screen
-// showing only loans that are long overdue must still reach it.
-func TestNewTimelineAlwaysReachesToday(t *testing.T) {
-	tl := newTimeline("2026-09-14", "2026-07-01", "2026-07-22")
-	if tl.End != "2026-09-14" {
-		t.Errorf("End = %s, want today", tl.End)
+func TestGaugeEnds(t *testing.T) {
+	if g := gaugeOn("2026-09-14", "2026-09-14", "2026-10-05"); g.Used != 0 || g.Fill != 0 {
+		t.Errorf("borrowed today: used %d, fill %v; want an empty track", g.Used, g.Fill)
 	}
-	// And a list of loans all due in the future still starts no later.
-	tl = newTimeline("2026-09-14", "2026-09-20", "2026-10-05")
-	if tl.Start != "2026-09-14" {
-		t.Errorf("Start = %s, want today", tl.Start)
+	if g := gaugeOn("2026-09-14", "2026-08-24", "2026-09-14"); g.Overdue || g.Fill != 100 {
+		t.Errorf("due today: overdue %v, fill %v; want a full track, not late", g.Overdue, g.Fill)
 	}
-}
-
-// One very old loan must not squash the rest of the axis.
-func TestNewTimelineCapsHowFarBackItReaches(t *testing.T) {
-	tl := newTimeline("2026-09-14", "2024-11-03", "2026-09-10")
-	want, _ := addDays("2026-09-14", -timelineWindow)
-	if tl.Start != want {
-		t.Errorf("Start = %s, want the window floor %s", tl.Start, want)
-	}
-	if bar := loanBar(tl, "2024-11-03", "2024-11-24"); !bar.Clipped {
-		t.Error("a loan older than the window is not marked as running off the edge")
+	// Lent and due the same day: a full track, not a division by zero.
+	if g := gaugeOn("2026-09-14", "2026-09-14", "2026-09-14"); !g.Valid || g.Fill != 100 {
+		t.Errorf("zero-day loan = %+v, want a full valid track", g)
 	}
 }
 
-// A day with nothing in it is still an axis: nothing may divide by its width.
-func TestNewTimelineNeverHasZeroWidth(t *testing.T) {
-	tl := newTimeline("2026-09-14")
-	if tl.Span < 1 {
-		t.Fatalf("Span = %v", tl.Span)
-	}
-	if bar := loanBar(tl, "2026-09-14", "2026-09-14"); !bar.Valid {
-		t.Error("a loan taken and due today draws nothing")
-	}
-}
-
-func TestLoanBarOnTimeAndOverdue(t *testing.T) {
-	// 40 days wide: the 1st to the 10th of the next month, today the 14th.
-	tl := newTimeline("2026-09-14", "2026-09-01", "2026-10-10")
-
-	// Borrowed on the 1st, due on the 22nd: a week and a half still to run, so
-	// the capsule is longer than what has been spent of it.
-	onTime := loanBar(tl, "2026-09-01", "2026-09-22")
-	if onTime.Overdue || onTime.Late != 0 {
-		t.Errorf("a loan due next week is drawn as late: %+v", onTime)
-	}
-	if onTime.Elapsed >= onTime.Period {
-		t.Errorf("the bar reaches the end of the capsule: %+v", onTime)
-	}
-	if onTime.Left+onTime.Period != onTime.Due {
-		t.Errorf("the capsule does not end on the due date: %+v", onTime)
-	}
-	// Nothing of it is overrun, so it is one colour all the way.
-	if onTime.Stop != 100 {
-		t.Errorf("a loan that is not late changes colour at %v%%", onTime.Stop)
-	}
-
-	// Borrowed on the 1st, due on the 8th: six days over. The capsule is full,
-	// and the overrun is drawn past its end.
-	late := loanBar(tl, "2026-09-01", "2026-09-08")
-	if !late.Overdue || late.Late <= 0 {
-		t.Errorf("a loan due last week is not drawn as late: %+v", late)
-	}
-	if late.Elapsed != late.Period {
-		t.Errorf("a late loan does not fill its capsule: %+v", late)
-	}
-	// Six days of 40 is 15% of the axis.
-	if math.Abs(late.Late-15) > 0.5 {
-		t.Errorf("the overrun is %v%% of the axis, want about 15", late.Late)
-	}
-	// Borrowed 13 days ago and due 6 days ago: the colour changes seven
-	// thirteenths of the way along the bar, where the due date falls.
-	if math.Abs(late.Stop-100*7/13.0) > 0.5 {
-		t.Errorf("the bar changes colour at %v%%, want about %v", late.Stop, 100*7/13.0)
-	}
-	if late.Bar != late.Elapsed+late.Late {
-		t.Errorf("the bar is not the loan end to end: %+v", late)
-	}
-}
-
-// Every bar ends at today, so the left edges alone rank the rows by age.
-func TestEveryBarEndsAtToday(t *testing.T) {
-	const now = "2026-09-14"
-	loans := [][2]string{
-		{"2026-09-01", "2026-09-22"}, // running
-		{"2026-08-10", "2026-08-31"}, // late
-		{"2026-09-13", "2026-10-04"}, // yesterday
-		{"2026-06-02", "2026-06-23"}, // older than the window
-	}
-	var dates []string
-	for _, l := range loans {
-		dates = append(dates, l[0], l[1])
-	}
-	tl := newTimeline(now, dates...)
-
-	var want float64
-	for i, l := range loans {
-		bar := loanBar(tl, l[0], l[1])
-		end := bar.Left + bar.Bar
-		if i == 0 {
-			want = end
-			continue
+func TestGaugeOverrunGrowsThenStops(t *testing.T) {
+	over := func(late int) float64 {
+		t.Helper()
+		due := "2026-09-01"
+		d, _ := parseDate(due)
+		today := d.AddDate(0, 0, late).Format("2006-01-02")
+		g := gaugeOn(today, "2026-08-11", due)
+		if !g.Overdue || g.Late != late || g.Fill != 100 {
+			t.Fatalf("%d days late: %+v", late, g)
 		}
-		if math.Abs(end-want) > 1.01 { // the one-percent floor a same-day loan gets
-			t.Errorf("loan %d ends at %v%% of the axis, the first at %v%%", i, end, want)
-		}
+		return g.Over
+	}
+	one, week, month, forgotten := over(1), over(7), over(overrunFull), over(150)
+	if one < overrunMin || !(one < week && week < month) {
+		t.Errorf("overrun at 1, 7, 30 days = %v, %v, %v; want it to grow from %v", one, week, month, overrunMin)
+	}
+	if month != overrunMax || forgotten != overrunMax {
+		t.Errorf("overrun at %d and 150 days = %v, %v; want both at the %v cap", overrunFull, month, forgotten, overrunMax)
 	}
 }
 
-// An unreadable date draws nothing rather than a bar starting in 1970. The row
-// still carries both dates in full beside it.
-func TestLoanBarRefusesADateItCannotRead(t *testing.T) {
-	tl := newTimeline("2026-09-14", "2026-09-01")
-	for _, c := range [][2]string{{"", "2026-09-22"}, {"2026-09-01", "later"}, {"nope", ""}} {
-		if bar := loanBar(tl, c[0], c[1]); bar.Valid {
-			t.Errorf("loanBar(%q, %q) drew a bar", c[0], c[1])
+func TestGaugeRefusesADateItCannotRead(t *testing.T) {
+	for _, c := range [][2]string{{"", "2026-09-22"}, {"2026-09-01", "not a date"}} {
+		if g := gaugeOn("2026-09-14", c[0], c[1]); g.Valid {
+			t.Errorf("gaugeOn(%q, %q) drew a gauge", c[0], c[1])
 		}
 	}
 }

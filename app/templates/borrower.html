@@ -78,7 +78,7 @@
           {{if gt .DaysOverdue 0}}<span class="overdue-badge">{{Tn "loans.days_overdue" .DaysOverdue}}</span>
           {{else}}<span class="relative">{{relativeDate .DueOn}}</span>{{end}}</span>
       </td>
-      <td data-label="{{T "loans.col_since"}}" class="col-timeline">{{template "loan_bar" (loanBar $.Timeline .LoanedOn .DueOn)}}</td>
+      <td data-label="{{T "loans.col_since"}}" class="col-timeline">{{template "loan_bar" (loanGauge .LoanedOn .DueOn)}}</td>
       <td class="col-actions">
         {{template "loan_actions" (loanActions .LoanID (printf "/borrowers/%d" $.E.ID) .Title $.E.FirstName $.E.LastInitial $.ExtendDays)}}
       </td>

@@ -45,12 +45,11 @@
   --alert-bg: #fffaeb;
   --alert-border: #fedf89;
 
-  /* The loan timeline only: the accent's hue running, orange overrun. Not
-     --accent or --err: the bar is a state, and the red words already say "late". */
-  --tl-run:  #a9b1e6;
+  /* The loan gauge only: the orange overrun of a late loan. Not --err: the
+     bar is a state, and the red words already say "late". */
   --tl-late: #efa13c;
 
-  /* The year heatmap: one ramp (--hm-3 is --tl-run), no second hue.
+  /* The year heatmap: one ramp, no second hue.
      --hm-0 is an open day with no loan, drawn rather than left blank. */
   --hm-0:     #dcdee7;
   --hm-ahead: #eef0f4;
@@ -116,7 +115,6 @@
   --accent-light:  #e8effd;
   --accent-border: #b8cbf5;
   --accent-hover:  #d8e4fb;
-  --tl-run:        #9cc0f0;
   --hm-0:          #e2e6ed;
   --hm-ahead:      #f1f3f6;
   --hm-1:          #e3f1e8;
@@ -690,23 +688,26 @@ button, input, select, textarea { font-family: inherit; }
 .table .col-actions .btn-link { margin-right: .5rem; }
 /* Two actions, each its own form: keep the forms on one line. */
 .table .col-actions form { display: inline-flex; vertical-align: middle; }
-/* One open loan on the shared time axis (timeline.go). The capsule is the whole
-   period, its right end the due date. Over it, the loan so far as ONE shape with a
-   colour stop at the due date: two shapes cannot meet cleanly at 7 px. Four stops
-   rather than the doubled-stop shorthand, which needs Safari 12.1. */
-.col-timeline { width: 11rem; min-width: 9rem; }
-.tl { position: relative; display: block; height: 18px; }
-.tl-period, .tl-bar { position: absolute; top: 6px; height: 7px; border-radius: 4px; }
-.tl-period { background: var(--border); }
-.tl-bar {
-  background: linear-gradient(90deg,
-    var(--tl-run) 0%, var(--tl-run) var(--s, 100%),
-    var(--tl-late) var(--s, 100%), var(--tl-late) 100%);
+/* One open loan as a gauge of its own period (timeline.go). The track is the
+   days granted, filled as they pass; a late loan's is spent (grey) and the
+   orange overrun, tucked under the track's rounded end, grows with the delay
+   (--o, percent of the track). */
+.col-timeline { width: 13rem; }
+.gauge { display: flex; align-items: center; gap: .5rem; }
+.gauge-bar { display: flex; align-items: center; flex: 0 0 auto; }
+.gauge-track {
+  position: relative; display: block; width: 7rem; height: 12px;
+  border-radius: 6px; background: var(--border); overflow: hidden;
 }
-/* Late: the granted days take the capsule's grey; the orange is the overrun. */
-.tl-bar-late { --tl-run: var(--border); }
-/* Started before the axis: it runs off the left edge. */
-.tl-clipped { border-top-left-radius: 0; border-bottom-left-radius: 0; }
+.gauge-fill { position: absolute; top: 0; bottom: 0; left: 0; border-radius: 6px; background: var(--accent); }
+.gauge-late .gauge-fill { background: var(--border-strong); }
+.gauge-over {
+  display: block; height: 12px; width: calc(7rem * var(--o) / 100 + 6px);
+  margin-left: -6px; border-radius: 0 6px 6px 0; background: var(--tl-late);
+}
+.gauge-count { font-size: .85rem; color: var(--muted); white-space: nowrap; }
+.gauge-count b { color: var(--text); }
+.gauge-late .gauge-count { color: var(--err); font-weight: 700; }
 
 .overdue { color: var(--err); font-weight: 600; }
 /* Its own column on the borrower list, empty on every row that is on time. */
@@ -1460,10 +1461,8 @@ button, input, select, textarea { font-family: inherit; }
      below `.table td`, which weighs the same. */
   .row-borrower > td { display: block; border-radius: var(--radius-s); margin: .2rem 0 .5rem; }
   .row-borrower > td::before { content: none; }
-  /* A bar has no content to size it and collapses in a flex line: give it the
-     width, and drop the table column width. */
+  /* Drop the table column width: the gauge sizes itself. */
   .table td.col-timeline { width: auto; min-width: 0; }
-  .table td.col-timeline .tl { flex: 1 1 auto; }
   /* No indent in cards: the group heading names the borrower. */
   .loan-borrower tr:not(.row-borrower) > td:first-child { padding-left: 0; }
   /* A cell holding a field: the field fills the line, the label gives up its

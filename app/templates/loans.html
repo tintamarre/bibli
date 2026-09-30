@@ -57,7 +57,7 @@
               {{if gt .DaysOverdue 0}}<span class="overdue-badge">{{Tn "loans.days_overdue" .DaysOverdue}}</span>
               {{else}}<span class="relative">{{relativeDate .DueOn}}</span>{{end}}</span>
           </td>
-          <td data-label="{{T "loans.col_since"}}" class="col-timeline">{{template "loan_bar" (loanBar $.Timeline .LoanedOn .DueOn)}}</td>
+          <td data-label="{{T "loans.col_since"}}" class="col-timeline">{{template "loan_bar" (loanGauge .LoanedOn .DueOn)}}</td>
           {{/* The scanner stays the fast path; this is for a book returned
                without it. */}}
           <td class="col-actions">
