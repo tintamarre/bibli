@@ -97,25 +97,25 @@
 :root[data-theme="ink"] .nav-sep { background: rgba(255, 255, 255, .35); }
 :root[data-theme="ink"] .header :is(a, summary):focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
 
-/* Crayons: the slate base on every screen, the colours kept for what leads
-   to a part of the application: its menu entry (icon and current-screen
-   underline, the label stays slate) and its home card, plus the dashes under
-   the name. None is red or orange (the inventory's is the brown of a wooden
-   shelf, too dark to read as either), and each holds white text. The heatmap
-   counts loans made, in Borrow's green. */
+/* Crayons: a white page in heavy contrast, crayon blue on every screen, the
+   area colours kept for what leads to a part of the application: its menu
+   entry (icon chip and current-screen underline, the label stays dark), its
+   home card and counter, plus the dashes under the name. None is red or
+   orange, and each holds white text. The heatmap counts loans made, in
+   Borrow's green. */
 :root[data-theme="crayons"] {
-  --bg:            #e8ebf0;
+  --bg:            #ffffff;
   --surface:       #ffffff;
-  --border:        #cbd1db;
-  --border-strong: #a0a9b8;
-  --sunken:        #dce1e9;
-  --text:          #121724;
-  --muted:         #3c4453;
-  --accent:        #3d4a5c;
-  --accent-dark:   #2e3847;
-  --accent-light:  #eef1f5;
-  --accent-border: #b9c2cf;
-  --accent-hover:  #e2e7ee;
+  --border:        #c3cddc;
+  --border-strong: #7d8ba1;
+  --sunken:        #e8effa;
+  --text:          #0b1220;
+  --muted:         #2c3647;
+  --accent:        #1d4ed8;
+  --accent-dark:   #1e3a8a;
+  --accent-light:  #e8effd;
+  --accent-border: #b8cbf5;
+  --accent-hover:  #d8e4fb;
   --tl-run:        #9cc0f0;
   --hm-0:          #e2e6ed;
   --hm-ahead:      #f1f3f6;
@@ -123,8 +123,11 @@
   --hm-2:          #bfe3cc;
   --hm-3:          #8fcca6;
   --hm-4:          #3f9a66;
-  --shadow:        0 1px 2px rgba(16, 24, 40, .10), 0 2px 6px rgba(16, 24, 40, .07);
+  --shadow:        none;
 }
+/* Page and cards are both white: a dark outline tells them apart. */
+:root[data-theme="crayons"] .header { border-bottom-color: var(--border-strong); }
+:root[data-theme="crayons"] :is(.table, .action-card, .counter, .filter-bar, .stats-card) { border-color: var(--border-strong); }
 /* A link to an area, in the header or on the home page, carries its colour. */
 :root[data-theme="crayons"] :is(.header, .home-actions) :is(a[href="/borrow"]) {
   --accent: #1f7a4a; --accent-dark: #17613a; --accent-light: #e9f6ee;
@@ -143,20 +146,31 @@
   --accent-border: #dcc6ee; --accent-hover: #ebdef6;
 }
 :root[data-theme="crayons"] :is(.header, .home-actions) :is(a[href="/inventory"], a[href="/catalogue"]) {
-  --accent: #7a5230; --accent-dark: #634225; --accent-light: #f7f0e8;
-  --accent-border: #e5d3bf; --accent-hover: #efe3d5;
+  --accent: #a21caf; --accent-dark: #86198f; --accent-light: #fbeafd;
+  --accent-border: #f0c4f5; --accent-hover: #f6dbf9;
 }
 /* Here the icons are the colour code, drawn at full strength. */
 :root[data-theme="crayons"] :is(.nav-icon, .menu-icon, .title-icon) { color: var(--accent); opacity: 1; }
-/* Every menu label in the same slate: only the underline takes the colour. */
+/* In the top bar, each icon sits on a chip of its colour. */
+:root[data-theme="crayons"] .menu a .nav-icon {
+  box-sizing: content-box; padding: 5px; border-radius: 8px; background: var(--accent-light);
+}
+/* Every menu label in the same dark: only the underline takes the colour. */
 :root[data-theme="crayons"] .menu a[aria-current="page"] { color: var(--text); }
+/* A home counter wears the colour of what it counts; the overdue one turns
+   red only when some are. */
+:root[data-theme="crayons"] .counter { border-top: 5px solid var(--counter, var(--accent)); }
+:root[data-theme="crayons"] .counter[href="/inventory"] { --counter: #a21caf; }
+:root[data-theme="crayons"] .counter[href="/loans"] { --counter: #1f7a4a; }
+:root[data-theme="crayons"] .counter[href="/loans?overdue=1"] { --counter: #7c3aad; }
+:root[data-theme="crayons"] .counter.counter-alert[href] { --counter: var(--err); }
 /* Five dashes under the name, one per area, in menu order. */
 :root[data-theme="crayons"] .brand-name {
   align-self: flex-start; padding-bottom: 5px;
   background: linear-gradient(to right,
     #1f7a4a 0 17%, transparent 17% 21%, #0e7490 21% 38%, transparent 38% 42%,
     #2457c5 42% 59%, transparent 59% 63%, #7c3aad 63% 80%, transparent 80% 84%,
-    #7a5230 84% 100%) bottom / 100% 3px no-repeat;
+    #a21caf 84% 100%) bottom / 100% 3px no-repeat;
 }
 
 /* Phone breakpoint: 40rem everywhere, in the final block. The one exception

@@ -27,7 +27,7 @@ var retiredThemes = map[string]string{"classic": "stamp"}
 var themeColor = map[string]string{
 	"stamp":   "#3a43a3",
 	"ink":     "#3a43a3",
-	"crayons": "#3d4a5c",
+	"crayons": "#1d4ed8",
 }
 
 var cachedTheme = defaultTheme
