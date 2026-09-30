@@ -147,6 +147,9 @@ func (a *app) loadBookPage(id int64) (*BookPage, error) {
 		}
 		f.Copies = append(f.Copies, cp)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
 
 	a.db.QueryRow(
 		`SELECT COUNT(*) FROM loan l JOIN copy c ON c.id = l.copy_id WHERE c.book_id = ?`, id,

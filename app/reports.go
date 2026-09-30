@@ -70,6 +70,11 @@ func (a *app) printLoans(w http.ResponseWriter, r *http.Request) {
 			groups = append(groups, group{Class: class, Rows: []row{l}})
 		}
 	}
+	if err := rows.Err(); err != nil {
+		log.Printf("loans print (rows): %v", err)
+		internalError(w, r)
+		return
+	}
 	// The class the sheet is restricted to, named in the heading.
 	printedClass := ""
 	if byClass {
@@ -115,6 +120,11 @@ func (a *app) printInventory(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		list = append(list, l)
+	}
+	if err := rows.Err(); err != nil {
+		log.Printf("inventory print (rows): %v", err)
+		internalError(w, r)
+		return
 	}
 	a.renderDoc(w, r, "inventory_print", map[string]any{
 		"Rows":  list,

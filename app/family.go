@@ -79,6 +79,11 @@ func (a *app) familyScreen(w http.ResponseWriter, r *http.Request) {
 			current = append(current, l)
 		}
 	}
+	if err := rows.Err(); err != nil {
+		log.Printf("family (rows): %v", err)
+		internalError(w, r)
+		return
+	}
 
 	a.renderDoc(w, r, "family", map[string]any{
 		"FirstName": firstName,

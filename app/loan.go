@@ -332,6 +332,10 @@ func (a *app) searchAvailableBooks(q string, inBasket []int64) ([]FoundBook, boo
 		}
 		out = append(out, l)
 	}
+	if err := rows.Err(); err != nil {
+		log.Printf("book search (rows): %v", err)
+		return nil, false
+	}
 	if len(out) > 5 {
 		return out[:5], true
 	}
