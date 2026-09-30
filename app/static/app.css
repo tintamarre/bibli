@@ -1097,12 +1097,14 @@ button, input, select, textarea { font-family: inherit; }
   display: grid; gap: 1rem; align-items: start;
   grid-template-columns: repeat(auto-fit, minmax(23rem, 1fr));
 }
-.info-block { padding: 1rem 1.15rem; color: var(--muted); font-size: .9rem; }
+/* The install-state blocks: white cards, like the settings form above them. */
+.info-col { display: flex; flex-direction: column; gap: 1rem; }
+.info-block { padding: 1rem 1.15rem; color: var(--muted); font-size: .9rem; background: var(--surface); }
 /* A repair link inside an observed block: quiet, with a 44 px target. */
 .info-block .link-quiet { min-height: 44px; }
 .info-block h3 { font-size: .95rem; margin: 0 0 .5rem; color: var(--text); }
 .info-block p { margin: .4rem 0; }
-.info-block .code { overflow-wrap: anywhere; background: var(--surface); }
+.info-block .code { overflow-wrap: anywhere; background: var(--bg); }
 
 /* A sortable heading: a <th>'s type and colour, button chrome removed. */
 .th-sort {

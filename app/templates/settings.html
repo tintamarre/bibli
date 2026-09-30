@@ -129,6 +129,9 @@
   <section class="tab-panel" data-panel="installation" role="tabpanel">
     <div class="info-grid">
 
+      {{/* The two short blocks stack in one column, so the tall Sauvegarde sits
+           beside them instead of pushing Catalogage far down. */}}
+      <div class="info-col">
       <section class="info-block">
         <h3>{{T "settings.access_heading"}}</h3>
         {{if .AccessLocal}}
@@ -143,6 +146,24 @@
         <p class="note">{{T "settings.access_hint"}}</p>
         {{end}}
       </section>
+
+      <section class="info-block">
+        <h3>{{T "settings.cataloguing"}}</h3>
+        {{with .Cache}}
+        <p>{{if .Active}}{{T "settings.cache_label"}} <b>{{.Count}}</b> {{T "settings.cache_note" .Size}}
+        {{else}}{{T "settings.cache_off_prefix"}} <b>{{T "settings.cache_off_word"}}</b> {{T "settings.cache_off_suffix"}}{{end}}</p>
+        {{/* Forget the recorded absences, keeping every image. Offered only
+             when there is something to forget. */}}
+        {{if and .Active .Absent}}
+        <p>{{T "settings.covers_absent_prefix"}} <b>{{.Absent}}</b>, {{T "settings.covers_absent_note"}}</p>
+        <form method="post" action="/settings/covers/absences/forget"
+              data-confirm="{{T "settings.covers_forget_confirm" .Absent}}">
+          <button class="link-quiet" type="submit">{{template "icon-refresh" "icon-inline"}}{{T "settings.covers_forget"}}</button>
+        </form>
+        {{end}}
+        {{end}}
+      </section>
+      </div>
 
       <section class="info-block">
         <h3>{{T "settings.backup"}}</h3>
@@ -172,23 +193,6 @@
           {{end}}
         </ul>
         <p class="note">{{T "settings.backup_download_note"}}</p>
-        {{end}}
-        {{end}}
-      </section>
-
-      <section class="info-block">
-        <h3>{{T "settings.cataloguing"}}</h3>
-        {{with .Cache}}
-        <p>{{if .Active}}{{T "settings.cache_label"}} <b>{{.Count}}</b> {{T "settings.cache_note" .Size}}
-        {{else}}{{T "settings.cache_off_prefix"}} <b>{{T "settings.cache_off_word"}}</b> {{T "settings.cache_off_suffix"}}{{end}}</p>
-        {{/* Forget the recorded absences, keeping every image. Offered only
-             when there is something to forget. */}}
-        {{if and .Active .Absent}}
-        <p>{{T "settings.covers_absent_prefix"}} <b>{{.Absent}}</b>, {{T "settings.covers_absent_note"}}</p>
-        <form method="post" action="/settings/covers/absences/forget"
-              data-confirm="{{T "settings.covers_forget_confirm" .Absent}}">
-          <button class="link-quiet" type="submit">{{template "icon-refresh" "icon-inline"}}{{T "settings.covers_forget"}}</button>
-        </form>
         {{end}}
         {{end}}
       </section>
