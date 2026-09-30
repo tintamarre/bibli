@@ -72,6 +72,29 @@ func scanOpenLoan(sc rowScanner, p *OpenLoan) error {
 		&p.FirstName, &p.LastInitial, &p.Class, &p.LoanedOn)
 }
 
+// borrowerLiteCols and scanBorrowerLite are the borrower fields the lending
+// screen shows; the class can be NULL, hence *string in Borrower.
+const borrowerLiteCols = "id, first_name, last_initial, class"
+
+func scanBorrowerLite(sc rowScanner, b *Borrower) error {
+	return sc.Scan(&b.ID, &b.FirstName, &b.LastInitial, &b.Class)
+}
+
+// activeBorrowerByID loads an active borrower for the lending screen; a missing
+// or deactivated id gives sql.ErrNoRows.
+func (a *app) activeBorrowerByID(id int64) (Borrower, error) {
+	var b Borrower
+	err := scanBorrowerLite(a.db.QueryRow(
+		`SELECT `+borrowerLiteCols+` FROM borrower WHERE id = ? AND active = 1`, id), &b)
+	return b, err
+}
+
+// borrowSection redraws the lending screen's borrower panel with the current
+// loan counts and an optional error line.
+func (a *app) borrowSection(w http.ResponseWriter, r *http.Request, b Borrower, errMsg string) {
+	a.fragment(w, r, "borrow", "borrow_section", map[string]any{"Borrower": a.withLoanCounts(b), "Error": errMsg})
+}
+
 const openLoanJoins = `
 	   FROM loan l
 	   JOIN copy c  ON c.id = l.copy_id
@@ -334,16 +357,14 @@ func (a *app) borrowBorrower(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var borrower Borrower
-	err := a.db.QueryRow(
-		`SELECT id, first_name, last_initial, class FROM borrower WHERE card_code = ? AND active = 1`,
-		code,
-	).Scan(&borrower.ID, &borrower.FirstName, &borrower.LastInitial, &borrower.Class)
+	err := scanBorrowerLite(a.db.QueryRow(
+		`SELECT `+borrowerLiteCols+` FROM borrower WHERE card_code = ? AND active = 1`, code), &borrower)
 	switch {
 	case err == sql.ErrNoRows:
 		// Not a known card: fuzzy search on first name, last name and class.
 		res, tooMany := a.searchBorrowers(code)
 		if len(res) == 1 && !tooMany {
-			a.fragment(w, r, "borrow", "borrow_section", map[string]any{"Borrower": a.withLoanCounts(res[0]), "Error": ""})
+			a.borrowSection(w, r, res[0], "")
 			return
 		}
 		a.fragment(w, r, "borrow", "borrow_step1", map[string]any{
@@ -356,7 +377,7 @@ func (a *app) borrowBorrower(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	a.fragment(w, r, "borrow", "borrow_section", map[string]any{"Borrower": a.withLoanCounts(borrower), "Error": ""})
+	a.borrowSection(w, r, borrower, "")
 }
 
 // Every word must appear somewhere. Up to 5 results; the boolean says there were
@@ -373,7 +394,7 @@ func (a *app) searchBorrowers(q string) ([]Borrower, bool) {
 		conds = append(conds, "(fold(first_name) LIKE ? OR fold(last_initial) LIKE ? OR fold(COALESCE(class,'')) LIKE ?)")
 		args = append(args, like, like, like)
 	}
-	query := `SELECT id, first_name, last_initial, class FROM borrower
+	query := `SELECT ` + borrowerLiteCols + ` FROM borrower
 	             WHERE active = 1 AND ` + strings.Join(conds, " AND ") + `
 	             ORDER BY class, last_initial, first_name LIMIT 6`
 	rows, err := a.db.Query(query, args...)
@@ -385,10 +406,15 @@ func (a *app) searchBorrowers(q string) ([]Borrower, bool) {
 	var out []Borrower
 	for rows.Next() {
 		var e Borrower
-		if err := rows.Scan(&e.ID, &e.FirstName, &e.LastInitial, &e.Class); err != nil {
+		if err := scanBorrowerLite(rows, &e); err != nil {
+			log.Printf("borrower search (scan): %v", err)
 			return nil, false
 		}
 		out = append(out, e)
+	}
+	if err := rows.Err(); err != nil {
+		log.Printf("borrower search (rows): %v", err)
+		return nil, false
 	}
 	if len(out) > 5 {
 		return out[:5], true
@@ -446,14 +472,12 @@ func (a *app) borrowBookSearch(w http.ResponseWriter, r *http.Request) {
 
 func (a *app) borrowBorrowerID(w http.ResponseWriter, r *http.Request) {
 	id, _ := strconv.ParseInt(r.FormValue("borrower_id"), 10, 64)
-	var borrower Borrower
-	if err := a.db.QueryRow(
-		`SELECT id, first_name, last_initial, class FROM borrower WHERE id = ? AND active = 1`, id,
-	).Scan(&borrower.ID, &borrower.FirstName, &borrower.LastInitial, &borrower.Class); err != nil {
+	borrower, err := a.activeBorrowerByID(id)
+	if err != nil {
 		a.fragment(w, r, "borrow", "borrow_step1", map[string]any{"Error": tr(r, "loan.err_borrower_unknown")})
 		return
 	}
-	a.fragment(w, r, "borrow", "borrow_section", map[string]any{"Borrower": a.withLoanCounts(borrower), "Error": ""})
+	a.borrowSection(w, r, borrower, "")
 }
 
 // The message goes to #scan-feedback; on success an <li> row is swapped out of
@@ -688,10 +712,7 @@ func (a *app) borrowConfirm(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Reload the pupil: needed for the display, and confirms they are still active.
-	var borrower Borrower
-	err := a.db.QueryRow(
-		`SELECT id, first_name, last_initial, class FROM borrower WHERE id = ? AND active = 1`, borrowerID,
-	).Scan(&borrower.ID, &borrower.FirstName, &borrower.LastInitial, &borrower.Class)
+	borrower, err := a.activeBorrowerByID(borrowerID)
 	if err == sql.ErrNoRows {
 		a.fragment(w, r, "borrow", "borrow_step1", map[string]any{"Error": tr(r, "loan.err_borrower_gone")})
 		return
@@ -704,7 +725,7 @@ func (a *app) borrowConfirm(w http.ResponseWriter, r *http.Request) {
 
 	ids := uniqueIDs(r.Form["copy_id"])
 	if len(ids) == 0 {
-		a.fragment(w, r, "borrow", "borrow_section", map[string]any{"Borrower": a.withLoanCounts(borrower), "Error": tr(r, "loan.err_empty_basket")})
+		a.borrowSection(w, r, borrower, tr(r, "loan.err_empty_basket"))
 		return
 	}
 
