@@ -270,6 +270,7 @@ func (a *app) handler() http.Handler {
 	// About
 	mux.HandleFunc("GET /about", a.about)
 	mux.HandleFunc("GET /build-info.json", a.buildInfo)
+	mux.HandleFunc("GET /manifest.webmanifest", a.manifest)
 
 	// Vendored assets, no CDN. Cached long: every URL carries a fingerprint.
 	sub, _ := fs.Sub(staticFS, "static")

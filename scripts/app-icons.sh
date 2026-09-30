@@ -1,8 +1,9 @@
 #!/bin/sh
-# Bibli — draws the desktop icons from app/static/favicon.svg into
+# Bibli — draws the icons from app/static/favicon.svg. The desktop icons go to
 # scripts/icons/: Bibli.icns for the Mac app, bibli.ico for the Windows
-# shortcut, bibli.png for the Linux menu entry. The favicon on a light rounded
-# square.
+# shortcut, bibli.png for the Linux menu entry (the favicon on a light rounded
+# square). The web home-screen icons go to app/static/ (icon-192, icon-512 and
+# apple-touch-icon.png, the logo on a solid white square).
 #
 # Run on a Mac, and only when the logo changes: the result is committed, so
 # that macos-app.sh, windows-app.sh and linux-app.sh build anywhere, the release runner
@@ -50,4 +51,20 @@ for s, img in zip(sizes, images):
 open(out, "wb").write(data + b"".join(images))
 EOF
 cp "$WORK/ico256.png" "$OUT/bibli.png"
-echo "Written: $OUT/Bibli.icns, $OUT/bibli.ico and $OUT/bibli.png"
+
+# The web home-screen icons (Add to Home Screen on a phone): the logo on a solid
+# white square, full bleed, so a phone can round it and it never turns black on
+# a transparent background. Served from app/static/ and named in the web app
+# manifest and the apple-touch-icon link.
+cat > "$WORK/web.html" <<'EOF'
+<html><body style="margin:0">
+<div style="width:1024px;height:1024px;background:#ffffff;display:flex;align-items:center;justify-content:center">
+<img src="favicon.svg" style="width:660px;height:660px"></div></body></html>
+EOF
+(cd "$WORK" && "$CHROME" --headless=new --disable-gpu \
+    --screenshot="$WORK/web1024.png" --window-size=1024,1024 --hide-scrollbars web.html 2>/dev/null)
+sips -z 192 192 "$WORK/web1024.png" --out app/static/icon-192.png > /dev/null
+sips -z 512 512 "$WORK/web1024.png" --out app/static/icon-512.png > /dev/null
+sips -z 180 180 "$WORK/web1024.png" --out app/static/apple-touch-icon.png > /dev/null
+
+echo "Written: $OUT/Bibli.icns, $OUT/bibli.ico, $OUT/bibli.png and app/static/{icon-192,icon-512,apple-touch-icon}.png"

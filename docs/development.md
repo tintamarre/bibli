@@ -89,7 +89,7 @@ Construit `Bibli-linux.tar.gz` dans `dist/`, depuis n'importe quel système. L'a
 
 ### Icônes
 
-Les icônes sont dans `scripts/icons/`, dessinées depuis `app/static/favicon.svg` par `scripts/app-icons.sh` (Chrome requis, chemin dans `CHROME` au besoin). À relancer sur un Mac quand le logo change, puis à committer : c'est ce qui permet de construire les trois versions sans navigateur, sur le runner comme ailleurs.
+Les icônes sont dessinées depuis `app/static/favicon.svg` par `scripts/app-icons.sh` (Chrome requis, chemin dans `CHROME` au besoin) : celles des applications de bureau dans `scripts/icons/`, et celles de l'écran d'accueil des téléphones (« Ajouter à l'écran d'accueil ») dans `app/static/` (`icon-192`, `icon-512`, `apple-touch-icon.png`). À relancer sur un Mac quand le logo change, puis à committer : c'est ce qui permet de construire les applications sans navigateur, sur le runner comme ailleurs.
 
 ## Structure
 
@@ -137,7 +137,7 @@ Tout le code Go vit dans `app/`, en **un seul paquet plat** : les fichiers y son
     scripts/macos-app.sh        application de bureau Mac
     scripts/windows-app.sh      application de bureau Windows
     scripts/linux-app.sh        application de bureau Linux
-    scripts/app-icons.sh        les icônes des trois, dans scripts/icons/
+    scripts/app-icons.sh        icônes de bureau (scripts/icons/) et web (app/static/)
     Makefile             raccourcis de développement (make help)
 
 ## Ajouter une migration

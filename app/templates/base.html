@@ -6,6 +6,12 @@
 <meta name="theme-color" content="{{themeColor}}">
 <title>{{.Title}} · Bibli{{with school}} · {{.}}{{end}}</title>
 <link rel="icon" type="image/svg+xml" href="{{asset "/static/favicon.svg"}}">
+<link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Bibli">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="stylesheet" href="{{asset "/static/app.css"}}">
 <script src="{{asset "/static/vendor/htmx.min.js"}}" defer></script>
 <script src="{{asset "/static/vendor/zxing.min.js"}}" defer></script>

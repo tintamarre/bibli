@@ -156,7 +156,7 @@ func (a *app) clearSessionCookie(w http.ResponseWriter) {
 
 func isPublicPath(path string) bool {
 	switch {
-	case path == "/", path == "/login", path == "/healthcheck":
+	case path == "/", path == "/login", path == "/healthcheck", path == "/manifest.webmanifest":
 		return true
 	case path == "/logout":
 		// Signing out of an expired session must not detour through /login.
