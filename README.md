@@ -7,7 +7,7 @@
 **La bibliothèque de l'école, tenue par des bénévoles.** Prêter et rendre à la douchette, cataloguer un livre en scannant son ISBN, imprimer les étiquettes, suivre les retards. Sur un seul ordinateur ou pour toute l'école, sans informaticien sur place.
 
 **[Essayer la démonstration](https://bibli.tintamarre.be)** · mot de passe `demo` · une école fictive, remise à zéro régulièrement
-· **[▶ Voir la vidéo](https://www.youtube.com/watch?v=Yo_IYGwo8sM)**
+· **[Voir la vidéo](https://www.youtube.com/watch?v=Yo_IYGwo8sM)**
 
 [![L'accueil de Bibli : emprunter, rendre, et les livres en rayon, en prêt et en retard](docs/img/home.png)](https://www.youtube.com/watch?v=Yo_IYGwo8sM)
 
