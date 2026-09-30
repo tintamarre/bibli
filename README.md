@@ -1,5 +1,9 @@
 # Bibli
 
+[![Version](https://img.shields.io/github/v/release/tintamarre/bibli?label=version&sort=semver)](https://github.com/tintamarre/bibli/releases)
+[![CI](https://github.com/tintamarre/bibli/actions/workflows/ci.yml/badge.svg)](https://github.com/tintamarre/bibli/actions/workflows/ci.yml)
+[![Licence AGPL-3.0](https://img.shields.io/badge/licence-AGPL--3.0-blue)](LICENSE)
+
 **La bibliothèque de l'école, tenue par des bénévoles.** Prêter et rendre à la douchette, cataloguer un livre en scannant son ISBN, imprimer les étiquettes, suivre les retards. Sur un seul ordinateur ou pour toute l'école, sans informaticien sur place.
 
 **[Essayer la démonstration →](https://bibli.tintamarre.be)** · mot de passe `demo` · une école fictive, remise à zéro régulièrement
