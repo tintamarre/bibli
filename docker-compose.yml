@@ -16,8 +16,8 @@
 
 services:
   bibli:
-    # :stable = the latest version published by the release workflow.
-    # Do not use :latest in production: it follows every push to main.
+    # :stable = the latest version published by the release workflow. It is the
+    # only tag a school should run; the exact versions (:1.2.3) are there too.
     image: ghcr.io/tintamarre/bibli:stable
     container_name: bibli
     restart: always

@@ -143,7 +143,7 @@ Bibli répond alors sur `http://IP-de-la-machine:8080`.
 
 La base vit dans `./data` sur l'hôte, avec les sauvegardes (`./data/backups`) et les couvertures (`./data/cache`). **Ne jamais** placer ce dossier sur un partage réseau (NFS/CIFS) : le verrouillage SQLite y est cassé et la base se corrompt.
 
-Le compose suit le tag **`:stable`**, publié à chaque version. La CI publie aussi `:<sha>` et `:latest` à chaque changement de `main` : ces tags servent aux essais, pas à une école en production.
+Le compose suit le tag **`:stable`**, republié à chaque version (les versions exactes, `:1.2.3`, sont aussi disponibles). L'image n'est construite qu'à la publication d'une version, pour amd64 et arm64.
 
 Mettre à jour :
 
