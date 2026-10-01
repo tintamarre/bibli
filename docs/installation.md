@@ -18,7 +18,7 @@ Pour plusieurs postes, des tablettes ou un accès depuis la maison, il faut un s
 
 ## Ce qu'il faut
 
-- Un ordinateur qui reste à la bibliothèque : Mac, PC Windows ou PC Linux (un Raspberry Pi récent convient aussi).
+- Un ordinateur qui reste à la bibliothèque : Mac, PC Windows 10 ou 11 (pas Windows 7, 8 ni 8.1, où Bibli ne démarre pas), ou PC Linux (un Raspberry Pi récent convient aussi).
 - Un navigateur **Chrome**, **Edge**, **Brave** ou **Chromium**. Edge est déjà installé sur Windows. Bibli s'ouvre alors dans une fenêtre à lui, sans onglets ni barre d'adresse. Sans aucun de ces navigateurs, Bibli s'ouvre dans le navigateur habituel, dans un onglet.
 - Une connexion Internet, pour télécharger Bibli, puis pour retrouver les fiches des livres au catalogage. Prêter et rendre fonctionnent sans Internet.
 - Si possible, une douchette (voir [Scanner les codes-barres](guide.md#2-scanner-les-codes-barres)).

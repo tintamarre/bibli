@@ -12,7 +12,7 @@ Tout ce qu'il faut pour lancer Bibli depuis le code, le modifier et en publier u
 | `python3` | Régénérer les prêts de démonstration (`scripts/gen-demo-loans.py`), construire l'application Mac hors d'un Mac. |
 | `zip`, `tar` | Les applications de bureau. |
 
-Rien d'autre à installer : une seule dépendance Go (`modernc.org/sqlite`), pas de `package.json`.
+Rien d'autre à installer : deux dépendances Go (`modernc.org/sqlite` et `golang.org/x/sys`, que la première apporte déjà, pour le service Windows), pas de `package.json`.
 
 ## Démarrer
 

@@ -9,19 +9,20 @@ Ce guide s'adresse à la personne qui installe Bibli **pour plusieurs appareils*
 3. [Configuration](#configuration)
 4. [HTTPS ou réseau local : choisir le bon mode](#https-ou-réseau-local--choisir-le-bon-mode)
 5. [Binaire + systemd](#binaire--systemd)
-6. [Docker](#docker)
-7. [Reverse proxy](#reverse-proxy)
-8. [Sauvegarde et restauration](#sauvegarde-et-restauration)
-9. [Capacité](#capacité)
-10. [Bon à savoir](#bon-à-savoir)
-11. [Instance de démonstration](#instance-de-démonstration)
+6. [Windows (service)](#windows-service)
+7. [Docker](#docker)
+8. [Reverse proxy](#reverse-proxy)
+9. [Sauvegarde et restauration](#sauvegarde-et-restauration)
+10. [Capacité](#capacité)
+11. [Bon à savoir](#bon-à-savoir)
+12. [Instance de démonstration](#instance-de-démonstration)
 
 ## Quelle installation choisir ?
 
 ![Quelle installation choisir : application de bureau, serveur HTTP sur le réseau local, serveur HTTPS sur le réseau local, serveur sur Internet](img/which-setup.svg)
 
 - **Un seul ordinateur** : l'application de bureau, avec le [guide d'installation](installation.md). Rien d'autre ne l'atteint.
-- **Plusieurs appareils, douchettes ou ISBN tapé** : un serveur sur le réseau local, en HTTP ([binaire + systemd](#binaire--systemd) ou [Docker](#docker)), avec `-secure-cookies=false`.
+- **Plusieurs appareils, douchettes ou ISBN tapé** : un serveur sur le réseau local, en HTTP ([binaire + systemd](#binaire--systemd) sous Linux, [Windows (service)](#windows-service) sous Windows, ou [Docker](#docker)), avec `-secure-cookies=false`.
 - **Plusieurs appareils, caméra des tablettes** : le même serveur derrière un [reverse proxy](#reverse-proxy) HTTPS. Sur un réseau fermé, le plus simple est un vrai nom de domaine avec un certificat obtenu par défi DNS (DNS-01), qu'aucun appareil n'a besoin d'approuver.
 - **Accès depuis la maison** (liens de suivi pour les familles) : un serveur sur Internet, derrière un reverse proxy HTTPS.
 
@@ -32,7 +33,7 @@ Dans les quatre cas, Bibli reste un seul programme et un seul fichier de base de
 | Pour | Il faut |
 |---|---|
 | Utiliser | Un navigateur récent. Une douchette USB au comptoir (25–40 €, elle se comporte comme un clavier). |
-| Héberger | Une machine allumée en permanence : mini-PC, Raspberry Pi 4/5 ou serveur Linux. Aucune base de données ni serveur d'applications à installer. |
+| Héberger | Une machine allumée en permanence : mini-PC, Raspberry Pi 4/5, serveur Linux, ou PC **Windows 10 ou 11** ([Windows (service)](#windows-service)). Aucune base de données ni serveur d'applications à installer. |
 | Compiler | Go ≥ 1.27, sur n'importe quel système. |
 | Déployer avec Docker | Docker et le plugin `compose`, sur une machine amd64 ou arm64 (Raspberry Pi 4/5 avec un système 64 bits). |
 
@@ -42,7 +43,7 @@ Dans les quatre cas, Bibli reste un seul programme et un seul fichier de base de
 
 | Variable | Rôle |
 |---|---|
-| `BIBLI_ADMIN_PASSWORD` | **Obligatoire.** Le mot de passe bibliothécaire, unique pour toute l'école. Sans lui, Bibli refuse de démarrer, et sur une instance accessible par le réseau il exige **au moins 12 caractères** (une phrase de trois ou quatre mots suffit ; l'application de bureau et la démonstration en sont dispensées). Une session dure 12 heures sans utilisation, et jamais plus de 7 jours après la connexion ; changer le mot de passe déconnecte tout le monde. |
+| `BIBLI_ADMIN_PASSWORD` | **Obligatoire.** Le mot de passe bibliothécaire, unique pour toute l'école. Sans lui (ou sans `-password-file`), Bibli refuse de démarrer, et sur une instance accessible par le réseau il exige **au moins 12 caractères** (une phrase de trois ou quatre mots suffit ; l'application de bureau et la démonstration en sont dispensées). Une session dure 12 heures sans utilisation, et jamais plus de 7 jours après la connexion ; changer le mot de passe déconnecte tout le monde. |
 | `BIBLI_GOOGLE_BOOKS_KEY` | Optionnelle. Clé API Google Books : relève le quota d'enrichissement et évite les erreurs 429 quand on catalogue beaucoup de livres d'affilée. Elle peut aussi être collée dans **Réglages** (« Clé Google Books ») ; si la variable est définie, elle l'emporte et le champ est désactivé. |
 | `BIBLI_DEMO_RESET` | **Réservée à une instance de démonstration publique**, jamais à une école : voir [Instance de démonstration](#instance-de-démonstration). |
 | `BIBLI_LOG_COLOR` | Optionnelle. `1` colore le journal, seulement dans un terminal (utile en développement). |
@@ -58,6 +59,8 @@ Dans les quatre cas, Bibli reste un seul programme et un seul fichier de base de
 | `-secure-cookies` | `true` | Cookies de session en `Secure`. **À mettre à `false` pour un accès en HTTP** (réseau local, développement). |
 | `-trust-proxy` | `false` | Lire `X-Forwarded-For`. **À activer derrière un reverse proxy**, jamais sans. |
 | `-family-links` | `true` | Proposer les liens de suivi pour les familles. `false` sur une installation qu'aucune famille ne peut joindre (les applications de bureau le passent). |
+| `-log-file` | vide | Écrire le journal dans ce fichier (à la suite, renouvelé à 5 Mo, l'ancien gardé en `.1`) plutôt que sur la sortie d'erreur. Le service Windows le passe. |
+| `-password-file` | vide | Lire le mot de passe bibliothécaire dans ce fichier plutôt que dans `BIBLI_ADMIN_PASSWORD` (tout le fichier, sans le saut de ligne final). Le service Windows le passe. |
 
 Les migrations du schéma s'appliquent seules au démarrage.
 
@@ -125,6 +128,43 @@ Puis :
 `Restart=always` relance Bibli après une coupure de courant. Réserver une **IP fixe** dans le routeur : en DHCP, l'adresse changera un jour et plus aucun poste ne trouvera Bibli.
 
 Mettre à jour : remplacer `/opt/bibli/biblio` par la nouvelle version, puis `sudo systemctl restart biblio`.
+
+## Windows (service)
+
+Sur un PC Windows allumé en permanence, Bibli tourne en **service Windows** : il démarre tout seul à l'allumage, redémarre après un plantage, et sert toutes les tablettes et tous les postes du réseau, sans que personne ait à ouvrir une fenêtre. C'est l'équivalent Windows de [binaire + systemd](#binaire--systemd), sans rien à compiler, et sans second programme à installer : `bibli.exe` est lui-même le service. Arrêter le service ou éteindre le PC ferme la base proprement.
+
+Télécharger `Bibli-vX.Y.Z-windows-server.zip` depuis la [page de la dernière version](https://github.com/tintamarre/bibli/releases/latest), l'extraire (dans *Documents*, par exemple), puis double-cliquer sur **`Installer Bibli (serveur).cmd`**. Windows demande l'autorisation d'administrateur (SmartScreen peut prévenir : *Informations complémentaires → Exécuter quand même*), puis le mot de passe de la bibliothèque (au moins 12 caractères). C'est tout.
+
+**Il faut** un PC **Windows 10 ou 11** (Famille, Professionnel ou Éducation), de préférence un **PC de bureau** qui reste branché. Windows 7, 8 et 8.1 ne conviennent pas : Bibli n'y démarre pas. Le mode S de Windows non plus, il n'accepte que les applications du Microsoft Store. Sur un PC à processeur ARM, il faut Windows 11.
+
+L'installateur :
+
+- copie `bibli.exe` dans `C:\Program Files\Bibli` et garde la base dans `C:\ProgramData\Bibli` (base, sauvegardes, couvertures, journaux) : une mise à jour remplace le programme sans toucher aux données ;
+- enregistre le service **Bibli** (visible dans `services.msc`), lancé au démarrage sous le compte restreint `SERVICE LOCAL` (un serveur ouvert au réseau n'a pas besoin de plus de droits), que Windows relance s'il plante ;
+- écrit le mot de passe dans un fichier que seuls le serveur, `SYSTEM` et les administrateurs peuvent lire, jamais sur la ligne de commande ;
+- empêche le PC de se mettre en veille quand il est sur secteur : un PC en veille ne répond plus aux tablettes ;
+- ouvre le port **8080** en entrée, sur les profils de pare-feu *Privé* et *Domaine* seulement ;
+- pose une icône **Bibli** sur le Bureau, une **icône dans la zone de notification** (près de l'horloge, à chaque ouverture de session) et un dossier **Bibli (serveur)** dans le menu Démarrer : démarrer, arrêter, redémarrer, état, voir le journal, adresse réseau, mettre à jour, désinstaller.
+
+**Démarrer, arrêter, redémarrer** : par l'icône de la zone de notification (clic droit) ou le menu **Bibli (serveur)**. Ces trois actions pilotent le service et demandent donc l'autorisation d'administrateur (une fenêtre UAC) à chaque fois. Un serveur se laisse normalement allumé ; l'arrêter met Bibli hors service pour tous les postes jusqu'au prochain démarrage (il redémarre de lui-même au prochain allumage du PC — pour qu'il reste éteint, passer le service **Bibli** en *Désactivé* dans `services.msc`). « Cacher l'icône » retire seulement l'icône, sans arrêter le serveur.
+
+**Pour qu'il reste joignable** :
+
+- Bibli redémarre seul après une mise à jour de Windows ou un plantage, sans que personne ait à ouvrir de session.
+- Un **portable** se met en veille quand on rabat l'écran ou qu'il passe sur batterie, même avec ce réglage : préférer un PC de bureau, ou régler *Fermeture du capot → Ne rien faire* (Panneau de configuration → Options d'alimentation).
+- Après une **coupure de courant**, le PC ne se rallume tout seul que si son BIOS/UEFI le prévoit (option du type *Restore on AC Power Loss* ou *Après une coupure : allumer*), à régler une fois au démarrage du PC.
+- Si les tablettes n'y accèdent plus alors que Bibli répond sur ce PC, vérifier d'abord que le réseau est toujours en **Privé** (Paramètres → Réseau et Internet).
+- Si Bibli ne répond plus du tout, le motif est à la fin du journal (menu **Voir le journal**) : port 8080 déjà pris par un autre programme, base abîmée… Windows retente le démarrage chaque minute.
+
+Bibli répond alors sur `http://localhost:8080` depuis ce PC, et sur `http://NOM-DU-PC:8080` depuis les tablettes et les autres postes (l'entrée **« Adresse pour les tablettes »** donne l'adresse exacte, à recopier). Mettre le réseau de l'école en **Privé** (et non *Public*), sinon le pare-feu bloque l'accès, et réserver une **IP fixe** dans le routeur pour que l'adresse ne change jamais. Le nom du PC suffit aux autres postes Windows, mais les tablettes Android et les iPad ne le reconnaissent souvent pas : leur donner l'adresse IP.
+
+Comme pour tout accès en HTTP, les cookies sont servis sans `Secure` (`-secure-cookies=false`) et la **caméra des tablettes n'est pas disponible** (voir [HTTPS ou réseau local](#https-ou-réseau-local--choisir-le-bon-mode)) ; les douchettes, elles, fonctionnent partout. Les liens de suivi pour les familles sont désactivés (`-family-links=false`), un serveur HTTP sur le réseau local n'étant pas joignable depuis la maison.
+
+L'installateur, l'icône de la zone de notification et le menu suivent la **langue de Windows** (français, néerlandais ou anglais ; français par défaut), comme l'application elle-même.
+
+**Poser l'icône sur un autre poste** : copier le dossier extrait sur ce poste et double-cliquer sur **`Raccourci Bibli (autre poste).cmd`** (il demande le nom ou l'adresse IP du serveur).
+
+**Mettre à jour** : menu **Bibli (serveur) → Mettre à jour Bibli**, puis choisir le nouveau `.zip` téléchargé ; Bibli s'arrête, copie la base par sécurité, remplace le programme et redémarre. Ces copies (`C:\ProgramData\Bibli\backups\pre-update-…`) ne sont jamais effacées automatiquement : supprimer les plus anciennes de temps en temps. Le journal est `C:\ProgramData\Bibli\logs\bibli.log` (menu **Voir le journal**), renouvelé tous les 5 Mo. **Désinstaller** : menu **Bibli (serveur) → Désinstaller** ; les données de `C:\ProgramData\Bibli` sont **conservées** (pour tout effacer, y compris les dossiers des élèves : touche Windows + R, puis `powershell -ExecutionPolicy Bypass -File "C:\Program Files\Bibli\uninstall.ps1" -PurgeData`).
 
 ## Docker
 

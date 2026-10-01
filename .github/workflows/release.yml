@@ -212,7 +212,7 @@ jobs:
 
   # A failure here leaves the release out with the Docker image alone; rerun
   # this job, or attach the apps by hand from scripts/macos-app.sh,
-  # windows-app.sh and linux-app.sh.
+  # windows-app.sh, windows-service.sh and linux-app.sh.
   apps:
     needs: [version, release]
     runs-on: ubuntu-latest
@@ -246,6 +246,7 @@ jobs:
           fi
           scripts/macos-app.sh dist
           scripts/windows-app.sh dist
+          scripts/windows-service.sh dist
           scripts/linux-app.sh dist
           ls -la dist
 
@@ -256,9 +257,11 @@ jobs:
           NEW_VERSION="${{ needs.version.outputs.version }}"
           cp dist/Bibli-macos.zip "Bibli-${NEW_VERSION}-macos.zip"
           cp dist/Bibli-windows.zip "Bibli-${NEW_VERSION}-windows.zip"
+          cp dist/Bibli-windows-server.zip "Bibli-${NEW_VERSION}-windows-server.zip"
           cp dist/Bibli-linux.tar.gz "Bibli-${NEW_VERSION}-linux.tar.gz"
           gh release upload "$NEW_VERSION" \
             "Bibli-${NEW_VERSION}-macos.zip" \
             "Bibli-${NEW_VERSION}-windows.zip" \
+            "Bibli-${NEW_VERSION}-windows-server.zip" \
             "Bibli-${NEW_VERSION}-linux.tar.gz" \
             --clobber

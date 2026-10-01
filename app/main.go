@@ -50,14 +50,38 @@ func main() {
 		secureCookies = flag.Bool("secure-cookies", true, "session cookies as Secure (disable for local HTTP dev)")
 		trustProxy    = flag.Bool("trust-proxy", false, "trust X-Forwarded-For to identify the client (only behind a reverse proxy)")
 		familyOffer   = flag.Bool("family-links", true, "offer the loans links for families (false for a single-computer install)")
+		logPath       = flag.String("log-file", "", "append the log to this file, rotated at 5 MB (empty = stderr)")
+		passwordFile  = flag.String("password-file", "", "read the librarian password from this file instead of BIBLI_ADMIN_PASSWORD")
 	)
 	flag.Parse()
 	allowFamilyLinks(*familyOffer)
 
+	// A Windows service has no stderr: without a file, its log is lost.
+	if *logPath != "" {
+		lf, err := openLogFile(*logPath, maxLogSize)
+		if err != nil {
+			log.Fatalf("log file: %v", err)
+		}
+		log.SetOutput(lf)
+	}
+
+	// Early: the Windows service manager gives up on a service that does not
+	// check in within 30 seconds.
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
+	stopped := runAsService(stop)
+
 	// Fail-closed: the application is public, so no password means no start.
 	adminPass := os.Getenv("BIBLI_ADMIN_PASSWORD")
+	if *passwordFile != "" {
+		pw, err := readPasswordFile(*passwordFile)
+		if err != nil {
+			log.Fatalf("password file: %v", err)
+		}
+		adminPass = pw
+	}
 	if adminPass == "" {
-		log.Fatal("BIBLI_ADMIN_PASSWORD required: the application is public and refuses to start without a password")
+		log.Fatal("BIBLI_ADMIN_PASSWORD (or -password-file) required: the application is public and refuses to start without a password")
 	}
 
 	// Read before anything opens, so a malformed value stops the binary here.
@@ -154,9 +178,6 @@ func main() {
 
 	// Let in-flight requests finish before closing the database, otherwise a
 	// restart can leave an inconsistent WAL.
-	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
-
 	go func() {
 		log.Printf("Bibli started on %s (database: %s)", *addr, *dbPath)
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
@@ -172,7 +193,10 @@ func main() {
 	if err := srv.Shutdown(ctx); err != nil {
 		log.Printf("forced shutdown: %v", err)
 	}
+	// Before reporting the service stopped: Windows may end the process then.
+	db.Close()
 	log.Println("stopped")
+	stopped()
 }
 
 // handler is the whole application — routes and middleware — as one
