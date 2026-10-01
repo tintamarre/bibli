@@ -72,13 +72,13 @@ function Get-BibliStrings {
       sum_icons2   = 'menu « Bibli (serveur) » dans Démarrer (démarrer / arrêter / mettre à jour).'
       sum_notup    = 'Bibli n''a pas encore répondu. Voir {0}'
       menu_folder  = 'Bibli (serveur)'
-      svc_desc     = 'Serveur de la bibliothèque de l''école (Bibli).'
+      svc_desc     = 'Serveur de la bibliothèque (Bibli).'
       sc_open = 'Ouvrir Bibli'; sc_address = 'Adresse pour les tablettes'; sc_status = 'État du serveur'
       sc_start = 'Démarrer le serveur'; sc_stop = 'Arrêter le serveur'; sc_restart = 'Redémarrer le serveur'
       sc_logs = 'Voir le journal'; sc_data = 'Dossier des données'; sc_update = 'Mettre à jour Bibli'; sc_uninstall = 'Désinstaller Bibli'
       msg_started = 'Serveur démarré.'; msg_stopped = 'Serveur arrêté.'; msg_restarted = 'Serveur redémarré.'
       lbl_task = 'Service :'; lbl_responds = 'Répond sur le réseau :'; lbl_address = 'Adresse :'
-      addr_intro = 'Sur les tablettes et les autres ordinateurs de l''école, ouvrir :'
+      addr_intro = 'Sur les tablettes et les autres ordinateurs, ouvrir :'
       t_hide = 'Cacher l''icône (le serveur continue)'
       tip_up = 'Bibli — en marche'; tip_down = 'Bibli — arrêté'
       up_title = 'Choisir le nouveau bibli.exe ou le fichier .zip téléchargé'
@@ -104,13 +104,13 @@ function Get-BibliStrings {
       sum_icons2   = 'menu « Bibli (server) » in Start (starten / stoppen / bijwerken).'
       sum_notup    = 'Bibli heeft nog niet geantwoord. Zie {0}'
       menu_folder  = 'Bibli (server)'
-      svc_desc     = 'Server van de schoolbibliotheek (Bibli).'
+      svc_desc     = 'Server van de bibliotheek (Bibli).'
       sc_open = 'Bibli openen'; sc_address = 'Adres voor tablets'; sc_status = 'Status van de server'
       sc_start = 'Server starten'; sc_stop = 'Server stoppen'; sc_restart = 'Server herstarten'
       sc_logs = 'Logboek bekijken'; sc_data = 'Gegevensmap'; sc_update = 'Bibli bijwerken'; sc_uninstall = 'Bibli verwijderen'
       msg_started = 'Server gestart.'; msg_stopped = 'Server gestopt.'; msg_restarted = 'Server herstart.'
       lbl_task = 'Dienst:'; lbl_responds = 'Antwoordt op het netwerk:'; lbl_address = 'Adres:'
-      addr_intro = 'Open op de tablets en de andere computers van de school:'
+      addr_intro = 'Open op de tablets en de andere computers:'
       t_hide = 'Pictogram verbergen (server blijft draaien)'
       tip_up = 'Bibli — actief'; tip_down = 'Bibli — gestopt'
       up_title = 'Kies de nieuwe bibli.exe of het gedownloade .zip-bestand'
@@ -136,13 +136,13 @@ function Get-BibliStrings {
       sum_icons2   = 'a "Bibli (server)" menu in Start (start / stop / update).'
       sum_notup    = 'Bibli has not answered yet. See {0}'
       menu_folder  = 'Bibli (server)'
-      svc_desc     = 'School library server (Bibli).'
+      svc_desc     = 'Library server (Bibli).'
       sc_open = 'Open Bibli'; sc_address = 'Address for tablets'; sc_status = 'Server status'
       sc_start = 'Start the server'; sc_stop = 'Stop the server'; sc_restart = 'Restart the server'
       sc_logs = 'View the log'; sc_data = 'Data folder'; sc_update = 'Update Bibli'; sc_uninstall = 'Uninstall Bibli'
       msg_started = 'Server started.'; msg_stopped = 'Server stopped.'; msg_restarted = 'Server restarted.'
       lbl_task = 'Service:'; lbl_responds = 'Answers on the network:'; lbl_address = 'Address:'
-      addr_intro = 'On the tablets and the other school computers, open:'
+      addr_intro = 'On the tablets and the other computers, open:'
       t_hide = 'Hide the icon (the server keeps running)'
       tip_up = 'Bibli — running'; tip_down = 'Bibli — stopped'
       up_title = 'Choose the new bibli.exe or the downloaded .zip file'
@@ -668,23 +668,23 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0client-shortcut.ps
 CMD
 
 cat > "$DIR/LISEZ-MOI.txt" <<'TXT'
-Bibli — serveur pour toute l'école (Windows)
---------------------------------------------
+Bibli — serveur pour plusieurs postes (Windows)
+-----------------------------------------------
 Installer : double-cliquez sur « Installer Bibli (serveur).cmd », acceptez l'avertissement de Windows, puis choisissez le mot de passe de la bibliothèque. Bibli démarre alors tout seul à chaque allumage du PC, et une icône apparaît dans la zone de notification (près de l'horloge).
 - Sur ce PC : l'icône « Bibli » sur le Bureau.
 - Tablettes et autres postes : l'adresse donnée en fin d'installation (clic droit sur l'icône → « Adresse pour les tablettes »).
 - Autre PC : copiez ce dossier dessus et double-cliquez sur « Raccourci Bibli (autre poste).cmd ».
 Les scripts et l'icône parlent français, néerlandais ou anglais selon la langue de Windows. Détails : docs/deployment.md (« Windows (service) »).
 
-Bibli — server voor de hele school (Windows)
---------------------------------------------
+Bibli — server voor meerdere computers (Windows)
+------------------------------------------------
 Installeren: dubbelklik op « Installer Bibli (serveur).cmd », aanvaard de Windows-waarschuwing en kies het wachtwoord van de bibliotheek. Bibli start voortaan bij elke start van de pc; een pictogram verschijnt in het systeemvak.
 - Op deze pc: het pictogram « Bibli » op het bureaublad.
 - Tablets en andere pc's: het adres dat na de installatie wordt getoond (rechtsklik op het pictogram → « Adres voor tablets »).
 - Andere pc: kopieer deze map en dubbelklik op « Raccourci Bibli (autre poste).cmd ».
 
-Bibli — server for the whole school (Windows)
----------------------------------------------
+Bibli — server for several computers (Windows)
+----------------------------------------------
 Install: double-click "Installer Bibli (serveur).cmd", accept the Windows warning, then choose the library password. Bibli then starts on its own every time the PC powers on, and an icon appears in the notification area.
 - On this PC: the "Bibli" icon on the Desktop.
 - Tablets and other PCs: the address shown at the end of the install (right-click the icon -> "Address for tablets").

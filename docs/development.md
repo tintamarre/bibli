@@ -26,7 +26,7 @@ Rien d'autre à installer : deux dépendances Go (`modernc.org/sqlite` et `golan
 - La base est `data/biblio.db`, la même que le conteneur Docker de développement ; la cible arrête d'abord ce conteneur, qui tiendrait le port et le fichier.
 - Une compilation en échec **ne coupe pas le serveur** : la version précédente continue de répondre, et le message d'erreur s'affiche.
 - La détection de changement est un `find -newer`, une fois par seconde (`scripts/dev.sh`).
-- `make dev-docker` fait la même chose à travers l'image, pour vérifier ce qu'une école exécutera réellement. Plus lent, à réserver à ce contrôle.
+- `make dev-docker` fait la même chose à travers l'image, pour vérifier ce qu'une vraie installation exécutera. Plus lent, à réserver à ce contrôle.
 
 Sans `make` :
 
@@ -65,7 +65,7 @@ Le script cherche Chrome ou Chromium sur la machine, y compris celui que Playwri
 
 ## Applications de bureau
 
-Trois scripts construisent un Bibli pour **un seul ordinateur** : le serveur tourne en arrière-plan sur `http://localhost:8765/` (ou le port de `BIBLI_PORT`) et s'ouvre dans une fenêtre à lui, sans onglets ni barre d'adresse. Il n'écoute que `localhost` : aucune tablette ne l'atteint, et rien ne le relance après une coupure de courant. Ce n'est pas un déploiement d'école. Le mode d'emploi pour l'utilisateur est dans le [guide d'installation](installation.md).
+Trois scripts construisent un Bibli pour **un seul ordinateur** : le serveur tourne en arrière-plan sur `http://localhost:8765/` (ou le port de `BIBLI_PORT`) et s'ouvre dans une fenêtre à lui, sans onglets ni barre d'adresse. Il n'écoute que `localhost` : aucune tablette ne l'atteint, et rien ne le relance après une coupure de courant. Ce n'est pas un déploiement pour plusieurs postes. Le mode d'emploi pour l'utilisateur est dans le [guide d'installation](installation.md).
 
 À chaque version, le workflow de release construit les trois et les attache à la release (`Bibli-vX.Y.Z-macos.zip`, `Bibli-vX.Y.Z-windows.zip`, `Bibli-vX.Y.Z-linux.tar.gz`). Un échec de cette étape n'empêche pas la release, qui sort alors sans elles.
 
@@ -122,7 +122,7 @@ Tout le code Go vit dans `app/`, en **un seul paquet plat** : les fichiers y son
     app/themes.go        thèmes de couleurs (le détail est dans app.css)
     app/dates.go         dates « pour humains », formats par langue
     app/isbn.go          conversion et validation ISBN-10/13
-    app/params.go        réglages globaux gardés en mémoire (nom d'école, langue…)
+    app/params.go        réglages globaux gardés en mémoire (nom de l'établissement, langue…)
     app/version.go       métadonnées de build, lien vers le code source
     app/demo.go          mode démonstration : remise à zéro périodique
     app/demo.sql         jeu de démonstration, embarqué dans le binaire

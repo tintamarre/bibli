@@ -43,9 +43,9 @@ Dans les quatre cas, Bibli reste un seul programme et un seul fichier de base de
 
 | Variable | Rôle |
 |---|---|
-| `BIBLI_ADMIN_PASSWORD` | **Obligatoire.** Le mot de passe bibliothécaire, unique pour toute l'école. Sans lui (ou sans `-password-file`), Bibli refuse de démarrer, et sur une instance accessible par le réseau il exige **au moins 12 caractères** (une phrase de trois ou quatre mots suffit ; l'application de bureau et la démonstration en sont dispensées). Une session dure 12 heures sans utilisation, et jamais plus de 7 jours après la connexion ; changer le mot de passe déconnecte tout le monde. |
+| `BIBLI_ADMIN_PASSWORD` | **Obligatoire.** Le mot de passe bibliothécaire, unique pour tout l'établissement. Sans lui (ou sans `-password-file`), Bibli refuse de démarrer, et sur une instance accessible par le réseau il exige **au moins 12 caractères** (une phrase de trois ou quatre mots suffit ; l'application de bureau et la démonstration en sont dispensées). Une session dure 12 heures sans utilisation, et jamais plus de 7 jours après la connexion ; changer le mot de passe déconnecte tout le monde. |
 | `BIBLI_GOOGLE_BOOKS_KEY` | Optionnelle. Clé API Google Books : relève le quota d'enrichissement et évite les erreurs 429 quand on catalogue beaucoup de livres d'affilée. Elle peut aussi être collée dans **Réglages** (« Clé Google Books ») ; si la variable est définie, elle l'emporte et le champ est désactivé. |
-| `BIBLI_DEMO_RESET` | **Réservée à une instance de démonstration publique**, jamais à une école : voir [Instance de démonstration](#instance-de-démonstration). |
+| `BIBLI_DEMO_RESET` | **Réservée à une instance de démonstration publique**, jamais à une vraie installation : voir [Instance de démonstration](#instance-de-démonstration). |
 | `BIBLI_LOG_COLOR` | Optionnelle. `1` colore le journal, seulement dans un terminal (utile en développement). |
 
 ### Options de ligne de commande
@@ -71,15 +71,15 @@ Un navigateur **ignore sans rien dire** un cookie `Secure` reçu en HTTP : le mo
 | Situation | Options |
 |---|---|
 | Exposé sur Internet, derrière un reverse proxy TLS | `-trust-proxy` |
-| Réseau local de l'école, accès en `http://IP:8080` | `-secure-cookies=false` |
+| Réseau local, accès en `http://IP:8080` | `-secure-cookies=false` |
 
-`-trust-proxy` permet de distinguer les clients : sans lui, derrière un proxy, toutes les requêtes semblent venir de la même adresse, et cinq mots de passe erronés bloquent la connexion pour toute l'école pendant une minute. Ne l'activez **que** s'il y a réellement un proxy devant, sinon l'en-tête est falsifiable et le comptage ne vaut plus rien. Bibli retient la **dernière** adresse de `X-Forwarded-For`, celle qu'ajoute le proxy : il doit donc la renseigner (Caddy, Traefik et nginx avec `$proxy_add_x_forwarded_for` le font), et Bibli ne doit être joignable **que** par lui, en écoutant sur `127.0.0.1`.
+`-trust-proxy` permet de distinguer les clients : sans lui, derrière un proxy, toutes les requêtes semblent venir de la même adresse, et cinq mots de passe erronés bloquent la connexion pour tout le monde pendant une minute. Ne l'activez **que** s'il y a réellement un proxy devant, sinon l'en-tête est falsifiable et le comptage ne vaut plus rien. Bibli retient la **dernière** adresse de `X-Forwarded-For`, celle qu'ajoute le proxy : il doit donc la renseigner (Caddy, Traefik et nginx avec `$proxy_add_x_forwarded_for` le font), et Bibli ne doit être joignable **que** par lui, en écoutant sur `127.0.0.1`.
 
 La **caméra** des tablettes n'est disponible qu'en HTTPS ou sur `localhost` : c'est une exigence des navigateurs, pas un choix de Bibli. Les douchettes, elles, fonctionnent partout.
 
 ## Binaire + systemd
 
-La solution la plus simple pour une école : un seul fichier exécutable, relancé par le système.
+La solution la plus simple : un seul fichier exécutable, relancé par le système.
 
 Compiler pour la machine cible (binaire statique, sans dépendance) :
 
@@ -101,7 +101,7 @@ Copier `biblio` dans `/opt/bibli/` sur la machine. Le mot de passe ne va **pas**
     After=network.target
 
     [Service]
-    # -secure-cookies=false : accès en HTTP sur le réseau local de l'école.
+    # -secure-cookies=false : accès en HTTP sur le réseau local.
     # Derrière un reverse proxy HTTPS, retirer cette option, ajouter -trust-proxy
     # et écouter sur 127.0.0.1:8080.
     ExecStart=/opt/bibli/biblio -db /var/lib/bibli/biblio.db -addr :8080 \
@@ -156,7 +156,7 @@ L'installateur :
 - Si les tablettes n'y accèdent plus alors que Bibli répond sur ce PC, vérifier d'abord que le réseau est toujours en **Privé** (Paramètres → Réseau et Internet).
 - Si Bibli ne répond plus du tout, le motif est à la fin du journal (menu **Voir le journal**) : port 8080 déjà pris par un autre programme, base abîmée… Windows retente le démarrage chaque minute.
 
-Bibli répond alors sur `http://localhost:8080` depuis ce PC, et sur `http://NOM-DU-PC:8080` depuis les tablettes et les autres postes (l'entrée **« Adresse pour les tablettes »** donne l'adresse exacte, à recopier). Mettre le réseau de l'école en **Privé** (et non *Public*), sinon le pare-feu bloque l'accès, et réserver une **IP fixe** dans le routeur pour que l'adresse ne change jamais. Le nom du PC suffit aux autres postes Windows, mais les tablettes Android et les iPad ne le reconnaissent souvent pas : leur donner l'adresse IP.
+Bibli répond alors sur `http://localhost:8080` depuis ce PC, et sur `http://NOM-DU-PC:8080` depuis les tablettes et les autres postes (l'entrée **« Adresse pour les tablettes »** donne l'adresse exacte, à recopier). Mettre le réseau local en **Privé** (et non *Public*), sinon le pare-feu bloque l'accès, et réserver une **IP fixe** dans le routeur pour que l'adresse ne change jamais. Le nom du PC suffit aux autres postes Windows, mais les tablettes Android et les iPad ne le reconnaissent souvent pas : leur donner l'adresse IP.
 
 Comme pour tout accès en HTTP, les cookies sont servis sans `Secure` (`-secure-cookies=false`) et la **caméra des tablettes n'est pas disponible** (voir [HTTPS ou réseau local](#https-ou-réseau-local--choisir-le-bon-mode)) ; les douchettes, elles, fonctionnent partout. Les liens de suivi pour les familles sont désactivés (`-family-links=false`), un serveur HTTP sur le réseau local n'étant pas joignable depuis la maison.
 
@@ -164,7 +164,7 @@ L'installateur, l'icône de la zone de notification et le menu suivent la **lang
 
 **Poser l'icône sur un autre poste** : copier le dossier extrait sur ce poste et double-cliquer sur **`Raccourci Bibli (autre poste).cmd`** (il demande le nom ou l'adresse IP du serveur).
 
-**Mettre à jour** : menu **Bibli (serveur) → Mettre à jour Bibli**, puis choisir le nouveau `.zip` téléchargé ; Bibli s'arrête, copie la base par sécurité, remplace le programme et redémarre. Ces copies (`C:\ProgramData\Bibli\backups\pre-update-…`) ne sont jamais effacées automatiquement : supprimer les plus anciennes de temps en temps. Le journal est `C:\ProgramData\Bibli\logs\bibli.log` (menu **Voir le journal**), renouvelé tous les 5 Mo. **Désinstaller** : menu **Bibli (serveur) → Désinstaller** ; les données de `C:\ProgramData\Bibli` sont **conservées** (pour tout effacer, y compris les dossiers des élèves : touche Windows + R, puis `powershell -ExecutionPolicy Bypass -File "C:\Program Files\Bibli\uninstall.ps1" -PurgeData`).
+**Mettre à jour** : menu **Bibli (serveur) → Mettre à jour Bibli**, puis choisir le nouveau `.zip` téléchargé ; Bibli s'arrête, copie la base par sécurité, remplace le programme et redémarre. Ces copies (`C:\ProgramData\Bibli\backups\pre-update-…`) ne sont jamais effacées automatiquement : supprimer les plus anciennes de temps en temps. Le journal est `C:\ProgramData\Bibli\logs\bibli.log` (menu **Voir le journal**), renouvelé tous les 5 Mo. **Désinstaller** : menu **Bibli (serveur) → Désinstaller** ; les données de `C:\ProgramData\Bibli` sont **conservées** (pour tout effacer, y compris les fiches des emprunteurs : touche Windows + R, puis `powershell -ExecutionPolicy Bypass -File "C:\Program Files\Bibli\uninstall.ps1" -PurgeData`).
 
 ## Docker
 
@@ -173,7 +173,7 @@ L'installateur, l'icône de la zone de notification et le menu suivent la **lang
 
 Le `docker-compose.yml` fourni est prévu pour tourner **derrière un reverse proxy** : Bibli n'écoute que sur `127.0.0.1:8087` et lit `X-Forwarded-For` (`-trust-proxy`). Le proxy s'adresse donc à `127.0.0.1:8087` (voir [Reverse proxy](#reverse-proxy)).
 
-**Un seul PC sur le réseau de l'école, sans proxy** (le cas le plus courant : le portable de la bibliothèque, une douchette au comptoir, les enseignants qui se connectent depuis leur appareil) : utiliser le fichier prêt à l'emploi `docker-compose.lan.yml`.
+**Un seul PC sur le réseau local, sans proxy** (le cas le plus courant : le portable de la bibliothèque, une douchette au comptoir, l'équipe qui se connecte depuis ses appareils) : utiliser le fichier prêt à l'emploi `docker-compose.lan.yml`.
 
     cp .env.example .env
     docker compose -f docker-compose.lan.yml up -d
@@ -231,11 +231,11 @@ Une tâche quotidienne **anonymise** par ailleurs les prêts rendus et les empru
 
 ## Capacité
 
-Bibli est **testé jusqu'à 50 000 exemplaires et 2 500 élèves**, avec cinq ans de prêts (plus de 400 000), soit bien au-delà d'une école, primaire ou secondaire. Mesures sur une base de cette taille (184 Mo), servie par un ordinateur de bureau récent :
+Bibli est **testé jusqu'à 50 000 exemplaires et 2 500 emprunteurs**, avec cinq ans de prêts (plus de 400 000), soit bien au-delà d'une école primaire ou secondaire, d'une maison de repos ou d'un centre culturel. Mesures sur une base de cette taille (184 Mo), servie par un ordinateur de bureau récent :
 
 | Écran ou tâche | Temps |
 |---|---|
-| Prêt, retour, recherche d'un livre ou d'un élève au comptoir | moins d'une milliseconde |
+| Prêt, retour, recherche d'un livre ou d'un emprunteur au comptoir | moins d'une milliseconde |
 | Accueil, prêts en cours, inventaire, emprunteurs, fiche d'un livre | moins de 0,2 s |
 | Statistiques | 0,3 s |
 | Export CSV ou Excel de toute la collection | 0,2 à 0,3 s |
@@ -247,8 +247,8 @@ Sur un Raspberry Pi, compter quelques fois plus lent : les écrans du quotidien 
 Les seules limites fixes sont celles des codes imprimés sur les étiquettes et les cartes, tirés au hasard :
 
 - **Exemplaires** : `VOL` suivi de 5 chiffres et d'un chiffre de contrôle, soit 100 000 codes possibles. Au-delà d'environ 60 000 exemplaires, un nouveau code pourrait ne pas être trouvé.
-- **Cartes** : `LEC` suivi de 4 chiffres et d'un chiffre de contrôle, soit 10 000 codes possibles. Un élève parti garde sa carte jusqu'à son anonymisation : avec la conservation par défaut (3 ans), une école de 2 500 élèves en occupe moins de 4 000. Avec la conservation maximale (10 ans), une école de cette taille approche la limite.
-- **Import d'élèves** : 2 000 lignes par fichier ; au-delà, importer en deux fois.
+- **Cartes** : `LEC` suivi de 4 chiffres et d'un chiffre de contrôle, soit 10 000 codes possibles. Un emprunteur parti garde sa carte jusqu'à son anonymisation : avec la conservation par défaut (3 ans), un établissement de 2 500 emprunteurs en occupe moins de 4 000. Avec la conservation maximale (10 ans), un établissement de cette taille approche la limite.
+- **Import d'emprunteurs** : 2 000 lignes par fichier ; au-delà, importer en deux fois.
 
 ## Bon à savoir
 
@@ -270,4 +270,4 @@ Tout tient dans une variable, une durée Go (`6h`, `90m`) :
 
 Au démarrage puis à chaque échéance, toute la collection est supprimée et `app/demo.sql` rechargé en une seule transaction, avec les réglages qu'un visiteur peut modifier. Les sauvegardes sont désactivées d'office, puisqu'il n'y a rien à conserver, et un bandeau prévient sur chaque écran. Le mot de passe reste obligatoire : il suffit de le publier avec le lien.
 
-**Ne jamais mettre cette variable sur l'instance d'une école** : elle supprime la base à chaque échéance. C'est pourquoi c'est une variable d'environnement et non une option de ligne de commande : rien ne l'attrape en recopiant le `command:` donné aux écoles. Une valeur qui n'est pas une durée empêche Bibli de démarrer, plutôt que de laisser tourner une démonstration qui ne se réinitialise plus.
+**Ne jamais mettre cette variable sur une vraie instance** : elle supprime la base à chaque échéance. C'est pourquoi c'est une variable d'environnement et non une option de ligne de commande : rien ne l'attrape en recopiant le `command:` donné pour une vraie installation. Une valeur qui n'est pas une durée empêche Bibli de démarrer, plutôt que de laisser tourner une démonstration qui ne se réinitialise plus.
