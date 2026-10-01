@@ -34,7 +34,7 @@ Dans les quatre cas, Bibli reste un seul programme et un seul fichier de base de
 | Utiliser | Un navigateur récent. Une douchette USB au comptoir (25–40 €, elle se comporte comme un clavier). |
 | Héberger | Une machine allumée en permanence : mini-PC, Raspberry Pi 4/5 ou serveur Linux. Aucune base de données ni serveur d'applications à installer. |
 | Compiler | Go ≥ 1.27, sur n'importe quel système. |
-| Déployer avec Docker | Docker et le plugin `compose`, sur une machine **amd64** : l'image publiée n'existe pas encore pour ARM. Sur un Raspberry Pi, utiliser le [binaire](#binaire--systemd). |
+| Déployer avec Docker | Docker et le plugin `compose`, sur une machine amd64 ou arm64 (Raspberry Pi 4/5 avec un système 64 bits). |
 
 ## Configuration
 
