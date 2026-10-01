@@ -29,11 +29,114 @@ jobs:
       - name: go vet
         run: go vet ./...
 
+      - name: go vet (Windows, for service_windows.go)
+        run: GOOS=windows go vet ./...
+
       - name: Tests
         run: go test -v -coverprofile=coverage.out ./...
 
       - name: Code coverage
         run: go tool cover -func=coverage.out
+
+  # The Windows server package, built where the release builds it.
+  windows-package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.27'
+          cache-dependency-path: go.sum
+
+      - name: Build Bibli-windows-server.zip
+        run: scripts/windows-service.sh dist
+
+      - name: Keep the package for the Windows job
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-server
+          path: dist/Bibli-windows-server.zip
+          retention-days: 3
+
+  # The whole life of the Windows service, in Windows PowerShell 5 as schools
+  # run it: install, clean stop, crash and restart by Windows, update,
+  # uninstall. Each script runs in its own process, as a double-click would.
+  windows-server:
+    needs: windows-package
+    runs-on: windows-latest
+    steps:
+      - name: Fetch the package
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-server
+
+      - name: Install, stop, crash, update, uninstall
+        shell: powershell
+        env:
+          BIBLI_ADMIN_PASSWORD: ci-password-long-enough
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $data = 'C:\ProgramData\Bibli'
+          $log  = Join-Path $data 'logs\bibli.log'
+          function Step($title, $script, [string[]]$more = @()) {
+            Write-Host "::group::$title"
+            powershell.exe -NoProfile -ExecutionPolicy Bypass -File $script -Unattended @more
+            $code = $LASTEXITCODE
+            Write-Host '::endgroup::'
+            if ($code -ne 0) { throw "$title failed ($code)" }
+          }
+          function Wait-Health([bool]$want, [int]$seconds) {
+            $deadline = (Get-Date).AddSeconds($seconds)
+            do {
+              $up = $false
+              try { $up = (Invoke-WebRequest -UseBasicParsing -TimeoutSec 2 'http://localhost:8080/healthcheck').StatusCode -eq 200 } catch {}
+              if ($up -eq $want) { return }
+              Start-Sleep 1
+            } while ((Get-Date) -lt $deadline)
+            throw "healthcheck: expected up=$want within $seconds s"
+          }
+          trap { if (Test-Path $log) { Write-Host '--- bibli.log ---'; Get-Content $log -Tail 50 }; throw $_ }
+
+          Expand-Archive Bibli-windows-server.zip -DestinationPath pkg
+          Step 'install' 'pkg\Bibli-serveur\install.ps1'
+          Wait-Health $true 30
+          $svc = Get-CimInstance Win32_Service -Filter "Name='Bibli'"
+          if ($svc.StartName -ne 'NT AUTHORITY\LocalService') { throw "runs as $($svc.StartName)" }
+          if ($svc.StartMode -ne 'Auto') { throw "start mode $($svc.StartMode)" }
+          $readers = (Get-Acl (Join-Path $data 'password')).Access | Where-Object { $_.IdentityReference -match 'Users|Everyone|Utilisateurs' }
+          if ($readers) { throw "password file readable by $($readers.IdentityReference)" }
+
+          Write-Host 'clean stop'
+          Stop-Service Bibli
+          Wait-Health $false 5
+          if (-not (Select-String -Path $log -Pattern ' stopped$' -Quiet)) { throw 'no clean shutdown in the log' }
+
+          Write-Host 'crash: Windows restarts the service'
+          Start-Service Bibli
+          Wait-Health $true 30
+          $before = (Get-Process bibli).Id
+          Stop-Process -Id $before -Force
+          Start-Sleep 2
+          Wait-Health $true 60
+          if ((Get-Process bibli).Id -eq $before) { throw 'same process: it was never killed' }
+
+          Step 'update' 'pkg\Bibli-serveur\update.ps1' @('-Package', (Resolve-Path Bibli-windows-server.zip).Path)
+          Wait-Health $true 30
+          if (-not (Get-ChildItem (Join-Path $data 'backups') -Directory -Filter 'pre-update-*')) { throw 'no pre-update copy' }
+
+          Step 'uninstall' 'C:\Program Files\Bibli\uninstall.ps1'
+          Wait-Health $false 5
+          # A deleted service lingers while a handle on it is still open.
+          for ($i = 0; $i -lt 10 -and (Get-Service Bibli -ErrorAction SilentlyContinue); $i++) { Start-Sleep 1 }
+          if (Get-Service Bibli -ErrorAction SilentlyContinue) { throw 'service still registered' }
+          if (Test-Path 'C:\Program Files\Bibli') { throw 'program folder left behind' }
+          if (-not (Test-Path (Join-Path $data 'biblio.db'))) { throw 'uninstall removed the database' }
+          Write-Host 'all good'
 
 # The Docker image is not built here: it is heavy and per-commit :latest served
 # no one — schools deploy the release's :stable image, developers run `make dev`
