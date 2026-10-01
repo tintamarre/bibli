@@ -212,4 +212,10 @@
 
   document.addEventListener("DOMContentLoaded", equipFields);
   document.addEventListener("htmx:afterSwap", equipFields);
+  // A hidden tab or a page put in the back-forward cache keeps the camera (and
+  // its light) on otherwise.
+  document.addEventListener("visibilitychange", function () {
+    if (document.hidden) closeCamera();
+  });
+  window.addEventListener("pagehide", closeCamera);
 })();
