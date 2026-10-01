@@ -336,8 +336,8 @@ func TestLoansByDayReadsTheSchoolYearOnly(t *testing.T) {
 func TestMonthBarsHoldTwelveMonthsEndingThisOne(t *testing.T) {
 	a := homeApp(t)
 	exec(t, a.db, `INSERT INTO loan (copy_id, borrower_id, loaned_on, due_on, returned_on) VALUES
-	  (1, 101, date('now','-2 days'),   date('now','+19 days'), NULL),
-	  (2, 102, date('now','-2 days'),   date('now','+19 days'), NULL),
+	  (1, 101, date('now','start of month'), date('now','+19 days'), NULL),
+	  (2, 102, date('now','start of month'), date('now','+19 days'), NULL),
 	  (3, 103, date('now','-300 days'), date('now','-279 days'), date('now','-290 days')),
 	  (4, 104, date('now','-800 days'), date('now','-779 days'), date('now','-790 days'))`)
 
