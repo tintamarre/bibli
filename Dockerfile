@@ -21,6 +21,12 @@ RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/bibli .
 # ---- Final image ----
 FROM alpine:3.24
 
+# Static OCI labels; the release workflow adds version, revision, created and source.
+LABEL org.opencontainers.image.title="Bibli" \
+      org.opencontainers.image.authors="Martin Erpicum" \
+      org.opencontainers.image.description="Library management for a primary school, run by volunteers" \
+      org.opencontainers.image.licenses="AGPL-3.0"
+
 # ca-certificates: HTTPS calls to the catalogues (BnF, UniCat, Google, OL).
 # sqlite: the CLI, for a manual ".backup" or a look at the data; the app
 #   itself backs up with VACUUM INTO. Never a cp of the live file.
