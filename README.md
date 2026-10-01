@@ -4,7 +4,7 @@
 [![CI](https://github.com/tintamarre/bibli/actions/workflows/ci.yml/badge.svg)](https://github.com/tintamarre/bibli/actions/workflows/ci.yml)
 [![Licence AGPL-3.0](https://img.shields.io/badge/licence-AGPL--3.0-blue)](LICENSE)
 
-**La bibliothèque de l'école, tenue par des bénévoles.** Prêter et rendre à la douchette, cataloguer un livre en scannant son ISBN, imprimer les étiquettes, suivre les retards. Sur un seul ordinateur ou pour toute l'école, sans informaticien sur place.
+**La bibliothèque d'une école, d'un centre culturel, d'une maison de repos ou d'une association, tenue par des bénévoles.** Prêter et rendre à la douchette, cataloguer un livre en scannant son ISBN, imprimer les étiquettes, suivre les retards. Sur un seul ordinateur ou pour tout l'établissement, sans informaticien sur place.
 
 **[Essayer la démonstration](https://bibli.tintamarre.be)** · mot de passe `demo` · une école fictive, remise à zéro régulièrement
 · **[Voir la vidéo](https://www.youtube.com/watch?v=Yo_IYGwo8sM)**
@@ -15,41 +15,41 @@
 
 ## Ce que fait Bibli
 
-- **Prêt et retour en quelques secondes.** On scanne la carte de l'élève, puis ses livres ; au retour, un seul scan suffit. Une douchette USB à 30 € fait l'affaire, la caméra d'une tablette aussi.
+- **Prêt et retour en quelques secondes.** On scanne la carte de l'emprunteur, puis ses livres ; au retour, un seul scan suffit. Une douchette USB à 30 € fait l'affaire, la caméra d'une tablette aussi.
 - **Catalogage par ISBN.** Le titre, l'auteur, l'éditeur et la couverture arrivent seuls, depuis la BnF, UniCat, Google Books et Open Library. Un livre sans ISBN se saisit à la main.
 - **Étiquettes et cartes.** Planches A4 autocollantes, avec code-barres et cote de rangement ; les étiquettes d'une séance sortent dans l'ordre du catalogage.
-- **Élèves et classes.** Import des classes depuis un fichier CSV (exporté d'un tableur), cartes d'emprunteur, passage d'année en un écran.
+- **Emprunteurs et groupes.** Import de la liste depuis un fichier CSV (exporté d'un tableur), cartes d'emprunteur, passage d'année en un écran. Bibli appelle les groupes « classes » : une classe à l'école, mais aussi un étage, une unité de soins, un atelier.
 - **Retards, inventaire, statistiques.** Liste des retards à imprimer, inventaire modifiable ligne par ligne, lectures de l'année, exports CSV et Excel.
-- **Liens de suivi pour les familles**, si l'école le souhaite : chaque famille voit les livres de son enfant, rien d'autre.
+- **Liens de suivi pour les familles**, si on le souhaite : chaque famille voit les livres de son enfant ou de son proche, rien d'autre.
 - **En français, en néerlandais et en anglais.**
 
 | | |
 |---|---|
 | ![L'écran de prêt : l'emprunteur, puis les livres scannés](docs/img/borrow.png) | ![Le catalogage : la notice trouvée depuis l'ISBN, avec sa couverture](docs/img/catalogue.png) |
 | **Prêter** : la carte, puis les livres | **Cataloguer** : l'ISBN suffit |
-| ![Une planche d'étiquettes : titre, code-barres et cote](docs/img/labels.png) | ![La liste des prêts en cours, par classe et par élève, avec la date de retour](docs/img/loans.png) |
+| ![Une planche d'étiquettes : titre, code-barres et cote](docs/img/labels.png) | ![La liste des prêts en cours, par classe et par emprunteur, avec la date de retour](docs/img/loans.png) |
 | **Étiqueter** : planches A4 autocollantes | **Suivre** : les prêts, classe par classe |
 
-## Pensé pour une école
+## Pensé pour les petites structures
 
-- **La vie privée des enfants d'abord.** Un élève, c'est un prénom, l'initiale du nom et une classe, rien de plus. Seul l'ISBN d'un livre quitte le serveur. Les lectures sont anonymisées après la durée de conservation choisie, trois ans par défaut.
+- **La vie privée d'abord.** Conçu au départ pour des enfants : un emprunteur, c'est un prénom, l'initiale du nom et une classe (un groupe), rien de plus. Seul l'ISBN d'un livre quitte le serveur. Les lectures sont anonymisées après la durée de conservation choisie, trois ans par défaut.
 - **Rien à administrer.** Un seul programme et un seul fichier de base de données. Les sauvegardes se font seules, chaque jour, et se téléchargent depuis les réglages.
 - **Aucun service extérieur.** Pas de compte à créer, pas de cloud, pas de CDN : tout est servi par Bibli. Prêter et rendre fonctionnent sans Internet.
 - **Sobre.** Tourne sur un vieux PC, un mini-PC ou un Raspberry Pi, et s'utilise sans formation : grands boutons, écrans lisibles sur une tablette.
-- **À la taille d'une grande école.** Testé jusqu'à 50 000 exemplaires et 2 500 élèves avec cinq ans de prêts : le comptoir répond en moins d'une milliseconde, chaque écran en moins d'une demi-seconde. Détails : [capacité](docs/deployment.md#capacité).
+- **Pour les petites et moyennes collections.** Testé jusqu'à 50 000 exemplaires et 2 500 emprunteurs avec cinq ans de prêts : le comptoir répond en moins d'une milliseconde, chaque écran en moins d'une demi-seconde. Détails : [capacité](docs/deployment.md#capacité).
 
 ## Installer
 
 | Pour | La solution | Le guide |
 |---|---|---|
 | **Un seul ordinateur** à la bibliothèque | L'application de bureau, Mac, Windows ou Linux : télécharger, double-cliquer. | [Installer sur un ordinateur](docs/installation.md) |
-| **Plusieurs postes, des tablettes**, un accès depuis la maison | Un serveur sur le réseau de l'école ou sur Internet : un binaire, ou Docker. | [Déployer un serveur](docs/deployment.md) |
+| **Plusieurs postes, des tablettes**, un accès depuis la maison | Un serveur sur le réseau local ou sur Internet : un binaire, ou Docker. | [Déployer un serveur](docs/deployment.md) |
 
 Le choix en détail : [quelle installation choisir ?](docs/deployment.md#quelle-installation-choisir-)
 
 ## Documentation
 
-- [**Guide d'utilisation**](docs/guide.md) : pour les bénévoles. Prêter, rendre, cataloguer, étiqueter, gérer les élèves, passer d'une année à l'autre.
+- [**Guide d'utilisation**](docs/guide.md) : pour les bénévoles. Prêter, rendre, cataloguer, étiqueter, gérer les emprunteurs, passer d'une année à l'autre.
 - [**Installer sur un ordinateur**](docs/installation.md) : l'application de bureau, pas à pas.
 - [**Déployer un serveur**](docs/deployment.md) : systemd, Docker, HTTPS, sauvegardes.
 - [**Développer**](docs/development.md) : lancer le code, le jeu de démonstration, les captures, publier une version.

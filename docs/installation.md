@@ -1,6 +1,6 @@
 # Installer Bibli sur un ordinateur
 
-Ce guide s'adresse à la personne qui installe Bibli, seule, sur **un ordinateur de l'école** : un Mac, un PC Windows ou un PC Linux. Aucune connaissance technique n'est nécessaire. Une fois Bibli installé, le [guide d'utilisation](guide.md) prend le relais.
+Ce guide s'adresse à la personne qui installe Bibli, seule, sur **un ordinateur de la bibliothèque** : un Mac, un PC Windows ou un PC Linux. Aucune connaissance technique n'est nécessaire. Une fois Bibli installé, le [guide d'utilisation](guide.md) prend le relais.
 
 Pour plusieurs postes, des tablettes ou un accès depuis la maison, il faut un serveur : voir [Quand passer au serveur](#quand-passer-au-serveur).
 
@@ -18,7 +18,7 @@ Pour plusieurs postes, des tablettes ou un accès depuis la maison, il faut un s
 
 ## Ce qu'il faut
 
-- Un ordinateur qui reste à la bibliothèque : Mac, PC Windows ou PC Linux (un Raspberry Pi récent convient aussi).
+- Un ordinateur qui reste à la bibliothèque : Mac, PC Windows 10 ou 11 (pas Windows 7, 8 ni 8.1, où Bibli ne démarre pas), ou PC Linux (un Raspberry Pi récent convient aussi).
 - Un navigateur **Chrome**, **Edge**, **Brave** ou **Chromium**. Edge est déjà installé sur Windows. Bibli s'ouvre alors dans une fenêtre à lui, sans onglets ni barre d'adresse. Sans aucun de ces navigateurs, Bibli s'ouvre dans le navigateur habituel, dans un onglet.
 - Une connexion Internet, pour télécharger Bibli, puis pour retrouver les fiches des livres au catalogage. Prêter et rendre fonctionnent sans Internet.
 - Si possible, une douchette (voir [Scanner les codes-barres](guide.md#2-scanner-les-codes-barres)).
@@ -68,7 +68,7 @@ Ni Apple ni Microsoft n'ont signé Bibli : c'est un logiciel libre, distribué s
 
 ### Ensuite
 
-Se connecter avec le mot de passe choisi, puis suivre le [premier jour](guide.md#1-premier-jour) du guide d'utilisation : nom de l'école, liste des élèves, premiers livres.
+Se connecter avec le mot de passe choisi, puis suivre le [premier jour](guide.md#1-premier-jour) du guide d'utilisation : nom de l'établissement, liste des emprunteurs, premiers livres.
 
 ## 3. Tous les jours : ouvrir et quitter
 
@@ -80,7 +80,7 @@ Bibli ne fonctionne que tant que sa fenêtre est ouverte, et seulement sur cet o
 
 ## 4. Où sont les données
 
-Toute la bibliothèque (livres, élèves, prêts) tient dans **un dossier**, à part de l'application :
+Toute la bibliothèque (livres, emprunteurs, prêts) tient dans **un dossier**, à part de l'application :
 
 | Ordinateur | Dossier |
 | --- | --- |
@@ -109,9 +109,9 @@ Toute la bibliothèque est un seul fichier sur un seul disque. Si l'ordinateur e
 
 1. Dans Bibli, ouvrir **Réglages** → *Sauvegarde*. Vérifier la date de la dernière sauvegarde.
 2. Sous *Télécharger une sauvegarde*, cliquer la plus récente. Le fichier arrive dans *Téléchargements*, nommé d'après sa date (`biblio-2026-09-30.db`).
-3. Copier ce fichier **hors de l'ordinateur** : une clé USB rangée à l'école, le disque partagé de l'école.
+3. Copier ce fichier **hors de l'ordinateur** : une clé USB rangée dans le bâtiment, le disque partagé de l'établissement.
 
-Ce fichier contient la liste des élèves : rangez la clé comme le registre de la bibliothèque, pas dans un tiroir ouvert.
+Ce fichier contient la liste des emprunteurs : rangez la clé comme le registre de la bibliothèque, pas dans un tiroir ouvert.
 
 ## 6. Changer d'ordinateur ou restaurer une sauvegarde
 
@@ -152,7 +152,7 @@ Pour retrouver l'accès ou changer le mot de passe :
 
 1. Quitter Bibli.
 2. Dans le dossier des données (voir [§4](#4-où-sont-les-données)), supprimer le fichier **`password`**.
-3. Relancer Bibli : il demande un nouveau mot de passe. Les livres, les élèves et les prêts ne sont pas touchés.
+3. Relancer Bibli : il demande un nouveau mot de passe. Les livres, les emprunteurs et les prêts ne sont pas touchés.
 
 ## Quand passer au serveur
 
@@ -170,9 +170,9 @@ Il y a quatre façons d'installer Bibli. Ce guide couvre la première ; les troi
 | Installation | Pour qui | Ce qu'elle permet | Ce qu'elle ne permet pas |
 | --- | --- | --- | --- |
 | **Application pour un ordinateur** (ce guide) | une bibliothèque, un poste | tout, avec une douchette ou la webcam ; rien d'autre à installer | aucun autre appareil ; fermer la fenêtre arrête Bibli |
-| **Serveur sur le réseau de l'école** (`http://`) | plusieurs postes | plusieurs ordinateurs en même temps, toujours allumé, douchettes USB et Bluetooth | pas de caméra des tablettes (elle exige `https://`) |
-| **Serveur sur le réseau de l'école, en `https://`** | plusieurs postes et des tablettes | tout ce qui précède, plus la caméra des tablettes et des téléphones | rien depuis la maison |
-| **Serveur sur Internet** | l'école et les familles | partout, caméra comprise, et le lien de suivi pour les familles | demande un nom de domaine, un hébergement, un mot de passe solide et des mises à jour suivies |
+| **Serveur sur le réseau local** (`http://`) | plusieurs postes | plusieurs ordinateurs en même temps, toujours allumé, douchettes USB et Bluetooth | pas de caméra des tablettes (elle exige `https://`) |
+| **Serveur sur le réseau local, en `https://`** | plusieurs postes et des tablettes | tout ce qui précède, plus la caméra des tablettes et des téléphones | rien depuis la maison |
+| **Serveur sur Internet** | la bibliothèque et les familles | partout, caméra comprise, et le lien de suivi pour les familles | demande un nom de domaine, un hébergement, un mot de passe solide et des mises à jour suivies |
 
 Dans les quatre cas, Bibli fonctionne pareil : un seul fichier de données, des sauvegardes automatiques, un mot de passe pour la bibliothèque.
 
