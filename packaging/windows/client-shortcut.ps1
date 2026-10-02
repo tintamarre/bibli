@@ -4,8 +4,8 @@
 # (default: ask).
 param([string]$Server = '', [int]$Port = 8080)
 $ErrorActionPreference = 'Stop'
-. (Join-Path $PSScriptRoot 'lang.ps1'); $T = Get-BibliStrings
-if (-not $Server) { $Server = Read-Host $T.cl_prompt }
+. (Join-Path $PSScriptRoot 'ui.ps1'); . (Join-Path $PSScriptRoot 'lang.ps1'); $T = Get-BibliStrings
+if (-not $Server) { $Server = Read-Text $T $T.cl_prompt }
 if (-not $Server) { exit }
 $url = "http://${Server}:$Port/"
 
@@ -33,5 +33,4 @@ if ($browser) {
   "[InternetShortcut]`r`nURL=$url`r`nIconFile=$ico`r`nIconIndex=0" |
     Set-Content -Encoding ASCII (Join-Path $desktop 'Bibli.url')
 }
-Write-Host ($T.cl_done -f $url)
-Read-Host $T.press_enter
+Show-Message ($T.cl_done -f $url)

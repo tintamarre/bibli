@@ -73,12 +73,20 @@ running() {
 
 PWFILE="$DATA/password"
 if [ ! -s "$PWFILE" ]; then
-  text="Premier lancement : choisissez le mot de passe de la bibliothèque (il vous sera demandé pour vous connecter)."
-  if command -v zenity > /dev/null; then pw=$(zenity --entry --hide-text --title=Bibli --text="$text" 2> /dev/null)
-  elif command -v kdialog > /dev/null; then pw=$(kdialog --title Bibli --password "$text")
-  elif [ -t 0 ]; then echo "$text"; read -rs -p "Mot de passe : " pw; echo
-  else pw=""; fi
-  [ -n "$pw" ] || exit 0
+  # Typed twice: it is hidden, and a typo would lock the librarian out.
+  ask() {
+    if command -v zenity > /dev/null; then zenity --entry --hide-text --title=Bibli --text="$1" 2> /dev/null
+    elif command -v kdialog > /dev/null; then kdialog --title Bibli --password "$1"
+    elif [ -t 0 ]; then read -rs -p "$1 " answer; echo >&2; printf '%s' "$answer"
+    fi
+  }
+  while :; do
+    pw=$(ask "Premier lancement : choisissez le mot de passe de la bibliothèque (il vous sera demandé pour vous connecter).") || exit 0
+    [ -n "$pw" ] || exit 0
+    pw2=$(ask "Confirmez le mot de passe.") || exit 0
+    [ "$pw" = "$pw2" ] && break
+    error "Les deux mots de passe ne sont pas identiques."
+  done
   (umask 077; printf '%s' "$pw" > "$PWFILE")
 fi
 

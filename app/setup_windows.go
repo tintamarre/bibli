@@ -20,15 +20,18 @@ import (
 // terminal) starts the server as usual.
 func runSetup() (code int, ran bool) {
 	var extra []string
+	hidden := false
 	switch {
 	case len(os.Args) > 1 && os.Args[1] == "install":
 		extra = os.Args[2:]
 	case len(os.Args) == 1 && doubleClicked():
-		// A double-click asks before installing anything (install.ps1).
+		// A double-click asks before installing anything (install.ps1), in
+		// dialogs: the console it opened would only get in the way.
+		hidden = true
 	default:
 		return 0, false
 	}
-	if err := setup(extra); err != nil {
+	if err := setup(extra, hidden); err != nil {
 		var exit *osexec.ExitError
 		if errors.As(err, &exit) {
 			return exit.ExitCode(), true
@@ -51,9 +54,9 @@ func doubleClicked() bool {
 }
 
 // setup writes the embedded scripts (packaging/windows): bibli.exe is the whole
-// download. It writes the scripts to a temporary folder and runs install.ps1 there,
-// in this console, until it is done.
-func setup(extra []string) error {
+// download. It writes the scripts to a temporary folder and runs install.ps1 there
+// until it is done, with the console hidden when hidden is set.
+func setup(extra []string, hidden bool) error {
 	exe, err := os.Executable()
 	if err != nil {
 		return err
@@ -66,8 +69,12 @@ func setup(extra []string) error {
 	if err := writeSetupFiles(dir); err != nil {
 		return err
 	}
-	args := append([]string{"-NoProfile", "-ExecutionPolicy", "Bypass",
-		"-File", filepath.Join(dir, "install.ps1"), "-Exe", exe}, extra...)
+	args := []string{"-NoProfile", "-ExecutionPolicy", "Bypass"}
+	if hidden {
+		args = append(args, "-WindowStyle", "Hidden")
+	}
+	args = append(args, "-File", filepath.Join(dir, "install.ps1"), "-Exe", exe)
+	args = append(args, extra...)
 	cmd := osexec.Command("powershell.exe", args...)
 	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
 	return cmd.Run()

@@ -2,7 +2,7 @@
 # opens it in a browser window of its own; closing that window stops the
 # server. install.ps1 puts it in %LOCALAPPDATA%\Programs\Bibli with bibli.exe.
 $ErrorActionPreference = 'Stop'
-Add-Type -AssemblyName System.Windows.Forms, System.Drawing
+. (Join-Path $PSScriptRoot 'ui.ps1'); . (Join-Path $PSScriptRoot 'lang.ps1'); $T = Get-BibliStrings
 
 $port = if ($env:BIBLI_PORT) { $env:BIBLI_PORT } else { 8765 }
 $url = "http://localhost:$port/"
@@ -19,27 +19,10 @@ Get-ChildItem $here | Unblock-File -ErrorAction SilentlyContinue
 function Test-Running {
   try { (Invoke-WebRequest -UseBasicParsing -TimeoutSec 1 "${url}healthcheck").StatusCode -eq 200 } catch { $false }
 }
-function Show-Error($text) {
-  [System.Windows.Forms.MessageBox]::Show($text, 'Bibli', 'OK', 'Error') | Out-Null
-}
-function Read-Password {
-  $form = New-Object System.Windows.Forms.Form -Property @{
-    Text = 'Bibli'; Width = 460; Height = 190; StartPosition = 'CenterScreen'
-    FormBorderStyle = 'FixedDialog'; MaximizeBox = $false; MinimizeBox = $false; TopMost = $true }
-  $label = New-Object System.Windows.Forms.Label -Property @{
-    Text = "Premier lancement : choisissez le mot de passe de la bibliothèque (il vous sera demandé pour vous connecter)."
-    Left = 12; Top = 12; Width = 420; Height = 40 }
-  $box = New-Object System.Windows.Forms.TextBox -Property @{ Left = 12; Top = 60; Width = 420; UseSystemPasswordChar = $true }
-  $ok = New-Object System.Windows.Forms.Button -Property @{ Text = 'OK'; Left = 332; Top = 100; Width = 100; DialogResult = 'OK' }
-  $form.Controls.AddRange(@($label, $box, $ok))
-  $form.AcceptButton = $ok
-  if ($form.ShowDialog() -eq 'OK') { return $box.Text }
-  return ''
-}
 
 $pwFile = Join-Path $data 'password'
 if (-not (Test-Path $pwFile) -or -not (Get-Content -Raw $pwFile)) {
-  $pw = Read-Password
+  $pw = Read-NewPassword $T $T.pw_prompt_app
   if (-not $pw) { exit }
   Set-Content -NoNewline -Encoding UTF8 -Path $pwFile -Value $pw
 }
@@ -67,7 +50,7 @@ if (-not (Test-Running)) {
                     '-backup-dir', "`"$data\backups`"", '-cache-dir', "`"$data\cache`"") | Out-Null
   Remove-Item Env:BIBLI_ADMIN_PASSWORD
   for ($i = 0; $i -lt 50 -and -not (Test-Running); $i++) { Start-Sleep -Milliseconds 200 }
-  if (-not (Test-Running)) { Show-Error "Bibli n'a pas pu démarrer. Voir $data\bibli.log"; exit 1 }
+  if (-not (Test-Running)) { Show-Message ($T.app_nostart -f "$data\bibli.log") 'Error'; exit 1 }
 }
 
 $browser = @(

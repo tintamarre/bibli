@@ -92,8 +92,14 @@ fi
 
 PWFILE="$DATA/password"
 if [ ! -s "$PWFILE" ]; then
-  pw=$(osascript -e 'text returned of (display dialog "Premier lancement : choisissez le mot de passe de la bibliothèque (il vous sera demandé pour vous connecter)." default answer "" with hidden answer with title "Bibli")') || exit 0
-  [ -n "$pw" ] || exit 0
+  # Typed twice: it is hidden, and a typo would lock the librarian out.
+  while :; do
+    pw=$(osascript -e 'text returned of (display dialog "Premier lancement : choisissez le mot de passe de la bibliothèque (il vous sera demandé pour vous connecter)." default answer "" with hidden answer with title "Bibli")') || exit 0
+    [ -n "$pw" ] || exit 0
+    pw2=$(osascript -e 'text returned of (display dialog "Confirmez le mot de passe." default answer "" with hidden answer with title "Bibli")') || exit 0
+    [ "$pw" = "$pw2" ] && break
+    osascript -e 'display dialog "Les deux mots de passe ne sont pas identiques." buttons {"OK"} with icon caution with title "Bibli"' > /dev/null
+  done
   umask 077; printf '%s' "$pw" > "$PWFILE"
 fi
 

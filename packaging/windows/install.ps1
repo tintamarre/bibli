@@ -8,33 +8,30 @@
 # BIBLI_ADMIN_PASSWORD and asks nothing (CI, scripted installs).
 param([Parameter(Mandatory)][string]$Exe, [switch]$Server, [switch]$Unattended)
 $ErrorActionPreference = 'Stop'
-# A volunteer must see what went wrong before the window closes, and the
-# school must not be left with its server stopped.
+. (Join-Path $PSScriptRoot 'ui.ps1'); . (Join-Path $PSScriptRoot 'lang.ps1'); $T = Get-BibliStrings
+# The console is usually hidden (a double-click), so a volunteer sees what went
+# wrong in a message box, and the school is not left with its server stopped.
 trap {
   Write-Host "$_" -ForegroundColor Red
+  Stop-Progress
   Start-Service -Name 'Bibli' -ErrorAction SilentlyContinue
-  if (-not $Unattended) { [void](Read-Host) }
+  if (-not $Unattended) { Show-Message "$_" 'Error' }
   exit 1
 }
 
-Add-Type -AssemblyName System.Windows.Forms, System.Drawing
-. (Join-Path $PSScriptRoot 'lang.ps1'); $T = Get-BibliStrings
-
 # One button per role, each answering with its own DialogResult.
 function Read-Role {
-  $form = New-Object System.Windows.Forms.Form -Property @{
-    Text = 'Bibli'; Width = 460; Height = 270; StartPosition = 'CenterScreen'
-    FormBorderStyle = 'FixedDialog'; MaximizeBox = $false; MinimizeBox = $false; TopMost = $true }
-  $label = New-Object System.Windows.Forms.Label -Property @{
-    Text = $T.role_prompt; Left = 12; Top = 12; Width = 420; Height = 54 }
-  $top = 72
+  $form = New-Dialog 440 260
+  [void](Add-Label $form $T.role_prompt 16 22 -Bold)
+  $top = 48
   foreach ($b in @(@($T.role_app, 'OK'), @($T.role_server, 'Yes'), @($T.role_client, 'No'))) {
-    $form.Controls.Add((New-Object System.Windows.Forms.Button -Property @{
-      Text = $b[0]; Left = 12; Top = $top; Width = 420; Height = 44; DialogResult = $b[1] }))
-    $top += 50
+    $button = Add-Button $form $b[0] 16 $top 408 60
+    $button.DialogResult = $b[1]; $button.TextAlign = 'MiddleLeft'
+    $top += 68
   }
-  $form.Controls.Add($label)
-  return $form.ShowDialog()
+  $result = $form.ShowDialog()
+  $form.Dispose()
+  return $result
 }
 # Windows may hold an exe a moment after its process ends: retry the copy.
 function Copy-Exe($dest) {
@@ -52,7 +49,7 @@ function Install-App {
   $dest = Join-Path $dir 'bibli.exe'
   Get-Process bibli -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq $dest } | Stop-Process -Force
   Copy-Exe $dest
-  foreach ($f in 'app.ps1', 'bibli.ico') { Copy-Item -Force (Join-Path $PSScriptRoot $f) (Join-Path $dir $f) }
+  foreach ($f in 'app.ps1', 'ui.ps1', 'lang.ps1', 'bibli.ico') { Copy-Item -Force (Join-Path $PSScriptRoot $f) (Join-Path $dir $f) }
   Get-ChildItem $dir | Unblock-File -ErrorAction SilentlyContinue
   Start-Process powershell.exe -WindowStyle Hidden -ArgumentList @(
     '-NoProfile','-ExecutionPolicy','Bypass','-WindowStyle','Hidden','-File',"`"$(Join-Path $dir 'app.ps1')`"")
@@ -70,9 +67,10 @@ if (-not ($Server -or $Unattended) -and -not (Get-Service -Name 'Bibli' -ErrorAc
 if (-not $isAdmin) {
   if ($Unattended) { throw 'install.ps1 -Unattended must run as administrator' }
   # -Wait: bibli.exe deletes this folder as soon as this script returns.
-  Write-Host $T.elevated
-  $p = Start-Process powershell.exe -Verb RunAs -Wait -PassThru -ArgumentList @(
-    '-NoProfile','-ExecutionPolicy','Bypass','-File',"`"$PSCommandPath`"",'-Exe',"`"$Exe`"",'-Server')
+  try {
+    $p = Start-Process powershell.exe -Verb RunAs -Wait -PassThru -WindowStyle Hidden -ArgumentList @(
+      '-NoProfile','-ExecutionPolicy','Bypass','-File',"`"$PSCommandPath`"",'-Exe',"`"$Exe`"",'-Server')
+  } catch { exit 1 }  # the administrator prompt was declined
   exit $p.ExitCode
 }
 
@@ -83,18 +81,6 @@ $service = 'Bibli'
 $port    = 8080
 $ico     = Join-Path $prog 'bibli.ico'
 
-function Read-Password {
-  $form = New-Object System.Windows.Forms.Form -Property @{
-    Text = 'Bibli'; Width = 460; Height = 200; StartPosition = 'CenterScreen'
-    FormBorderStyle = 'FixedDialog'; MaximizeBox = $false; MinimizeBox = $false; TopMost = $true }
-  $label = New-Object System.Windows.Forms.Label -Property @{
-    Text = $T.pw_prompt; Left = 12; Top = 12; Width = 420; Height = 54 }
-  $box = New-Object System.Windows.Forms.TextBox -Property @{ Left = 12; Top = 72; Width = 420; UseSystemPasswordChar = $true }
-  $ok = New-Object System.Windows.Forms.Button -Property @{ Text = 'OK'; Left = 332; Top = 112; Width = 100; DialogResult = 'OK' }
-  $form.Controls.AddRange(@($label, $box, $ok)); $form.AcceptButton = $ok
-  if ($form.ShowDialog() -eq 'OK') { return $box.Text }
-  return $null
-}
 function Find-Browser {
   @("${env:ProgramFiles(x86)}\Microsoft\Edge\Application\msedge.exe",
     "$env:ProgramFiles\Microsoft\Edge\Application\msedge.exe",
@@ -117,12 +103,29 @@ $sidSystem = '*S-1-5-18'; $sidAdmins = '*S-1-5-32-544'; $sidLocalService = '*S-1
 function Invoke-Icacls { icacls @args | Out-Null; if ($LASTEXITCODE -ne 0) { throw "icacls $args failed ($LASTEXITCODE)" } }
 function Invoke-Sc { sc.exe @args | Out-Null; if ($LASTEXITCODE -ne 0) { throw "sc.exe $args failed ($LASTEXITCODE)" } }
 
-Write-Host ($T.installing -f $prog, $data)
+$pwFile = Join-Path $data 'password'
+
+# The librarian password is asked first, once, so that cancelling leaves the PC
+# untouched. A network instance needs 12+ characters.
+$pw = $null
+if (-not (Test-Path $pwFile)) {
+  if ($Unattended) {
+    $pw = $env:BIBLI_ADMIN_PASSWORD
+    if (-not $pw -or $pw.Length -lt 12) { throw 'BIBLI_ADMIN_PASSWORD must hold at least 12 characters' }
+  } else {
+    $pw = Read-NewPassword $T $T.pw_prompt 12
+    if ($null -eq $pw) { Write-Host $T.cancelled; exit 1 }
+  }
+}
+
+if ($Unattended) { Write-Host ($T.installing -f $prog, $data) }
+else { Start-Progress 7 ($T.installing -f $prog, $data) }
 
 # 0. On a re-run, stop the server first (Windows locks a running bibli.exe),
 #    and copy the closed database aside before the new version migrates it.
 $existing = Get-Service -Name $service -ErrorAction SilentlyContinue
 if ($existing) {
+  Set-Step $T.st_stop
   Stop-Service -Name $service -Force
   $existing.WaitForStatus('Stopped', [TimeSpan]::FromSeconds(30))
   if (Test-Path (Join-Path $data 'biblio.db')) {
@@ -134,9 +137,10 @@ if ($existing) {
 }
 
 # 1. Program files, replaced on every run. The database stays in ProgramData.
+Set-Step $T.st_files
 New-Item -ItemType Directory -Force -Path $prog | Out-Null
 Copy-Exe (Join-Path $prog 'bibli.exe')
-foreach ($f in 'bibli.ico','bibli-tray.ico','lang.ps1','bibli-admin.ps1','uninstall.ps1','tray-icon.ps1') {
+foreach ($f in 'bibli.ico','bibli-tray.ico','lang.ps1','ui.ps1','bibli-admin.ps1','uninstall.ps1','tray-icon.ps1') {
   Copy-Item -Force (Join-Path $src $f) (Join-Path $prog $f)
 }
 # Left by the older zip package, whose update the installer now does.
@@ -144,31 +148,19 @@ Remove-Item -Force (Join-Path $prog 'update.ps1') -ErrorAction SilentlyContinue
 Get-ChildItem $prog | Unblock-File -ErrorAction SilentlyContinue
 
 # 2. Data directory, writable by LOCAL SERVICE, the account the server runs as.
+Set-Step $T.st_data
 New-Item -ItemType Directory -Force -Path $data, (Join-Path $data 'logs'), (Join-Path $data 'backups') | Out-Null
 Invoke-Icacls $data /grant "${sidLocalService}:(OI)(CI)M" /T /Q
 
-# 3. Librarian password, asked once, stored where only the server, SYSTEM and
-#    administrators can read it. A network instance needs 12+ characters.
-$pwFile = Join-Path $data 'password'
-if (-not (Test-Path $pwFile)) {
-  if ($Unattended) {
-    $pw = $env:BIBLI_ADMIN_PASSWORD
-    if (-not $pw -or $pw.Length -lt 12) { throw 'BIBLI_ADMIN_PASSWORD must hold at least 12 characters' }
-  } else {
-    do {
-      $pw = Read-Password
-      if ($null -eq $pw) { Write-Host $T.cancelled; exit 1 }
-      $ok = $pw.Length -ge 12
-      if (-not $ok) { [System.Windows.Forms.MessageBox]::Show($T.pw_tooshort, 'Bibli', 'OK', 'Warning') | Out-Null }
-    } while (-not $ok)
-  }
-  [IO.File]::WriteAllText($pwFile, $pw)
-}
+# 3. Librarian password, stored where only the server, SYSTEM and administrators
+#    can read it.
+if ($pw) { [IO.File]::WriteAllText($pwFile, $pw) }
 Invoke-Icacls $pwFile /inheritance:r /grant:r "${sidSystem}:F" "${sidAdmins}:F" "${sidLocalService}:R"
 
 # 4. The service: starts with the PC as LOCAL SERVICE (a network-facing server
 #    needs no more rights), restarted by Windows after a crash. The service
 #    manager knows "NT AUTHORITY\LocalService" in every language.
+Set-Step $T.st_service
 $bin = ('"{0}" -db "{1}" -addr :{2} -secure-cookies=false -family-links=false ' +
         '-backup-dir "{3}" -cache-dir "{4}" -log-file "{5}" -password-file "{6}"') -f
   (Join-Path $prog 'bibli.exe'), (Join-Path $data 'biblio.db'), $port,
@@ -189,12 +181,14 @@ powercfg /change standby-timeout-ac 0
 powercfg /change hibernate-timeout-ac 0
 
 # 5. Firewall: port 8080 inbound, private and domain networks only.
+Set-Step $T.st_network
 if (-not (Get-NetFirewallRule -DisplayName 'Bibli' -ErrorAction SilentlyContinue)) {
   New-NetFirewallRule -DisplayName 'Bibli' -Direction Inbound -Action Allow `
     -Protocol TCP -LocalPort $port -Profile Domain,Private | Out-Null
 }
 
 # 6. Shortcuts: a "Bibli" icon for daily use, and the admin menu.
+Set-Step $T.st_shortcuts
 $url      = "http://$($env:COMPUTERNAME):$port/"
 $desktop  = [Environment]::GetFolderPath('CommonDesktopDirectory')
 $programs = [Environment]::GetFolderPath('CommonPrograms')
@@ -231,10 +225,13 @@ New-AdminShortcut $T.sc_uninstall 'uninstall'
 # 7. Tray icon: a shortcut in the common Startup folder launches it at each
 #    login, and we start it now so it appears straight away.
 $trayArgs = "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$(Join-Path $prog 'tray-icon.ps1')`""
-New-Shortcut (Join-Path ([Environment]::GetFolderPath('CommonStartup')) 'Bibli (icone).lnk') $ps $trayArgs $prog
+$startup = [Environment]::GetFolderPath('CommonStartup')
+Remove-Item -Force (Join-Path $startup 'Bibli (icone).lnk') -ErrorAction SilentlyContinue  # its former name
+New-Shortcut (Join-Path $startup 'Bibli.lnk') $ps $trayArgs $prog
 if (-not $Unattended) { Start-Process $ps -WindowStyle Hidden -ArgumentList $trayArgs }
 
 # 8. Start the server now and wait for the first answer.
+Set-Step $T.st_start
 Start-Service -Name $service
 $up = $false
 for ($i = 0; $i -lt 50 -and -not $up; $i++) {
@@ -242,16 +239,17 @@ for ($i = 0; $i -lt 50 -and -not $up; $i++) {
   catch { Start-Sleep -Milliseconds 300 }
 }
 
-Write-Host ''
+Stop-Progress
 if ($up) {
-  Write-Host $T.sum_running
-  Write-Host ($T.sum_thispc -f "http://localhost:$port/")
-  Write-Host ($T.sum_others -f $url)
-  Write-Host $T.sum_icons1
-  Write-Host $T.sum_icons2
+  $lines = @($T.sum_running, '', ($T.sum_thispc -f "http://localhost:$port/"), ($T.sum_others -f $url), '', $T.sum_icons1, $T.sum_icons2)
+  $icon = 'Information'
 } else {
-  Write-Host ($T.sum_notup -f (Join-Path $data 'logs\bibli.log'))
-  if ($Unattended) { exit 1 }
+  $lines = @($T.sum_notup -f (Join-Path $data 'logs\bibli.log'))
+  $icon = 'Warning'
 }
-Write-Host ''
-if (-not $Unattended) { Read-Host $T.done_enter }
+if ($Unattended) {
+  $lines | ForEach-Object { Write-Host $_ }
+  if (-not $up) { exit 1 }
+} else {
+  Show-Message ($lines -join "`n") $icon
+}

@@ -29,7 +29,7 @@ Remove-NetFirewallRule -DisplayName 'Bibli'
 $desktop  = [Environment]::GetFolderPath('CommonDesktopDirectory')
 $programs = [Environment]::GetFolderPath('CommonPrograms')
 $startup  = [Environment]::GetFolderPath('CommonStartup')
-Remove-Item -Force (Join-Path $desktop 'Bibli.lnk'), (Join-Path $desktop 'Bibli.url'), (Join-Path $programs 'Bibli.lnk'), (Join-Path $startup 'Bibli (icone).lnk')
+Remove-Item -Force (Join-Path $desktop 'Bibli.lnk'), (Join-Path $desktop 'Bibli.url'), (Join-Path $programs 'Bibli.lnk'), (Join-Path $startup 'Bibli.lnk'), (Join-Path $startup 'Bibli (icone).lnk')
 # The admin menu folder, whatever language it was installed in.
 foreach ($nm in 'Bibli (serveur)', 'Bibli (server)') { Remove-Item -Recurse -Force (Join-Path $programs $nm) }
 Remove-Item -Recurse -Force $prog
