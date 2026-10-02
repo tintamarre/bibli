@@ -1,7 +1,6 @@
 package main
 
 import (
-	"embed"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -12,14 +11,9 @@ import (
 	"unsafe"
 
 	"golang.org/x/sys/windows"
-)
 
-// The Windows installer and what it installs (the desktop app launcher, the
-// server's tray icon and admin menu): bibli.exe is the whole download, and
-// writes these out when it installs itself.
-//
-//go:embed winsetup
-var setupFiles embed.FS
+	winsetup "bibli/packaging/windows"
+)
 
 // runSetup runs the installer when it was asked for: "bibli.exe install", or
 // a double-click from Explorer. Anything else (flags, the service manager, a
@@ -56,7 +50,8 @@ func doubleClicked() bool {
 	return n == 1
 }
 
-// setup writes the scripts to a temporary folder and runs install.ps1 there,
+// setup writes the embedded scripts (packaging/windows): bibli.exe is the whole
+// download. It writes the scripts to a temporary folder and runs install.ps1 there,
 // in this console, until it is done.
 func setup(extra []string) error {
 	exe, err := os.Executable()
@@ -83,12 +78,12 @@ func setup(extra []string) error {
 // accents, and Notepad wants CRLF: the scripts get both, whatever line endings
 // the checkout gave them.
 func writeSetupFiles(dir string) error {
-	entries, err := fs.ReadDir(setupFiles, "winsetup")
+	entries, err := fs.ReadDir(winsetup.Files, ".")
 	if err != nil {
 		return err
 	}
 	for _, e := range entries {
-		b, err := setupFiles.ReadFile("winsetup/" + e.Name())
+		b, err := winsetup.Files.ReadFile(e.Name())
 		if err != nil {
 			return err
 		}

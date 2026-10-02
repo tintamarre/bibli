@@ -35,5 +35,5 @@ cache/
 # Screenshots produced by scripts/screenshots.mjs
 screenshots/
 
-# Desktop apps built by scripts/macos-app.sh, windows.sh and linux-app.sh
+# Build outputs: make build, make dist and the packaging/ scripts
 dist/

@@ -54,7 +54,7 @@ jobs:
           cache-dependency-path: go.sum
 
       - name: Build Bibli-windows.exe
-        run: scripts/windows.sh dist
+        run: packaging/windows.sh dist
 
       - name: Keep the exe for the Windows job
         uses: actions/upload-artifact@v7
@@ -84,7 +84,7 @@ jobs:
         shell: powershell
         run: |
           $bad = 0
-          foreach ($f in Get-ChildItem app\winsetup\*.ps1) {
+          foreach ($f in Get-ChildItem packaging\windows\*.ps1) {
             $errors = $null
             # As UTF-8: bibli.exe writes them out with a BOM, the repository has none.
             $text = Get-Content -Raw -Encoding UTF8 $f.FullName

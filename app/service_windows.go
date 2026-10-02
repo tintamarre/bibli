@@ -7,7 +7,7 @@ import (
 	"golang.org/x/sys/windows/svc"
 )
 
-// serviceName is the name winsetup/install.ps1 registers.
+// serviceName is the name packaging/windows/install.ps1 registers.
 const serviceName = "Bibli"
 
 // runAsService hooks the Windows service manager when it started Bibli: a stop

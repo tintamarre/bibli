@@ -4,7 +4,7 @@
 DEV_ADDR ?= 127.0.0.1:8080
 DEV_DB   ?= data/biblio.db
 
-.PHONY: help dev dev-docker stop build demo test check fmt clean
+.PHONY: help dev dev-docker stop build dist demo test check fmt clean
 
 help: ## Show this help
 	@echo "Bibli — available targets:"
@@ -23,13 +23,18 @@ stop: ## Stop the Docker dev container, which would hold the port and the databa
 		docker stop bibli-dev >/dev/null; \
 	fi
 
-build: ## Compile the binary into ./bibli
-	go build -o bibli ./app
+build: ## Compile the binary into dist/bibli
+	go build -o dist/bibli ./app
+
+dist: ## Build the Mac, Windows and Linux desktop packages into dist/
+	packaging/macos.sh dist
+	packaging/windows.sh dist
+	packaging/linux.sh dist
 
 demo: build stop ## Reset DEV_DB and fill it with the demo dataset (books, borrowers, loans)
 	@mkdir -p $(dir $(DEV_DB))
 	@rm -f $(DEV_DB)
-	@BIBLI_ADMIN_PASSWORD=dev ./bibli -db $(DEV_DB) -addr 127.0.0.1:0 -backup-dir "" -cache-dir "" -secure-cookies=false & \
+	@BIBLI_ADMIN_PASSWORD=dev dist/bibli -db $(DEV_DB) -addr 127.0.0.1:0 -backup-dir "" -cache-dir "" -secure-cookies=false & \
 		pid=$$!; \
 		for i in $$(seq 1 30); do \
 			sqlite3 $(DEV_DB) "SELECT 1 FROM sqlite_master WHERE name = 'book'" 2>/dev/null | grep -q 1 && break; \
@@ -52,4 +57,4 @@ fmt: ## Format the Go sources in place
 	gofmt -w .
 
 clean: ## Remove build artefacts
-	rm -f bibli
+	rm -rf dist

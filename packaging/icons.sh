@@ -1,22 +1,22 @@
 #!/bin/sh
 # Bibli — draws the icons from app/static/favicon.svg. The desktop icons go to
-# scripts/icons/: Bibli.icns for the Mac app and bibli.png for the Linux menu
+# packaging/icons/: Bibli.icns for the Mac app and bibli.png for the Linux menu
 # entry (the favicon on a light rounded square). The Windows ones go to
-# app/winsetup/, embedded in bibli.exe: bibli.ico for the shortcuts, and
+# packaging/windows/, embedded in bibli.exe: bibli.ico for the shortcuts, and
 # bibli-tray.ico for the Windows service tray (the book mark alone,
 # full bleed on transparency, so it reads at 16 px on any taskbar). The web
 # home-screen icons go to app/static/ (icon-192, icon-512 and apple-touch-icon.png,
 # the logo on a solid white square).
 #
 # Run on a Mac, and only when the logo changes: the result is committed, so
-# that macos-app.sh, windows.sh and linux-app.sh build
+# that macos.sh, windows.sh and linux.sh build
 # anywhere, the release runner included, without a browser to draw with. Needs Google Chrome, sips,
 # iconutil and python3.
 
 set -eu
 
 cd "$(dirname "$0")/.."
-OUT=scripts/icons
+OUT=packaging/icons
 WORK=$(mktemp -d)
 trap 'rm -rf "$WORK"' EXIT
 CHROME=${CHROME:-"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"}
@@ -41,7 +41,7 @@ iconutil -c icns "$WORK/Bibli.iconset" -o "$OUT/Bibli.icns"
 for s in 16 32 48 256; do
     sips -z $s $s "$WORK/icon1024.png" --out "$WORK/ico$s.png" > /dev/null
 done
-python3 - "$WORK" app/winsetup/bibli.ico <<'EOF'
+python3 - "$WORK" packaging/windows/bibli.ico <<'EOF'
 import struct, sys
 work, out = sys.argv[1], sys.argv[2]
 sizes = [16, 32, 48, 256]
@@ -75,7 +75,7 @@ EOF
 for s in 16 20 24 32; do
     sips -z $s $s "$WORK/tray512.png" --out "$WORK/tray$s.png" > /dev/null
 done
-python3 - "$WORK" app/winsetup/bibli-tray.ico <<'EOF'
+python3 - "$WORK" packaging/windows/bibli-tray.ico <<'EOF'
 import struct, sys
 work, out = sys.argv[1], sys.argv[2]
 sizes = [16, 20, 24, 32]
@@ -104,4 +104,4 @@ sips -z 192 192 "$WORK/web1024.png" --out app/static/icon-192.png > /dev/null
 sips -z 512 512 "$WORK/web1024.png" --out app/static/icon-512.png > /dev/null
 sips -z 180 180 "$WORK/web1024.png" --out app/static/apple-touch-icon.png > /dev/null
 
-echo "Written: $OUT/Bibli.icns, $OUT/bibli.png, app/winsetup/{bibli,bibli-tray}.ico and app/static/{icon-192,icon-512,apple-touch-icon}.png"
+echo "Written: $OUT/Bibli.icns, $OUT/bibli.png, packaging/windows/{bibli,bibli-tray}.ico and app/static/{icon-192,icon-512,apple-touch-icon}.png"

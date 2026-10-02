@@ -165,7 +165,7 @@ jobs:
           echo "Docker tags: $TAGS"
 
       - name: Write app/build-info.json
-        run: scripts/build-info.sh "${{ needs.version.outputs.version }}" "${{ needs.version.outputs.date }}"
+        run: packaging/build-info.sh "${{ needs.version.outputs.version }}" "${{ needs.version.outputs.date }}"
         env:
           BUILD_SHA: ${{ github.sha }}
           BUILD_BRANCH: ${{ github.ref_name }}
@@ -211,8 +211,8 @@ jobs:
           cache-to: type=gha,mode=max
 
   # A failure here leaves the release out with the Docker image alone; rerun
-  # this job, or attach the apps by hand from scripts/macos-app.sh,
-  # windows.sh and linux-app.sh.
+  # this job, or attach the apps by hand from packaging/macos.sh,
+  # windows.sh and linux.sh.
   apps:
     needs: [version, release]
     runs-on: ubuntu-latest
@@ -223,7 +223,7 @@ jobs:
           fetch-depth: 0
 
       - name: Write app/build-info.json
-        run: scripts/build-info.sh "${{ needs.version.outputs.version }}" "${{ needs.version.outputs.date }}"
+        run: packaging/build-info.sh "${{ needs.version.outputs.version }}" "${{ needs.version.outputs.date }}"
         env:
           BUILD_SHA: ${{ github.sha }}
           BUILD_BRANCH: ${{ github.ref_name }}
@@ -244,9 +244,9 @@ jobs:
           if ! command -v zip > /dev/null || ! command -v python3 > /dev/null; then
             $SUDO apt-get update -qq && $SUDO apt-get install -y -qq zip python3
           fi
-          scripts/macos-app.sh dist
-          scripts/windows.sh dist
-          scripts/linux-app.sh dist
+          packaging/macos.sh dist
+          packaging/windows.sh dist
+          packaging/linux.sh dist
           ls -la dist
 
       - name: Attach the Mac, Windows and Linux apps

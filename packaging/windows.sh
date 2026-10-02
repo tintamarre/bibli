@@ -3,7 +3,7 @@
 # dist/ (or the directory given as first argument).
 #
 # The whole download is bibli.exe. Double-clicked, it asks what the PC is for
-# (app/setup_windows.go runs app/winsetup/install.ps1) and installs one of:
+# (app/setup_windows.go runs packaging/windows/install.ps1) and installs one of:
 # - the desktop app, for a single PC: no administrator needed, localhost only,
 #   it runs while its Edge window is open (app.ps1);
 # - the server for a whole school: a Windows service that starts with the PC

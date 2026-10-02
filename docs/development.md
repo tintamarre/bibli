@@ -71,27 +71,27 @@ Trois scripts construisent un Bibli pour **un seul ordinateur** : le serveur tou
 
 ### macOS
 
-    scripts/macos-app.sh [dossier]
+    packaging/macos.sh [dossier]
 
 Construit `Bibli.app`, `Bibli-macos.zip` et, sur un Mac, `Bibli.dmg` dans `dist/`. La fenêtre est Chrome, Edge, Brave ou Chromium en mode application, quel que soit le navigateur par défaut ; **quitter cette fenêtre (Cmd+Q) arrête le serveur**. Sans aucun de ces navigateurs, Bibli s'ouvre dans celui par défaut, et un second double-clic propose de l'arrêter. Le premier lancement demande le mot de passe. Les données vivent dans `~/Library/Application Support/Bibli`, à part de l'application, qu'une nouvelle version remplace sans rien perdre. Rien n'est signé par Apple. Il faut Go, `zip` et, hors d'un Mac, `python3`.
 
 ### Windows
 
-    scripts/windows.sh [dossier]
+    packaging/windows.sh [dossier]
 
-Construit `Bibli-windows.exe` dans `dist/`, depuis un Mac ou un Linux : `bibli.exe` seul. Double-cliqué (ou lancé avec `install`), il lance les scripts embarqués de `app/winsetup/`, qui demandent ce que sera ce PC : l'application de bureau (`%LOCALAPPDATA%\Programs\Bibli`, sans droits d'administrateur, **fermer sa fenêtre arrête le serveur**), le [service Windows](deployment.md#windows-service) ou un raccourci vers un serveur. Lancé avec des options, il est le serveur, comme ailleurs. Rien n'est signé. Il faut Go.
+Construit `Bibli-windows.exe` dans `dist/`, depuis un Mac ou un Linux : `bibli.exe` seul. Double-cliqué (ou lancé avec `install`), il lance les scripts embarqués de `packaging/windows/`, qui demandent ce que sera ce PC : l'application de bureau (`%LOCALAPPDATA%\Programs\Bibli`, sans droits d'administrateur, **fermer sa fenêtre arrête le serveur**), le [service Windows](deployment.md#windows-service) ou un raccourci vers un serveur. Lancé avec des options, il est le serveur, comme ailleurs. Rien n'est signé. Il faut Go.
 
 Les scripts sont en UTF-8 et LF dans le dépôt ; `bibli.exe` leur ajoute le BOM et les CRLF qu'attend Windows PowerShell 5. La CI teste le cycle du service sur Windows ; l'application, l'icône de notification et le raccourci se vérifient à la main.
 
 ### Linux
 
-    scripts/linux-app.sh [dossier]
+    packaging/linux.sh [dossier]
 
 Construit `Bibli-linux.tar.gz` dans `dist/`, depuis n'importe quel système. L'archive contient le serveur pour PC (amd64) et pour ARM 64 bits (arm64, un Raspberry Pi récent par exemple) ; `bibli.sh` choisit le bon. Le premier lancement se fait depuis un terminal (`./bibli.sh`) : il demande le mot de passe et ajoute Bibli au menu des applications. La fenêtre est Chrome, Edge, Brave ou Chromium en mode application, y compris le Chromium en snap d'Ubuntu ; **fermer cette fenêtre arrête le serveur**. Les dialogues passent par `zenity` (GNOME) ou `kdialog` (KDE), à défaut par le terminal. Les données vivent dans `~/.local/share/bibli`. Il faut Go et `tar`.
 
 ### Icônes
 
-Les icônes sont dessinées depuis `app/static/favicon.svg` par `scripts/app-icons.sh` (Chrome requis, chemin dans `CHROME` au besoin) : celles des applications de bureau dans `scripts/icons/`, et celles de l'écran d'accueil des téléphones (« Ajouter à l'écran d'accueil ») dans `app/static/` (`icon-192`, `icon-512`, `apple-touch-icon.png`). À relancer sur un Mac quand le logo change, puis à committer : c'est ce qui permet de construire les applications sans navigateur, sur le runner comme ailleurs.
+Les icônes sont dessinées depuis `app/static/favicon.svg` par `packaging/icons.sh` (Chrome requis, chemin dans `CHROME` au besoin) : celles des applications de bureau dans `packaging/icons/`, et celles de l'écran d'accueil des téléphones (« Ajouter à l'écran d'accueil ») dans `app/static/` (`icon-192`, `icon-512`, `apple-touch-icon.png`). À relancer sur un Mac quand le logo change, puis à committer : c'est ce qui permet de construire les applications sans navigateur, sur le runner comme ailleurs.
 
 ## Structure
 
@@ -133,14 +133,16 @@ Tout le code Go vit dans `app/`, en **un seul paquet plat** : les fichiers y son
     app/templates/       HTML rendu côté serveur
     app/static/          CSS, JS et bibliothèques vendorées (vendor/README.md), aucun CDN
     app/testdata/        fixture.sql, le petit jeu de données des tests
-    app/winsetup/        installateur Windows et ses icônes, embarqués dans bibli.exe
     scripts/dev.sh              serveur de développement qui se recompile tout seul
     scripts/screenshots.mjs     captures de tous les écrans, sur une base jetable
     scripts/gen-demo-loans.py   prêts et classes du jeu de démonstration
-    scripts/macos-app.sh        application de bureau Mac
-    scripts/windows.sh          Windows : application, serveur ou raccourci, un seul .exe
-    scripts/linux-app.sh        application de bureau Linux
-    scripts/app-icons.sh        icônes de bureau (scripts/icons/, app/winsetup/) et web (app/static/)
+    packaging/build-info.sh     écrit app/build-info.json, la version que le binaire annonce
+    packaging/macos.sh          application de bureau Mac
+    packaging/windows.sh        Windows : application, serveur ou raccourci, un seul .exe
+    packaging/windows/          installateur Windows et ses icônes, embarqués dans bibli.exe
+    packaging/linux.sh          application de bureau Linux
+    packaging/icons.sh          icônes de bureau (packaging/icons/, packaging/windows/) et web (app/static/)
+    dist/                       tout ce qui est construit (make build, make dist), jamais versionné
     Makefile             raccourcis de développement (make help)
 
 ## Ajouter une migration

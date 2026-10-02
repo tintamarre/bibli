@@ -18,7 +18,7 @@
 # right-click → Open, or "Open Anyway" under Privacy & Security.
 #
 # Needs Go, zip and, off a Mac, python3 — lipo, codesign and hdiutil are used
-# when they are there. The icon is scripts/icons/Bibli.icns (app-icons.sh).
+# when they are there. The icon is packaging/icons/Bibli.icns (icons.sh).
 
 set -eu
 
@@ -62,7 +62,7 @@ open(out, "wb").write(head + b"\0" * ((1 << align) - len(head)) + body)
 EOF
     chmod +x "$APP/Resources/bibli"
 fi
-cp scripts/icons/Bibli.icns "$APP/Resources/"
+cp packaging/icons/Bibli.icns "$APP/Resources/"
 
 cat > "$APP/MacOS/Bibli" <<'EOF'
 #!/bin/bash

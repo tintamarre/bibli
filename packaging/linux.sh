@@ -14,12 +14,12 @@
 # ~/.local/share/bibli, apart from the folder, so a new version replaces the
 # folder and keeps the library.
 #
-# Deliberately a single-PC setup, like scripts/macos-app.sh: localhost only,
+# Deliberately a single-PC setup, like packaging/macos.sh: localhost only,
 # nothing restarts it after a power cut. Dialogs use zenity or kdialog, and
 # fall back to the terminal the script was started from.
 #
 # Needs Go and tar; builds on any system, the release runner included. The
-# icon is scripts/icons/bibli.png (app-icons.sh).
+# icon is packaging/icons/bibli.png (icons.sh).
 
 set -eu
 
@@ -37,7 +37,7 @@ for arch in amd64 arm64; do
         go build -trimpath -ldflags="-s -w" -o "$DIR/bibli-$arch" ./app
 done
 
-cp scripts/icons/bibli.png "$DIR/"
+cp packaging/icons/bibli.png "$DIR/"
 
 cat > "$DIR/bibli.sh" <<'EOF'
 #!/bin/bash
