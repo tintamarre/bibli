@@ -14,8 +14,9 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-// The Windows server installer, its tray icon and admin menu: bibli.exe is the
-// whole download, and writes these out when it installs itself.
+// The Windows installer and what it installs (the desktop app launcher, the
+// server's tray icon and admin menu): bibli.exe is the whole download, and
+// writes these out when it installs itself.
 //
 //go:embed winsetup
 var setupFiles embed.FS
@@ -79,7 +80,8 @@ func setup(extra []string) error {
 
 // writeSetupFiles copies the embedded files into dir. Windows PowerShell 5
 // reads a script without a BOM in the ANSI code page, which garbles the
-// accents, and Notepad wants CRLF: the scripts get both.
+// accents, and Notepad wants CRLF: the scripts get both, whatever line endings
+// the checkout gave them.
 func writeSetupFiles(dir string) error {
 	entries, err := fs.ReadDir(setupFiles, "winsetup")
 	if err != nil {
@@ -91,7 +93,8 @@ func writeSetupFiles(dir string) error {
 			return err
 		}
 		if strings.HasSuffix(e.Name(), ".ps1") {
-			b = []byte("\xef\xbb\xbf" + strings.ReplaceAll(string(b), "\n", "\r\n"))
+			lf := strings.ReplaceAll(string(b), "\r\n", "\n")
+			b = []byte("\xef\xbb\xbf" + strings.ReplaceAll(lf, "\n", "\r\n"))
 		}
 		if err := os.WriteFile(filepath.Join(dir, e.Name()), b, 0o644); err != nil {
 			return err
