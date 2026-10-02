@@ -42,6 +42,9 @@ type app struct {
 }
 
 func main() {
+	if code, ran := runSetup(); ran {
+		os.Exit(code)
+	}
 	var (
 		dbPath        = flag.String("db", "biblio.db", "path to the SQLite file")
 		addr          = flag.String("addr", ":8080", "listen address")

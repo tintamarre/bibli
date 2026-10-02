@@ -67,7 +67,7 @@ Le script cherche Chrome ou Chromium sur la machine, y compris celui que Playwri
 
 Trois scripts construisent un Bibli pour **un seul ordinateur** : le serveur tourne en arrière-plan sur `http://localhost:8765/` (ou le port de `BIBLI_PORT`) et s'ouvre dans une fenêtre à lui, sans onglets ni barre d'adresse. Il n'écoute que `localhost` : aucune tablette ne l'atteint, et rien ne le relance après une coupure de courant. Ce n'est pas un déploiement pour plusieurs postes. Le mode d'emploi pour l'utilisateur est dans le [guide d'installation](installation.md).
 
-À chaque version, le workflow de release construit les trois et les attache à la release (`Bibli-vX.Y.Z-macos.zip`, `Bibli-vX.Y.Z-windows.zip`, `Bibli-vX.Y.Z-linux.tar.gz`). Un échec de cette étape n'empêche pas la release, qui sort alors sans elles.
+À chaque version, le workflow de release construit les trois et les attache à la release (`Bibli-vX.Y.Z-macos.zip`, `Bibli-vX.Y.Z-windows.exe`, `Bibli-vX.Y.Z-linux.tar.gz`). Un échec de cette étape n'empêche pas la release, qui sort alors sans elles.
 
 ### macOS
 
@@ -77,9 +77,11 @@ Construit `Bibli.app`, `Bibli-macos.zip` et, sur un Mac, `Bibli.dmg` dans `dist/
 
 ### Windows
 
-    scripts/windows-app.sh [dossier]
+    scripts/windows.sh [dossier]
 
-Construit `Bibli-windows.zip` dans `dist/`, depuis un Mac ou un Linux. Le zip contient un dossier `Bibli` à extraire où l'on veut ; `Lancer Bibli.cmd` demande le mot de passe et pose un raccourci sur le Bureau et dans le menu Démarrer. Le serveur démarre caché et s'ouvre dans une fenêtre Edge (Chrome à défaut) ; **fermer cette fenêtre arrête le serveur**. Les données vivent dans `%LOCALAPPDATA%\Bibli`. `bibli.exe` n'est pas signé : SmartScreen peut avertir au premier lancement. Il faut Go et `zip`.
+Construit `Bibli-windows.exe` dans `dist/`, depuis un Mac ou un Linux. C'est `bibli.exe` seul : double-cliqué, ou lancé avec `install`, il écrit les scripts de `app/winsetup/` (embarqués) dans un dossier temporaire et lance `install.ps1`, qui demande ce que sera ce PC. **Seulement sur ce PC** installe l'application de bureau dans `%LOCALAPPDATA%\Programs\Bibli`, sans droits d'administrateur : `app.ps1` démarre le serveur caché et l'ouvre dans une fenêtre Edge (Chrome à défaut), et **fermer cette fenêtre arrête le serveur** ; les données vivent dans `%LOCALAPPDATA%\Bibli`. **Serveur** installe le service Windows ([Windows (service)](deployment.md#windows-service)). **Autre poste** pose un raccourci vers le serveur. Lancé avec des options (`-db`…), par le service ou depuis un terminal, `bibli.exe` est le serveur, comme ailleurs. Il n'est pas signé : SmartScreen peut avertir au premier lancement. Il faut Go.
+
+Les scripts de `app/winsetup/` sont en UTF-8 et LF dans le dépôt ; `bibli.exe` leur ajoute le BOM et les CRLF que Windows PowerShell 5 attend. La CI les analyse tous sur Windows et teste le cycle du service (installation, arrêt, plantage, mise à jour, désinstallation) ; l'application de bureau, l'icône de notification et le raccourci demandent quelqu'un devant l'écran et se vérifient à la main.
 
 ### Linux
 
@@ -131,13 +133,14 @@ Tout le code Go vit dans `app/`, en **un seul paquet plat** : les fichiers y son
     app/templates/       HTML rendu côté serveur
     app/static/          CSS, JS et bibliothèques vendorées (vendor/README.md), aucun CDN
     app/testdata/        fixture.sql, le petit jeu de données des tests
+    app/winsetup/        installateur Windows et ses icônes, embarqués dans bibli.exe
     scripts/dev.sh              serveur de développement qui se recompile tout seul
     scripts/screenshots.mjs     captures de tous les écrans, sur une base jetable
     scripts/gen-demo-loans.py   prêts et classes du jeu de démonstration
     scripts/macos-app.sh        application de bureau Mac
-    scripts/windows-app.sh      application de bureau Windows
+    scripts/windows.sh          Windows : application, serveur ou raccourci, un seul .exe
     scripts/linux-app.sh        application de bureau Linux
-    scripts/app-icons.sh        icônes de bureau (scripts/icons/) et web (app/static/)
+    scripts/app-icons.sh        icônes de bureau (scripts/icons/, app/winsetup/) et web (app/static/)
     Makefile             raccourcis de développement (make help)
 
 ## Ajouter une migration

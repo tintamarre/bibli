@@ -30,7 +30,7 @@ Ouvrir la [page de la dernière version de Bibli](https://github.com/tintamarre/
 | Ordinateur | Fichier |
 | --- | --- |
 | Mac | `Bibli-vX.Y.Z-macos.zip` |
-| Windows | `Bibli-vX.Y.Z-windows.zip` |
+| Windows | `Bibli-vX.Y.Z-windows.exe` |
 | Linux | `Bibli-vX.Y.Z-linux.tar.gz` |
 
 `X.Y.Z` est le numéro de version, par exemple `1.4.0`.
@@ -53,11 +53,13 @@ Ni Apple ni Microsoft n'ont signé Bibli : c'est un logiciel libre, distribué s
 
 ### Sur Windows
 
-1. Clic droit sur le fichier `.zip` téléchargé → **Extraire tout…**, et choisir comme destination le dossier **Documents**. On obtient un dossier `Bibli`.
-2. Ouvrir ce dossier et double-cliquer sur **`Lancer Bibli.cmd`**.
-3. Windows peut afficher « Windows a protégé votre ordinateur » (SmartScreen). Cliquer **Informations complémentaires**, puis **Exécuter quand même**.
+1. Double-cliquer sur le fichier `.exe` téléchargé (dans *Téléchargements*).
+2. Windows peut afficher « Windows a protégé votre ordinateur » (SmartScreen). Cliquer **Informations complémentaires**, puis **Exécuter quand même**.
+3. Bibli demande comment l'utiliser sur ce PC : choisir **Seulement sur ce PC**. Aucun droit d'administrateur n'est nécessaire.
 4. Bibli demande le mot de passe de la bibliothèque, puis ouvre sa fenêtre dans Edge.
-5. Un raccourci **Bibli** est posé sur le Bureau et dans le menu Démarrer : c'est lui qu'on utilisera ensuite. Ne pas déplacer ni supprimer le dossier `Bibli` de Documents : le raccourci y renvoie.
+5. Un raccourci **Bibli** est posé sur le Bureau et dans le menu Démarrer : c'est lui qu'on utilisera ensuite. Le fichier téléchargé ne sert plus et peut être supprimé.
+
+Les deux autres choix servent à une école qui a un serveur : **Serveur pour plusieurs appareils** l'installe sur ce PC (voir [Windows (service)](deployment.md#windows-service)), **Autre poste** pose seulement un raccourci vers un serveur installé ailleurs.
 
 ### Sur Linux
 
@@ -137,13 +139,14 @@ Le mot de passe n'est pas dans la sauvegarde : sur un nouvel ordinateur, c'est c
 **Mettre à jour** : quitter Bibli, télécharger la nouvelle version (voir [§1](#1-télécharger)) et remplacer l'ancienne :
 
 - Mac : glisser le nouveau `Bibli.app` dans *Applications*, et accepter de remplacer l'ancien.
-- Windows et Linux : extraire la nouvelle archive au même endroit que l'ancienne (Documents), et accepter de remplacer les fichiers du dossier `Bibli`.
+- Windows : double-cliquer sur le nouveau `.exe` et choisir de nouveau **Seulement sur ce PC**. Si une ancienne version avait été extraite dans un dossier `Bibli` de Documents, ce dossier ne sert plus et peut être supprimé.
+- Linux : extraire la nouvelle archive au même endroit que l'ancienne (Documents), et accepter de remplacer les fichiers du dossier `Bibli`.
 
 Les données ne sont pas dans l'application : elles restent. Par prudence, téléchargez une sauvegarde juste avant.
 
 **Désinstaller** :
 
-- supprimer l'application (`Bibli.app`, ou le dossier `Bibli` de Documents, et sous Windows le raccourci du Bureau) : les données restent ;
+- supprimer l'application (`Bibli.app` sur Mac ; sous Windows le dossier `%LOCALAPPDATA%\Programs\Bibli` et les raccourcis du Bureau et du menu Démarrer ; sous Linux le dossier `Bibli` de Documents) : les données restent ;
 - supprimer **aussi** le dossier des données (voir [§4](#4-où-sont-les-données)) efface toute la bibliothèque. Faites d'abord une sauvegarde si elle peut encore servir.
 
 ## 8. Mot de passe oublié

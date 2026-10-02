@@ -38,7 +38,7 @@ jobs:
       - name: Code coverage
         run: go tool cover -func=coverage.out
 
-  # The Windows server package, built where the release builds it.
+  # The Windows exe, built where the release builds it.
   windows-package:
     runs-on: ubuntu-latest
     steps:
@@ -53,27 +53,45 @@ jobs:
           go-version: '1.27'
           cache-dependency-path: go.sum
 
-      - name: Build Bibli-windows-server.zip
-        run: scripts/windows-service.sh dist
+      - name: Build Bibli-windows.exe
+        run: scripts/windows.sh dist
 
-      - name: Keep the package for the Windows job
+      - name: Keep the exe for the Windows job
         uses: actions/upload-artifact@v7
         with:
-          name: windows-server
-          path: dist/Bibli-windows-server.zip
+          name: windows-exe
+          path: dist/Bibli-windows.exe
           retention-days: 3
 
   # The whole life of the Windows service, in Windows PowerShell 5 as schools
   # run it: install, clean stop, crash and restart by Windows, update,
-  # uninstall. Each script runs in its own process, as a double-click would.
+  # uninstall. Each step runs in its own process, as a double-click would.
   windows-server:
     needs: windows-package
     runs-on: windows-latest
     steps:
-      - name: Fetch the package
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Fetch the exe
         uses: actions/download-artifact@v8
         with:
-          name: windows-server
+          name: windows-exe
+
+      # The tray, the admin menu, the desktop app and the shortcut need a
+      # person in front of them: CI can only check that they parse.
+      - name: Every embedded script parses
+        shell: powershell
+        run: |
+          $bad = 0
+          foreach ($f in Get-ChildItem app\winsetup\*.ps1) {
+            $errors = $null
+            # As UTF-8: bibli.exe writes them out with a BOM, the repository has none.
+            $text = Get-Content -Raw -Encoding UTF8 $f.FullName
+            [void][Management.Automation.Language.Parser]::ParseInput($text, [ref]$null, [ref]$errors)
+            foreach ($e in $errors) { Write-Host "$($f.Name):$($e.Extent.StartLineNumber): $($e.Message)"; $bad++ }
+          }
+          if ($bad) { exit 1 }
 
       - name: Install, stop, crash, update, uninstall
         shell: powershell
@@ -83,9 +101,9 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $data = 'C:\ProgramData\Bibli'
           $log  = Join-Path $data 'logs\bibli.log'
-          function Step($title, $script, [string[]]$more = @()) {
+          function Step($title, [scriptblock]$run) {
             Write-Host "::group::$title"
-            powershell.exe -NoProfile -ExecutionPolicy Bypass -File $script -Unattended @more
+            & $run
             $code = $LASTEXITCODE
             Write-Host '::endgroup::'
             if ($code -ne 0) { throw "$title failed ($code)" }
@@ -102,8 +120,7 @@ jobs:
           }
           trap { if (Test-Path $log) { Write-Host '--- bibli.log ---'; Get-Content $log -Tail 50 }; throw $_ }
 
-          Expand-Archive Bibli-windows-server.zip -DestinationPath pkg
-          Step 'install' 'pkg\Bibli-serveur\install.ps1'
+          Step 'install' { .\Bibli-windows.exe install -Unattended }
           Wait-Health $true 30
           $svc = Get-CimInstance Win32_Service -Filter "Name='Bibli'"
           if ($svc.StartName -ne 'NT AUTHORITY\LocalService') { throw "runs as $($svc.StartName)" }
@@ -125,11 +142,11 @@ jobs:
           Wait-Health $true 60
           if ((Get-Process bibli).Id -eq $before) { throw 'same process: it was never killed' }
 
-          Step 'update' 'pkg\Bibli-serveur\update.ps1' @('-Package', (Resolve-Path Bibli-windows-server.zip).Path)
+          Step 'update' { .\Bibli-windows.exe install -Unattended }
           Wait-Health $true 30
           if (-not (Get-ChildItem (Join-Path $data 'backups') -Directory -Filter 'pre-update-*')) { throw 'no pre-update copy' }
 
-          Step 'uninstall' 'C:\Program Files\Bibli\uninstall.ps1'
+          Step 'uninstall' { powershell.exe -NoProfile -ExecutionPolicy Bypass -File 'C:\Program Files\Bibli\uninstall.ps1' -Unattended }
           Wait-Health $false 5
           # A deleted service lingers while a handle on it is still open.
           for ($i = 0; $i -lt 10 -and (Get-Service Bibli -ErrorAction SilentlyContinue); $i++) { Start-Sleep 1 }

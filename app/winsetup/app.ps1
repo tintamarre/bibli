@@ -1,43 +1,6 @@
-#!/bin/sh
-# Bibli — a Windows version for one PC, built from this machine: Bibli-windows.zip,
-# written to dist/ (or the directory given as first argument).
-#
-# The zip holds a Bibli folder to extract anywhere (Documents, say) and
-# "Lancer Bibli.cmd" to double-click once. That first launch asks for the
-# librarian password and puts a Bibli shortcut on the Desktop and in the Start
-# menu; from then on the shortcut is what starts it. It starts the server on
-# 127.0.0.1:8765 hidden, and opens it in an Edge window of its own (app mode,
-# its own profile: no tabs, no address bar, no bookmarks) — Edge ships with
-# Windows 10 and 11, Chrome is used if it is missing. Closing that window stops
-# the server. Data lives in %LOCALAPPDATA%\Bibli, apart from the folder, so a
-# new version replaces the folder and keeps the library.
-#
-# Deliberately a single-PC setup, like scripts/macos-app.sh: localhost only,
-# nothing restarts it after a power cut. bibli.exe is not signed, so SmartScreen
-# may warn on the first launch ("More info" → "Run anyway").
-#
-# Needs Go and zip; builds on any system, the release runner included. The
-# icon is scripts/icons/bibli.ico (app-icons.sh).
-
-set -eu
-
-cd "$(dirname "$0")/.."
-OUT=$(mkdir -p "${1:-dist}" && cd "${1:-dist}" && pwd)
-WORK=$(mktemp -d)
-trap 'rm -rf "$WORK"' EXIT
-DIR="$WORK/Bibli"
-mkdir -p "$DIR"
-
-VERSION=$(git describe --tags --match 'v[0-9]*.[0-9]*.[0-9]*' --always 2>/dev/null || echo dev)
-echo "Building Bibli $VERSION for Windows (amd64, which Windows on ARM also runs)…"
-GOOS=windows GOARCH=amd64 CGO_ENABLED=0 \
-    go build -trimpath -ldflags="-s -w" -o "$DIR/bibli.exe" ./app
-
-cp scripts/icons/bibli.ico "$DIR/"
-
-cat > "$DIR/bibli.ps1" <<'EOF'
-# Starts Bibli on localhost, hidden, and opens it in a browser window of its
-# own; closing that window stops the server.
+# The desktop app, for a single PC: starts Bibli on localhost, hidden, and
+# opens it in a browser window of its own; closing that window stops the
+# server. install.ps1 puts it in %LOCALAPPDATA%\Programs\Bibli with bibli.exe.
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Windows.Forms, System.Drawing
 
@@ -86,9 +49,9 @@ if (-not (Test-Path $pwFile) -or -not (Get-Content -Raw $pwFile)) {
 $shell = New-Object -ComObject WScript.Shell
 foreach ($folder in @([Environment]::GetFolderPath('Desktop'), [Environment]::GetFolderPath('Programs'))) {
   $lnk = $shell.CreateShortcut((Join-Path $folder 'Bibli.lnk'))
-  if ($lnk.Arguments -notlike "*$here*") {
+  if ($lnk.Arguments -notlike "*$here\app.ps1*") {
     $lnk.TargetPath = (Get-Command powershell.exe).Source
-    $lnk.Arguments = "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$here\bibli.ps1`""
+    $lnk.Arguments = "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$here\app.ps1`""
     $lnk.WorkingDirectory = $here
     $lnk.WindowStyle = 7
     if (Test-Path "$here\bibli.ico") { $lnk.IconLocation = "$here\bibli.ico" }
@@ -129,18 +92,3 @@ if ($open) {
 $window = Start-Process -FilePath $browser -ArgumentList $browserArgs -PassThru
 $window.WaitForExit()
 Get-Process bibli -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq $bin } | Stop-Process -Force
-EOF
-
-# Double-clicked once, from the extracted folder; the shortcuts take over.
-printf '@echo off\r\nstart "" powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "%%~dp0bibli.ps1"\r\n' \
-    > "$DIR/Lancer Bibli.cmd"
-
-# Windows PowerShell 5 reads a script without a BOM as the ANSI code page, and
-# the accents in the dialogs would come out garbled.
-printf '\357\273\277' | cat - "$DIR/bibli.ps1" > "$WORK/bibli.ps1" && mv "$WORK/bibli.ps1" "$DIR/bibli.ps1"
-# CRLF throughout, so Notepad shows the script as a script.
-sed 's/$/\r/' "$DIR/bibli.ps1" > "$WORK/crlf" && mv "$WORK/crlf" "$DIR/bibli.ps1"
-
-rm -f "$OUT/Bibli-windows.zip"
-(cd "$WORK" && zip -qr "$OUT/Bibli-windows.zip" Bibli)
-echo "Written: $OUT/Bibli-windows.zip"
