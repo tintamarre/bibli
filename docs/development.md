@@ -79,9 +79,9 @@ Construit `Bibli.app`, `Bibli-macos.zip` et, sur un Mac, `Bibli.dmg` dans `dist/
 
     scripts/windows.sh [dossier]
 
-Construit `Bibli-windows.exe` dans `dist/`, depuis un Mac ou un Linux. C'est `bibli.exe` seul : double-cliqué, ou lancé avec `install`, il écrit les scripts de `app/winsetup/` (embarqués) dans un dossier temporaire et lance `install.ps1`, qui demande ce que sera ce PC. **Seulement sur ce PC** installe l'application de bureau dans `%LOCALAPPDATA%\Programs\Bibli`, sans droits d'administrateur : `app.ps1` démarre le serveur caché et l'ouvre dans une fenêtre Edge (Chrome à défaut), et **fermer cette fenêtre arrête le serveur** ; les données vivent dans `%LOCALAPPDATA%\Bibli`. **Serveur** installe le service Windows ([Windows (service)](deployment.md#windows-service)). **Autre poste** pose un raccourci vers le serveur. Lancé avec des options (`-db`…), par le service ou depuis un terminal, `bibli.exe` est le serveur, comme ailleurs. Il n'est pas signé : SmartScreen peut avertir au premier lancement. Il faut Go.
+Construit `Bibli-windows.exe` dans `dist/`, depuis un Mac ou un Linux : `bibli.exe` seul. Double-cliqué (ou lancé avec `install`), il lance les scripts embarqués de `app/winsetup/`, qui demandent ce que sera ce PC : l'application de bureau (`%LOCALAPPDATA%\Programs\Bibli`, sans droits d'administrateur, **fermer sa fenêtre arrête le serveur**), le [service Windows](deployment.md#windows-service) ou un raccourci vers un serveur. Lancé avec des options, il est le serveur, comme ailleurs. Rien n'est signé. Il faut Go.
 
-Les scripts de `app/winsetup/` sont en UTF-8 et LF dans le dépôt ; `bibli.exe` leur ajoute le BOM et les CRLF que Windows PowerShell 5 attend. La CI les analyse tous sur Windows et teste le cycle du service (installation, arrêt, plantage, mise à jour, désinstallation) ; l'application de bureau, l'icône de notification et le raccourci demandent quelqu'un devant l'écran et se vérifient à la main.
+Les scripts sont en UTF-8 et LF dans le dépôt ; `bibli.exe` leur ajoute le BOM et les CRLF qu'attend Windows PowerShell 5. La CI teste le cycle du service sur Windows ; l'application, l'icône de notification et le raccourci se vérifient à la main.
 
 ### Linux
 
