@@ -288,6 +288,8 @@ Dans l'**Inventaire**, la colonne *Condition* de chaque exemplaire : *disponible
 
 **Statistiques** montre les prêts de l'année, les livres les plus empruntés et ceux qui ne sont jamais sortis. Le **Bilan du fonds** (*Télécharger le tableur*) donne une ligne par titre, dans l'ordre des cotes : de quoi décider ce qu'on déplace, rachète ou retire. Il ne nomme personne.
 
+L'année des statistiques (la grille de l'accueil, les livres les plus empruntés) commence le 1er août par défaut. **Réglages** → *Début de l'année dans les statistiques* choisit un autre mois : septembre, janvier pour une année civile…
+
 ### Passage d'année
 
 **Emprunteurs** → *Gérer la liste* → *Passer à l'année suivante*, une fois par an (surtout utile dans une école ou toute structure qui fonctionne par années), avant d'importer les nouveaux emprunteurs.

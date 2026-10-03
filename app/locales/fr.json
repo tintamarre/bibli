@@ -637,6 +637,8 @@
   "settings.theme": "Thème",
   "settings.theme_help": "Les couleurs des écrans, pour toute la bibliothèque. Les impressions restent en noir et blanc.",
   "settings.years": "ans",
+  "settings.year_start": "Début de l'année dans les statistiques",
+  "settings.year_start_help": "Le premier jour de ce mois ouvre une nouvelle année : la grille de l'accueil et la liste des livres les plus empruntés repartent de zéro. Septembre pour une année scolaire, janvier pour une année civile.",
 
   "source.bnf": "BnF",
   "source.google": "Google Books",
@@ -669,7 +671,7 @@
   "stats.top_title": "Les plus empruntés",
   "stats.year_busiest.one": "journée la plus chargée : le {1}, {0} prêt",
   "stats.year_busiest.other": "journée la plus chargée : le {1}, {0} prêts",
-  "stats.year_none": "Aucun prêt enregistré depuis le 1er août.",
+  "stats.year_none": "Aucun prêt enregistré depuis le début de l'année.",
   "stats.year_summary.one": "{0} prêt depuis le {1}",
   "stats.year_summary.other": "{0} prêts depuis le {1}",
   "stats.year_title": "L'année en un coup d'œil",

@@ -75,6 +75,14 @@
         </div>
 
         <div class="setting">
+          <label class="field"><span>{{T "settings.year_start"}}</span>
+            <select name="year_start_month">
+              {{range .YearStartMonths}}<option value="{{.Number}}"{{if .Selected}} selected{{end}}>{{.Label}}</option>{{end}}
+            </select></label>
+          <p class="note">{{T "settings.year_start_help"}}</p>
+        </div>
+
+        <div class="setting">
           <div class="field">
             <span>{{T "settings.tracking_links"}}</span>
             <label class="field-check">

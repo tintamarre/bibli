@@ -637,6 +637,8 @@
   "settings.theme": "Thema",
   "settings.theme_help": "De kleuren van de schermen, voor de hele bibliotheek. Afdrukken blijven zwart-wit.",
   "settings.years": "jaar",
+  "settings.year_start": "Begin van het jaar in de statistieken",
+  "settings.year_start_help": "De eerste dag van deze maand opent een nieuw jaar: het raster op het startscherm en de lijst met meest ontleende boeken beginnen opnieuw. September voor een schooljaar, januari voor een kalenderjaar.",
 
   "source.bnf": "BnF",
   "source.google": "Google Books",
@@ -669,7 +671,7 @@
   "stats.top_title": "Meest ontleend",
   "stats.year_busiest.one": "drukste dag: {1}, {0} ontlening",
   "stats.year_busiest.other": "drukste dag: {1}, {0} ontleningen",
-  "stats.year_none": "Geen ontleningen geregistreerd sinds 1 augustus.",
+  "stats.year_none": "Geen ontleningen geregistreerd sinds het begin van het jaar.",
   "stats.year_summary.one": "{0} ontlening sinds {1}",
   "stats.year_summary.other": "{0} ontleningen sinds {1}",
   "stats.year_title": "Het jaar in één oogopslag",

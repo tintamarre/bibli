@@ -4,7 +4,9 @@ import (
 	"database/sql"
 	"log"
 	"os"
+	"strconv"
 	"sync"
+	"time"
 )
 
 // Settings shown on almost every page, cached in memory so a render runs no
@@ -17,6 +19,7 @@ var (
 	cachedLang          = defaultLang
 	cachedGoogleKey     string
 	cachedTrackingLinks = true
+	cachedYearStart     = defaultYearStart
 	// -tracking-links: off in the Mac and Windows apps, which no one else can reach.
 	trackingLinksAllowed = true
 )
@@ -55,6 +58,15 @@ func loadSettingsCache(db *sql.DB) {
 		log.Printf("settings cache (loans links): %v", err)
 	}
 	setTrackingLinks(v != "0")
+
+	// No row until /settings is saved: the year starts in August.
+	v = ""
+	if err := db.QueryRow(`SELECT value FROM setting WHERE key = 'year_start_month'`).Scan(&v); err != nil && err != sql.ErrNoRows {
+		log.Printf("settings cache (year start): %v", err)
+	}
+	if m, err := strconv.Atoi(v); err == nil {
+		setYearStart(m)
+	}
 }
 
 // anonymousBorrowerID reads the sentinel borrower's id, 0 when absent — the
@@ -86,6 +98,25 @@ func setLang(l string) {
 	settingsMu.Lock()
 	cachedLang = l
 	settingsMu.Unlock()
+}
+
+// setYearStart records the month the activity year starts in, ignoring a value
+// that is not a month.
+func setYearStart(m int) {
+	if m < 1 || m > 12 {
+		log.Printf("unknown year start month in the database: %d — keeping %d", m, cachedYearStart)
+		return
+	}
+	settingsMu.Lock()
+	cachedYearStart = time.Month(m)
+	settingsMu.Unlock()
+}
+
+// yearStart is the month the activity year starts in (the statistics' year).
+func yearStart() time.Month {
+	settingsMu.RLock()
+	defer settingsMu.RUnlock()
+	return cachedYearStart
 }
 
 func setTrackingLinks(on bool) {

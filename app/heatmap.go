@@ -8,9 +8,9 @@ import (
 // An activity year drawn one cell per day: weeks down the columns, the days of a
 // week across the seven rows. Nothing is stored.
 
-// The year runs 1 August to 31 July: wide enough to hold any activity year, and
-// no decree moves these two dates.
-const activityYearStart = time.August
+// The year starts on the 1st of a month the library chooses in /settings,
+// August until it does: the one a school's year turns on.
+const defaultYearStart = time.August
 
 // Seven rows and not five: a loan recorded on a Saturday must have somewhere
 // to go.
@@ -44,17 +44,22 @@ type heatmap struct {
 }
 
 // activityYearBounds gives the first and last day of the activity year containing
-// the given day.
+// the given day, for the month the library set.
 func activityYearBounds(todayISO string) (string, string) {
+	return activityYearBoundsFrom(todayISO, yearStart())
+}
+
+// activityYearBoundsFrom is activityYearBounds for a given starting month.
+func activityYearBoundsFrom(todayISO string, from time.Month) (string, string) {
 	t, ok := parseDate(todayISO)
 	if !ok {
 		t = today()
 	}
 	year := t.Year()
-	if t.Month() < activityYearStart {
+	if t.Month() < from {
 		year--
 	}
-	start := time.Date(year, activityYearStart, 1, 0, 0, 0, 0, time.UTC)
+	start := time.Date(year, from, 1, 0, 0, 0, 0, time.UTC)
 	return start.Format("2006-01-02"), start.AddDate(1, 0, -1).Format("2006-01-02")
 }
 

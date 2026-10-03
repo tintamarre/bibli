@@ -21,6 +21,25 @@ func TestActivityYearRunsFromAugustToJuly(t *testing.T) {
 	}
 }
 
+func TestActivityYearFollowsTheMonthChosen(t *testing.T) {
+	for _, c := range []struct {
+		from       time.Month
+		day        string
+		start, end string
+	}{
+		{time.January, "2026-09-22", "2026-01-01", "2026-12-31"}, // a calendar year
+		{time.January, "2026-01-01", "2026-01-01", "2026-12-31"},
+		{time.September, "2026-08-31", "2025-09-01", "2026-08-31"},
+		{time.September, "2026-09-01", "2026-09-01", "2027-08-31"},
+		{time.December, "2026-02-10", "2025-12-01", "2026-11-30"},
+	} {
+		start, end := activityYearBoundsFrom(c.day, c.from)
+		if start != c.start || end != c.end {
+			t.Errorf("%v, %s: want %s..%s, got %s..%s", c.from, c.day, c.start, c.end, start, end)
+		}
+	}
+}
+
 // The activity-year boundary, where an off-by-one shifts a whole year.
 func TestActivityYearTurnsOverOnTheFirstOfAugust(t *testing.T) {
 	_, julyEnd := activityYearBounds("2026-07-31")

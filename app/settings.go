@@ -12,6 +12,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // backupStatus is the backup state, formatted for the screen, so anyone can
@@ -126,6 +127,23 @@ func backupView(r *http.Request, basePath, backupDir string) backupStatus {
 	return s
 }
 
+// yearStartMonth is one choice of the year-start select.
+type yearStartMonth struct {
+	Number   int
+	Label    string
+	Selected bool
+}
+
+// yearStartMonths lists the twelve months, the current one selected. The
+// abbreviations are the ones the statistics already draw.
+func yearStartMonths(lang string, current time.Month) []yearStartMonth {
+	out := make([]yearStartMonth, 12)
+	for i := range out {
+		out[i] = yearStartMonth{Number: i + 1, Label: T(lang, monthKeys[i]), Selected: time.Month(i+1) == current}
+	}
+	return out
+}
+
 // settingsData is everything the settings screen shows, on opening as well as
 // after a rejected entry.
 func (a *app) settingsData(r *http.Request, libName, lang, theme string) map[string]any {
@@ -137,6 +155,7 @@ func (a *app) settingsData(r *http.Request, libName, lang, theme string) map[str
 		"Languages":       offeredLangs(lang),
 		"Themes":          offeredThemes(requestLang(r), theme),
 		"Retention":       retentionYears(a.db),
+		"YearStartMonths": yearStartMonths(requestLang(r), yearStart()),
 		"RetentionMax":    maxRetentionYears,
 		"Express":         a.expressCatalogue(),
 		"TrackingLinks":   trackingLinks(),
@@ -239,6 +258,12 @@ func (a *app) settingsSave(w http.ResponseWriter, r *http.Request) {
 	n, err := strconv.Atoi(strings.TrimSpace(r.FormValue("loan_days")))
 	retention, errR := strconv.Atoi(strings.TrimSpace(r.FormValue("retention_years")))
 
+	// An unexpected month changes nothing, as for the language.
+	yearFrom := int(yearStart())
+	if m, err := strconv.Atoi(strings.TrimSpace(r.FormValue("year_start_month"))); err == nil && m >= 1 && m <= 12 {
+		yearFrom = m
+	}
+
 	// Empty leaves the saved key alone; a typed key wins over the box to remove it.
 	googleKeyIn := strings.TrimSpace(r.FormValue("google_key"))
 	removeGoogleKey := r.FormValue("google_key_remove") != ""
@@ -270,6 +295,7 @@ func (a *app) settingsSave(w http.ResponseWriter, r *http.Request) {
 		{"loan_days", strconv.Itoa(n), "Default loan period, in days"},
 		{"library_name", libName, "Library name, shown in the header and on printouts"},
 		{"retention_years", strconv.Itoa(retention), "Years before returned loans and departed readers are anonymised"},
+		{"year_start_month", strconv.Itoa(yearFrom), "Month the statistics' year starts in (1-12)"},
 		{"language", lang, "Language of the interface, the printouts and the exports"},
 		{"theme", theme, "Colour theme of the screens (themes.go); printouts ignore it"},
 		{"express_catalogue", express, "Allow cataloguing an unknown book from the lending desk"},
@@ -336,6 +362,7 @@ func (a *app) settingsSave(w http.ResponseWriter, r *http.Request) {
 	setLibraryName(libName)
 	setLang(lang)
 	setTheme(theme)
+	setYearStart(yearFrom)
 	if trackingLinksOffered() {
 		setTrackingLinks(tracking)
 	}

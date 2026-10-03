@@ -637,6 +637,8 @@
   "settings.theme": "Theme",
   "settings.theme_help": "The colours of the screens, for the whole library. Printouts stay black and white.",
   "settings.years": "years",
+  "settings.year_start": "Start of the year in the statistics",
+  "settings.year_start_help": "The first day of this month opens a new year: the grid on the home screen and the list of most borrowed books start again from zero. September for a school year, January for a calendar year.",
 
   "source.bnf": "BnF",
   "source.google": "Google Books",
@@ -669,7 +671,7 @@
   "stats.top_title": "Most borrowed",
   "stats.year_busiest.one": "busiest day: {1}, {0} loan",
   "stats.year_busiest.other": "busiest day: {1}, {0} loans",
-  "stats.year_none": "No loans recorded since 1 August.",
+  "stats.year_none": "No loans recorded since the start of the year.",
   "stats.year_summary.one": "{0} loan since {1}",
   "stats.year_summary.other": "{0} loans since {1}",
   "stats.year_title": "The year at a glance",

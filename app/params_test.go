@@ -1,16 +1,19 @@
 package main
 
-import "testing"
+import (
+	"testing"
+	"time"
+)
 
 // restoreSettings puts the settings cache back after a test changes it.
 func restoreSettings(t *testing.T) {
 	t.Helper()
 	settingsMu.RLock()
-	name, lang, anon, key := cachedLibraryName, cachedLang, cachedAnonymousID, cachedGoogleKey
+	name, lang, anon, key, from := cachedLibraryName, cachedLang, cachedAnonymousID, cachedGoogleKey, cachedYearStart
 	settingsMu.RUnlock()
 	t.Cleanup(func() {
 		settingsMu.Lock()
-		cachedLibraryName, cachedLang, cachedAnonymousID, cachedGoogleKey = name, lang, anon, key
+		cachedLibraryName, cachedLang, cachedAnonymousID, cachedGoogleKey, cachedYearStart = name, lang, anon, key, from
 		settingsMu.Unlock()
 	})
 }
@@ -94,5 +97,31 @@ func TestGoogleKeyFromSettingsAndEnvironment(t *testing.T) {
 	t.Setenv("BIBLI_GOOGLE_BOOKS_KEY", "env")
 	if got := googleKey(); got != "env" || !googleKeyFromEnv() {
 		t.Errorf("googleKey() = %q, googleKeyFromEnv() = %v: the environment must win", got, googleKeyFromEnv())
+	}
+}
+
+// No row until /settings is saved: the year starts in August, and a stored
+// value that is not a month is ignored.
+func TestYearStartDefaultsToAugustAndReadsTheSetting(t *testing.T) {
+	loadForTest(t)
+	restoreSettings(t)
+	db := testDB(t)
+
+	loadSettingsCache(db)
+	if got := yearStart(); got != time.August {
+		t.Errorf("yearStart() = %v with no row, want August", got)
+	}
+	for _, c := range []struct {
+		stored string
+		want   time.Month
+	}{{"1", time.January}, {"9", time.September}, {"13", time.September}, {"0", time.September}, {"x", time.September}} {
+		if _, err := db.Exec(`INSERT INTO setting (key, value, label) VALUES ('year_start_month', ?, '')
+			ON CONFLICT(key) DO UPDATE SET value = excluded.value`, c.stored); err != nil {
+			t.Fatal(err)
+		}
+		loadSettingsCache(db)
+		if got := yearStart(); got != c.want {
+			t.Errorf("stored %q: yearStart() = %v, want %v", c.stored, got, c.want)
+		}
 	}
 }

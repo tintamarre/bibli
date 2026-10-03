@@ -282,3 +282,48 @@ func TestSettingsSaveCutsTheLibraryNameByRunes(t *testing.T) {
 		t.Errorf("stored %d runes, want 120", n)
 	}
 }
+
+// The year-start month is saved, cached and read back by the statistics; a
+// value that is not a month changes nothing.
+func TestSettingsSaveStoresTheYearStart(t *testing.T) {
+	loadForTest(t)
+	restoreSettings(t)
+	a, h := testHandler(t)
+	c := signedIn(t, a)
+	save := func(month string) {
+		t.Helper()
+		form := url.Values{
+			"library_name": {"Bibliothèque"}, "language": {"fr"}, "theme": {defaultTheme},
+			"loan_days": {"14"}, "retention_years": {"3"}, "year_start_month": {month},
+		}
+		r := httptest.NewRequest(http.MethodPost, "/settings", strings.NewReader(form.Encode()))
+		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		r.AddCookie(c)
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, r)
+		if w.Code != http.StatusSeeOther {
+			t.Fatalf("save %q = %d, want 303", month, w.Code)
+		}
+	}
+
+	save("1")
+	var got string
+	if err := a.db.QueryRow(`SELECT value FROM setting WHERE key = 'year_start_month'`).Scan(&got); err != nil || got != "1" {
+		t.Fatalf("stored %q (%v), want 1", got, err)
+	}
+	if start, _ := activityYearBounds("2026-09-22"); start != "2026-01-01" {
+		t.Errorf("the year starts %s after choosing January, want 2026-01-01", start)
+	}
+
+	save("13") // not a month: kept as it was
+	if yearStart() != time.January {
+		t.Errorf("yearStart() = %v after an invalid month, want January", yearStart())
+	}
+
+	// The select offers twelve months with the current one selected.
+	d := a.settingsData(httptest.NewRequest("GET", "/settings", nil), "x", "fr", defaultTheme)
+	months := d["YearStartMonths"].([]yearStartMonth)
+	if len(months) != 12 || !months[0].Selected || months[7].Selected {
+		t.Errorf("months = %+v, want twelve with January selected", months)
+	}
+}
