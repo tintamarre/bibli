@@ -38,7 +38,7 @@ const password = 'demo'
 // them filled — an empty header and a missing tracking page show nothing.
 const library = 'Bibliothèque de Lincé'
 const token = '7f3c1a9b4e2d8c6f0a5b3e7d1c9f4a2b'
-const tokenBorrower = 'LEC10035' // Adam N., P4 — three books out, none late
+const tokenBorrower = 'LEC10035' // Adam N., P3 — two books out, none late
 
 // Codes are literals in demo.sql, so they are the same on every run.
 const CARD = 'LEC10035'
