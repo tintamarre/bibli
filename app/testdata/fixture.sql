@@ -25,15 +25,15 @@ INSERT INTO copy (id, book_id, code, location, status) VALUES
  (4, 2, 'VOL627437', 'classe P3',   'available'),
  (5, 3, 'VOL146302', 'coin lecture','available');
 
--- Pupils, plus one teacher ---------------------------------------------------
+-- Readers, plus one staff member without a group ---------------------------------------------------
 -- Only the initial of the family name is kept (data minimisation).
 -- Codes carry no order: LEC or VOL, random digits, a check digit (codes.go).
-INSERT INTO borrower (id, first_name, last_initial, class, kind, card_code, active) VALUES
- (101, 'Léa',   'D.', 'P4',  'student', 'LEC73048', 1),
- (102, 'Tom',   'B.', 'P3',  'student', 'LEC28462', 1),
- (103, 'Zoé',   'P.', 'P4',  'student', 'LEC51932', 1),
- (104, 'Noah',  'M.', 'P3',  'student', 'LEC06813', 1),
- (105, 'Claire','L.', NULL,  'teacher', 'LEC40275', 1);
+INSERT INTO borrower (id, first_name, last_initial, group_name, card_code, active) VALUES
+ (101, 'Léa',   'D.', 'P4', 'LEC73048', 1),
+ (102, 'Tom',   'B.', 'P3', 'LEC28462', 1),
+ (103, 'Zoé',   'P.', 'P4', 'LEC51932', 1),
+ (104, 'Noah',  'M.', 'P3', 'LEC06813', 1),
+ (105, 'Claire','L.', NULL,  'LEC40275', 1);
 
 -- Loans: one running on time, one overdue ------------------------------------
 INSERT INTO loan (copy_id, borrower_id, loaned_on, due_on) VALUES

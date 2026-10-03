@@ -1,6 +1,6 @@
-# Bibli — one PC on the school's local network, no reverse proxy.
+# Bibli — one PC on the local network, no reverse proxy.
 #
-# The library's laptop or mini-PC runs Bibli; teachers reach it from their own
+# The library's laptop or mini-PC runs Bibli; readers and staff reach it from their own
 # device over plain HTTP at http://<the machine's IP>:8080. Borrow and return
 # with a USB scanner (douchette) at the desk; the tablet camera needs HTTPS, so
 # it is not available in this mode — the docs say which setup adds it.
@@ -8,7 +8,7 @@
 #   1. copy .env.example to .env and set a strong admin password;
 #   2. docker compose -f docker-compose.lan.yml up -d
 #   3. open http://<the machine's IP>:8080 — the Settings screen shows that
-#      address (under "Accès local") to give the teachers;
+#      address (under "Accès local") to give your users;
 #   4. to update:  docker compose -f docker-compose.lan.yml pull && \
 #                  docker compose -f docker-compose.lan.yml up -d
 #

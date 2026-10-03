@@ -1,5 +1,5 @@
 # Bibli — production: pulls the image published by CI and runs it.
-# A third-party school has only three things to do:
+# A third-party organisation has only three things to do:
 #   1. copy .env.example to .env and set an admin password;
 #   2. docker compose up -d
 #   3. to update:  docker compose pull && docker compose up -d
@@ -17,7 +17,7 @@
 services:
   bibli:
     # :stable = the latest version published by the release workflow. It is the
-    # only tag a school should run; the exact versions (:1.2.3) are there too.
+    # only tag an organisation should run; the exact versions (:1.2.3) are there too.
     image: ghcr.io/tintamarre/bibli:stable
     container_name: bibli
     restart: always
@@ -30,7 +30,7 @@ services:
       - ./data:/data
     # -trust-proxy: required behind a reverse proxy, so that the sign-in attempt
     #   counter tells clients apart (without it everyone shares the proxy's
-    #   address and five failures lock out the whole school).
+    #   address and five failures lock out the whole library).
     #   REMOVE IT if Bibli is exposed directly, with no proxy in front.
     # -secure-cookies=false: add only for HTTP access on the local network
     #   (otherwise the browser drops the session cookie, see README).

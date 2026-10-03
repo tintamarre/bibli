@@ -1,35 +1,35 @@
 {{define "title_icon"}}{{template "icon-loans" "title-icon"}}{{end}}
-{{/* One button, hard right. The sheet carries both filters, the class and the
+{{/* One button, hard right. The sheet carries both filters, the group and the
      tab, and its label follows the tab. */}}
-{{define "title_actions"}}<a class="btn-secondary" href="/print/loans{{if .Overdue}}?overdue=1{{with .Class}}&amp;class={{.}}{{end}}{{else}}{{with .Class}}?class={{.}}{{end}}{{end}}" target="_blank" rel="noopener">{{template "icon-print" "btn-icon"}}{{if .Overdue}}{{T "loans.print_overdue"}}{{else}}{{T "loans.print_list"}}{{end}}</a>{{end}}
+{{define "title_actions"}}<a class="btn-secondary" href="/print/loans{{if .Overdue}}?overdue=1{{with .Group}}&amp;group={{.}}{{end}}{{else}}{{with .Group}}?group={{.}}{{end}}{{end}}" target="_blank" rel="noopener">{{template "icon-print" "btn-icon"}}{{if .Overdue}}{{T "loans.print_overdue"}}{{else}}{{T "loans.print_list"}}{{end}}</a>{{end}}
 {{define "content"}}
 
   <div class="filter-bar">
     <div class="filter-row">
-      {{template "class_filter" .}}
+      {{template "group_filter" .}}
     </div>
     <div class="filter-row">
       <span class="filter-label">{{T "filter.show"}}</span>
       {{/* Everything out, or only what is late: two tabs of one list. */}}
-      <nav class="class-tabs state-tabs" aria-label="{{T "filter.show"}}">
+      <nav class="group-tabs state-tabs" aria-label="{{T "filter.show"}}">
         <a class="tab{{if not .Overdue}} tab-active{{end}}"
-           href="/loans{{with .Class}}?class={{.}}{{end}}">{{T "loans.tab_current"}}</a>
+           href="/loans{{with .Group}}?group={{.}}{{end}}">{{T "loans.tab_current"}}</a>
         <a class="tab{{if .Overdue}} tab-active{{end}}"
-           href="/loans?overdue=1{{with .Class}}&amp;class={{.}}{{end}}">{{T "loans.tab_overdue"}}</a>
+           href="/loans?overdue=1{{with .Group}}&amp;group={{.}}{{end}}">{{T "loans.tab_overdue"}}</a>
       </nav>
     </div>
   </div>
 
-  {{if .Groups}}
+  {{if .LoanGroups}}
   <p class="loans-total">{{Tn "loans.total_out" .Total}}</p>
 
-  {{/* One table per class, one tbody per borrower: the headings carry who and
-       which class. */}}
-  {{range .Groups}}
-  <section class="loan-class">
-    <h2 class="loan-class-head">
-      <span class="loan-class-name">{{if .Class}}{{.Class}}{{else}}{{T "borrower.no_class"}}{{end}}</span>
-      <span class="loan-class-count">{{Tn "loans.books_count" .Count}}</span>
+  {{/* One table per group, one tbody per borrower: the headings carry who and
+       which group. */}}
+  {{range .LoanGroups}}
+  <section class="loan-group">
+    <h2 class="loan-group-head">
+      <span class="loan-group-name">{{if .Group}}{{.Group}}{{else}}{{T "borrower.no_group"}}{{end}}</span>
+      <span class="loan-group-count">{{Tn "loans.books_count" .Count}}</span>
     </h2>
 
     <div class="table-scroll">
@@ -73,6 +73,6 @@
   {{end}}
 
   {{else}}
-  <p class="empty">{{template "icon-empty" "empty-icon"}}{{if .ByClass}}{{T "loans.empty_class"}}{{else}}{{T "loans.empty"}}{{end}}</p>
+  <p class="empty">{{template "icon-empty" "empty-icon"}}{{if .ByGroup}}{{T "loans.empty_group"}}{{else}}{{T "loans.empty"}}{{end}}</p>
   {{end}}
 {{end}}

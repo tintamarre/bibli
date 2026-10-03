@@ -90,8 +90,8 @@ type LocationCount struct {
 }
 
 // locationFilterNone is what the dropdown submits for "copies with no location",
-// since an empty value means every location. Same sentinel as the class filter.
-const locationFilterNone = classFilterNone
+// since an empty value means every location. Same sentinel as the group filter.
+const locationFilterNone = groupFilterNone
 
 // locationFilter reads the dropdown's value: "" is every location, the
 // sentinel is the copies that have none, anything else is itself.

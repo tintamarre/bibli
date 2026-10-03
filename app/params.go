@@ -11,24 +11,24 @@ import (
 // query; the settings screen refreshes the cache after a change.
 
 var (
-	settingsMu        sync.RWMutex
-	cachedSchool      string
-	cachedAnonymousID int64
-	cachedLang        = defaultLang
-	cachedGoogleKey   string
-	cachedFamilyLinks = true
-	// -family-links: off in the Mac and Windows apps, which no family can reach.
-	familyLinksAllowed = true
+	settingsMu          sync.RWMutex
+	cachedLibraryName   string
+	cachedAnonymousID   int64
+	cachedLang          = defaultLang
+	cachedGoogleKey     string
+	cachedTrackingLinks = true
+	// -tracking-links: off in the Mac and Windows apps, which no one else can reach.
+	trackingLinksAllowed = true
 )
 
 func loadSettingsCache(db *sql.DB) {
 	var v string
-	switch err := db.QueryRow(`SELECT value FROM setting WHERE key = 'school_name'`).Scan(&v); err {
+	switch err := db.QueryRow(`SELECT value FROM setting WHERE key = 'library_name'`).Scan(&v); err {
 	case nil:
-		setSchool(v)
+		setLibraryName(v)
 	case sql.ErrNoRows:
 	default:
-		log.Printf("settings cache (school): %v", err)
+		log.Printf("settings cache (library name): %v", err)
 	}
 
 	switch err := db.QueryRow(`SELECT value FROM setting WHERE key = 'language'`).Scan(&v); err {
@@ -49,12 +49,12 @@ func loadSettingsCache(db *sql.DB) {
 	}
 	setGoogleKey(v)
 
-	// On unless a school turns it off; no row until /settings is saved.
+	// On unless the library turns it off; no row until /settings is saved.
 	v = ""
-	if err := db.QueryRow(`SELECT value FROM setting WHERE key = 'family_links'`).Scan(&v); err != nil && err != sql.ErrNoRows {
+	if err := db.QueryRow(`SELECT value FROM setting WHERE key = 'tracking_links'`).Scan(&v); err != nil && err != sql.ErrNoRows {
 		log.Printf("settings cache (loans links): %v", err)
 	}
-	setFamilyLinks(v != "0")
+	setTrackingLinks(v != "0")
 }
 
 // anonymousBorrowerID reads the sentinel borrower's id, 0 when absent — the
@@ -71,9 +71,9 @@ func anonymousBorrowerID(db *sql.DB) int64 {
 	return id
 }
 
-func setSchool(s string) {
+func setLibraryName(s string) {
 	settingsMu.Lock()
-	cachedSchool = s
+	cachedLibraryName = s
 	settingsMu.Unlock()
 }
 
@@ -88,30 +88,30 @@ func setLang(l string) {
 	settingsMu.Unlock()
 }
 
-func setFamilyLinks(on bool) {
+func setTrackingLinks(on bool) {
 	settingsMu.Lock()
-	cachedFamilyLinks = on
+	cachedTrackingLinks = on
 	settingsMu.Unlock()
 }
 
-func allowFamilyLinks(on bool) {
+func allowTrackingLinks(on bool) {
 	settingsMu.Lock()
-	familyLinksAllowed = on
+	trackingLinksAllowed = on
 	settingsMu.Unlock()
 }
 
-// familyLinksOffered says whether this install may offer the loans links at all.
-func familyLinksOffered() bool {
+// trackingLinksOffered says whether this install may offer the loans links at all.
+func trackingLinksOffered() bool {
 	settingsMu.RLock()
 	defer settingsMu.RUnlock()
-	return familyLinksAllowed
+	return trackingLinksAllowed
 }
 
-// familyLinks says whether the loans links (family.go) are offered and open.
-func familyLinks() bool {
+// trackingLinks says whether the loans links (tracking.go) are offered and open.
+func trackingLinks() bool {
 	settingsMu.RLock()
 	defer settingsMu.RUnlock()
-	return familyLinksAllowed && cachedFamilyLinks
+	return trackingLinksAllowed && cachedTrackingLinks
 }
 
 func setAnonymousID(id int64) {
@@ -120,11 +120,11 @@ func setAnonymousID(id int64) {
 	settingsMu.Unlock()
 }
 
-// school returns the school name, empty when unset.
-func school() string {
+// libraryName returns the library name, empty when unset.
+func libraryName() string {
 	settingsMu.RLock()
 	defer settingsMu.RUnlock()
-	return cachedSchool
+	return cachedLibraryName
 }
 
 // instanceLang is the language set in /settings; requestLang may override it

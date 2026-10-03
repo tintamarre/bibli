@@ -168,7 +168,7 @@ func TestLoggingIsPlainWithoutColour(t *testing.T) {
 }
 
 // The family token is never logged.
-func TestLoggingHidesTheFamilyToken(t *testing.T) {
+func TestLoggingHidesTheTrackingToken(t *testing.T) {
 	var out strings.Builder
 	savedOutput := log.Writer()
 	savedFlags := log.Flags()
@@ -181,7 +181,7 @@ func TestLoggingHidesTheFamilyToken(t *testing.T) {
 
 	handler := logging(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
 	handler.ServeHTTP(httptest.NewRecorder(),
-		httptest.NewRequest(http.MethodGet, "/family/s3cr3t-token-value", nil))
+		httptest.NewRequest(http.MethodGet, "/track/s3cr3t-token-value", nil))
 
 	if line := out.String(); strings.Contains(line, "s3cr3t-token-value") {
 		t.Errorf("the family token was logged: %q", line)

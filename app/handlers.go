@@ -26,11 +26,11 @@ func templateFuncs(lang string) template.FuncMap {
 		"shortDate":        func(iso string) string { return shortDate(lang, iso) },
 		"version":          displayVersion,
 		"sourceURL":        func() string { return sourceURL },
-		"school":           school,
+		"libraryName":      libraryName,
 		"theme":            instanceTheme,
 		"themeColor":       func() string { return themeColor[instanceTheme()] },
 		"googleKeyMissing": func() bool { return googleKey() == "" },
-		"familyLinks":      familyLinks,
+		"trackingLinks":    trackingLinks,
 		"demo":             func() bool { return demoEvery > 0 },
 		"asset":            asset,
 		"jsTexts":          func() map[string]string { return jsTexts(lang) },
@@ -159,14 +159,14 @@ func pathID(r *http.Request) int64 {
 	return id
 }
 
-// Loan is one row of v_active_loan. The class can be NULL, hence *string.
+// Loan is one row of v_active_loan. The group can be NULL, hence *string.
 type Loan struct {
 	ID          int64
 	BorrowerID  int64
 	BookID      int64
 	FirstName   string
 	LastInitial string
-	Class       *string
+	Group       *string
 	Code        string
 	Title       string
 	LoanedOn    string
@@ -219,7 +219,7 @@ func (a *app) buildInfo(w http.ResponseWriter, r *http.Request) {
 	w.Write(buildInfoJSON)
 }
 
-// A branded 404, also served for an invalid family token.
+// A branded 404, also served for an invalid tracking token.
 func (a *app) notFoundScreen(w http.ResponseWriter, r *http.Request) {
 	tpl, ok := a.pageTemplate(r, "notfound")
 	if !ok {
@@ -321,25 +321,25 @@ func (a *app) statsScreen(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// Two filters that combine: ?overdue=1 and ?class=P3. One page for both views.
+// Two filters that combine: ?overdue=1 and ?group=P3. One page for both views.
 func (a *app) loans(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	overdueOnly := q.Get("overdue") == "1"
-	class := strings.TrimSpace(q.Get("class"))
-	classValue, byClass := classFilter(class)
+	group := strings.TrimSpace(q.Get("group"))
+	groupValue, byGroup := groupFilter(group)
 
 	view, title := "v_active_loan", tr(r, "loans.title")
 	if overdueOnly {
 		view, title = "v_overdue", tr(r, "loans.title_overdue")
 	}
 	query := `
-		SELECT loan_id, borrower_id, book_id, first_name, last_initial, class,
+		SELECT loan_id, borrower_id, book_id, first_name, last_initial, group_name,
 		       code, title, loaned_on, due_on, days_overdue
 		FROM ` + view
 	var args []any
-	if byClass {
-		query += ` WHERE COALESCE(class, '') = ?`
-		args = append(args, classValue)
+	if byGroup {
+		query += ` WHERE COALESCE(group_name, '') = ?`
+		args = append(args, groupValue)
 	}
 	query += loansOrderForGrouping
 
@@ -350,25 +350,25 @@ func (a *app) loans(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// After the list: one connection, and its *sql.Rows must be closed.
-	classes, err := a.loanClasses(view)
+	groups, err := a.loanGroups(view)
 	if err != nil {
-		log.Printf("loans (classes): %v", err)
+		log.Printf("loans (groups): %v", err)
 		internalError(w, r)
 		return
 	}
-	// The class dropdown is shared with /borrowers (filters.html).
+	// The group dropdown is shared with /borrowers (filters.html).
 	extra := map[string]string{}
 	if overdueOnly {
 		extra["overdue"] = "1"
 	}
 	a.render(w, r, "loans", map[string]any{
 		"Title":        title,
-		"Groups":       groupLoans(loans),
+		"LoanGroups":   groupLoans(loans),
 		"Total":        len(loans),
-		"Classes":      classes,
+		"Groups":       groups,
 		"Overdue":      overdueOnly,
-		"Class":        class,
-		"ByClass":      byClass,
+		"Group":        group,
+		"ByGroup":      byGroup,
 		"URL":          r.URL.RequestURI(),
 		"FilterAction": "/loans",
 		"FilterExtra":  extra,
@@ -376,22 +376,22 @@ func (a *app) loans(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// loanClasses counts the classes with a book out, for the tabs. The class
+// loanGroups counts the groups with a book out, for the tabs. The group
 // filter is not applied: the tabs are how you leave it. view is one of a fixed
 // pair, never from the request.
-func (a *app) loanClasses(view string) ([]ClassCount, error) {
+func (a *app) loanGroups(view string) ([]GroupCount, error) {
 	rows, err := a.db.Query(`
-		SELECT COALESCE(class, ''), COUNT(*) FROM ` + view + `
-		 GROUP BY COALESCE(class, '')
-		 ORDER BY CASE WHEN COALESCE(class, '') = '' THEN 1 ELSE 0 END, class`)
+		SELECT COALESCE(group_name, ''), COUNT(*) FROM ` + view + `
+		 GROUP BY COALESCE(group_name, '')
+		 ORDER BY CASE WHEN COALESCE(group_name, '') = '' THEN 1 ELSE 0 END, group_name`)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var out []ClassCount
+	var out []GroupCount
 	for rows.Next() {
-		var c ClassCount
-		if err := rows.Scan(&c.Class, &c.Count); err != nil {
+		var c GroupCount
+		if err := rows.Scan(&c.Group, &c.Count); err != nil {
 			return nil, err
 		}
 		out = append(out, c)
@@ -401,11 +401,11 @@ func (a *app) loanClasses(view string) ([]ClassCount, error) {
 
 // loansOrderForGrouping is what makes groupLoans correct: it folds consecutive
 // rows. borrower_id separates namesakes; the CASE puts the classless last.
-const loansOrderForGrouping = ` ORDER BY CASE WHEN COALESCE(class, '') = '' THEN 1 ELSE 0 END,
-	       class, last_initial, first_name, borrower_id, due_on`
+const loansOrderForGrouping = ` ORDER BY CASE WHEN COALESCE(group_name, '') = '' THEN 1 ELSE 0 END,
+	       group_name, last_initial, first_name, borrower_id, due_on`
 
-// BorrowerLoans is one borrower and the books they have out; ClassLoans gathers
-// the borrowers of one class.
+// BorrowerLoans is one borrower and the books they have out; GroupLoans gathers
+// the borrowers of one group.
 type BorrowerLoans struct {
 	BorrowerID   int64
 	FirstName    string
@@ -414,23 +414,23 @@ type BorrowerLoans struct {
 	OverdueCount int
 }
 
-type ClassLoans struct {
-	Class     string // "" = no class: the teachers
+type GroupLoans struct {
+	Group     string // "" = no group
 	Borrowers []BorrowerLoans
-	Count     int // books out in this class
+	Count     int // books out in this group
 }
 
-// groupLoans folds the flat list into class → borrower → books, in one pass
+// groupLoans folds the flat list into group → borrower → books, in one pass
 // and no map so the order is stable. It relies on loansOrderForGrouping.
-func groupLoans(loans []Loan) []ClassLoans {
-	var out []ClassLoans
+func groupLoans(loans []Loan) []GroupLoans {
+	var out []GroupLoans
 	for _, l := range loans {
-		class := ""
-		if l.Class != nil {
-			class = *l.Class
+		group := ""
+		if l.Group != nil {
+			group = *l.Group
 		}
-		if len(out) == 0 || out[len(out)-1].Class != class {
-			out = append(out, ClassLoans{Class: class})
+		if len(out) == 0 || out[len(out)-1].Group != group {
+			out = append(out, GroupLoans{Group: group})
 		}
 		g := &out[len(out)-1]
 		g.Count++
@@ -462,7 +462,7 @@ func (a *app) listLoans(query string, args ...any) ([]Loan, error) {
 	for rows.Next() {
 		var p Loan
 		if err := rows.Scan(
-			&p.ID, &p.BorrowerID, &p.BookID, &p.FirstName, &p.LastInitial, &p.Class,
+			&p.ID, &p.BorrowerID, &p.BookID, &p.FirstName, &p.LastInitial, &p.Group,
 			&p.Code, &p.Title, &p.LoanedOn, &p.DueOn, &p.DaysOverdue,
 		); err != nil {
 			return nil, err

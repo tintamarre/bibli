@@ -10,7 +10,7 @@ param([Parameter(Mandatory)][string]$Exe, [switch]$Server, [switch]$Unattended)
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'ui.ps1'); . (Join-Path $PSScriptRoot 'lang.ps1'); $T = Get-BibliStrings
 # The console is usually hidden (a double-click), so a volunteer sees what went
-# wrong in a message box, and the school is not left with its server stopped.
+# wrong in a message box, and the library is not left with its server stopped.
 trap {
   Write-Host "$_" -ForegroundColor Red
   Stop-Progress
@@ -161,7 +161,7 @@ Invoke-Icacls $pwFile /inheritance:r /grant:r "${sidSystem}:F" "${sidAdmins}:F" 
 #    needs no more rights), restarted by Windows after a crash. The service
 #    manager knows "NT AUTHORITY\LocalService" in every language.
 Set-Step $T.st_service
-$bin = ('"{0}" -db "{1}" -addr :{2} -secure-cookies=false -family-links=false ' +
+$bin = ('"{0}" -db "{1}" -addr :{2} -secure-cookies=false -tracking-links=false ' +
         '-backup-dir "{3}" -cache-dir "{4}" -log-file "{5}" -password-file "{6}"') -f
   (Join-Path $prog 'bibli.exe'), (Join-Path $data 'biblio.db'), $port,
   (Join-Path $data 'backups'), (Join-Path $data 'cache'), (Join-Path $data 'logs\bibli.log'), $pwFile

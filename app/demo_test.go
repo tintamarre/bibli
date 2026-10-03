@@ -13,7 +13,7 @@ func TestDemoInterval(t *testing.T) {
 		want time.Duration
 		err  bool
 	}{
-		{"", 0, false}, // every school: demonstration mode off
+		{"", 0, false}, // every instance: demonstration mode off
 		{"6h", 6 * time.Hour, false},
 		{"90m", 90 * time.Minute, false},
 		{"6", 0, true}, // no unit: Go reads no duration here

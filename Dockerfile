@@ -24,7 +24,7 @@ FROM alpine:3.24
 # Static OCI labels; the release workflow adds version, revision, created and source.
 LABEL org.opencontainers.image.title="Bibli" \
       org.opencontainers.image.authors="Martin Erpicum" \
-      org.opencontainers.image.description="Library management for a primary school, run by volunteers" \
+      org.opencontainers.image.description="Library management for small organisations (schools, cultural centres, care homes), run by volunteers" \
       org.opencontainers.image.licenses="AGPL-3.0"
 
 # ca-certificates: HTTPS calls to the catalogues (BnF, UniCat, Google, OL).

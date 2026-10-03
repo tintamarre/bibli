@@ -6,11 +6,11 @@ import "testing"
 func restoreSettings(t *testing.T) {
 	t.Helper()
 	settingsMu.RLock()
-	name, lang, anon, key := cachedSchool, cachedLang, cachedAnonymousID, cachedGoogleKey
+	name, lang, anon, key := cachedLibraryName, cachedLang, cachedAnonymousID, cachedGoogleKey
 	settingsMu.RUnlock()
 	t.Cleanup(func() {
 		settingsMu.Lock()
-		cachedSchool, cachedLang, cachedAnonymousID, cachedGoogleKey = name, lang, anon, key
+		cachedLibraryName, cachedLang, cachedAnonymousID, cachedGoogleKey = name, lang, anon, key
 		settingsMu.Unlock()
 	})
 }
@@ -21,14 +21,14 @@ func TestLoadSettingsCache(t *testing.T) {
 	db := testDB(t)
 
 	if _, err := db.Exec(
-		`UPDATE setting SET value = 'École communale' WHERE key = 'school_name';
+		`UPDATE setting SET value = 'École communale' WHERE key = 'library_name';
 		 UPDATE setting SET value = 'en'             WHERE key = 'language';`); err != nil {
 		t.Fatalf("settings: %v", err)
 	}
 	loadSettingsCache(db)
 
-	if got := school(); got != "École communale" {
-		t.Errorf("school() = %q, want %q", got, "École communale")
+	if got := libraryName(); got != "École communale" {
+		t.Errorf("libraryName() = %q, want %q", got, "École communale")
 	}
 	if got := instanceLang(); got != "en" {
 		t.Errorf("instanceLang() = %q, want en", got)

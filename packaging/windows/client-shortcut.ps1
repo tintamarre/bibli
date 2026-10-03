@@ -1,5 +1,5 @@
 # Puts a "Bibli" icon on the Desktop of another Windows PC or tablet, opening
-# the library on the school server: what a double-click on bibli.exe does
+# the library on the shared server: what a double-click on bibli.exe does
 # there, once told it is not the server. -Server names the machine or IP
 # (default: ask).
 param([string]$Server = '', [int]$Port = 8080)

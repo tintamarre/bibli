@@ -137,22 +137,22 @@ func TestBackupDownloadServesNothingOutsideTheRotation(t *testing.T) {
 	}
 }
 
-// The parent space: a revocable token is the only authentication.
-func TestTheLoansLinkOpensOnlyForALivePupil(t *testing.T) {
+// The tracking page: a revocable token is the only authentication.
+func TestTheLoansLinkOpensOnlyForALiveReader(t *testing.T) {
 	a, h := testHandler(t)
 	const token = "0123456789abcdef0123456789abcdef"
-	// Léa, a live pupil of the fixture; checked, so a no-op UPDATE cannot pass.
-	res, err := a.db.Exec(`UPDATE borrower SET family_token = ? WHERE id = 101`, token)
+	// Léa, a live reader of the fixture; checked, so a no-op UPDATE cannot pass.
+	res, err := a.db.Exec(`UPDATE borrower SET tracking_token = ? WHERE id = 101`, token)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if n, _ := res.RowsAffected(); n != 1 {
 		t.Fatalf("fixture: %d borrowers given a token, want 1", n)
 	}
-	if w := get(h, "/family/"+token, nil); w.Code != http.StatusOK {
-		t.Fatalf("a live pupil's link = %d, want 200", w.Code)
+	if w := get(h, "/track/"+token, nil); w.Code != http.StatusOK {
+		t.Fatalf("a live reader's link = %d, want 200", w.Code)
 	}
-	if w := get(h, "/family/"+token+"x", nil); w.Code != http.StatusNotFound {
+	if w := get(h, "/track/"+token+"x", nil); w.Code != http.StatusNotFound {
 		t.Errorf("an unknown token = %d, want 404", w.Code)
 	}
 
@@ -160,45 +160,45 @@ func TestTheLoansLinkOpensOnlyForALivePupil(t *testing.T) {
 	if _, err := a.db.Exec(`UPDATE borrower SET active = 0 WHERE id = 101`); err != nil {
 		t.Fatal(err)
 	}
-	if w := get(h, "/family/"+token, nil); w.Code != http.StatusNotFound {
-		t.Errorf("a deactivated pupil's link = %d, want 404", w.Code)
+	if w := get(h, "/track/"+token, nil); w.Code != http.StatusNotFound {
+		t.Errorf("a deactivated reader's link = %d, want 404", w.Code)
 	}
 
 	// Revoked: the token is NULL, and NULL matches no token handed in a URL.
-	if _, err := a.db.Exec(`UPDATE borrower SET active = 1, family_token = NULL WHERE id = 101`); err != nil {
+	if _, err := a.db.Exec(`UPDATE borrower SET active = 1, tracking_token = NULL WHERE id = 101`); err != nil {
 		t.Fatal(err)
 	}
-	if w := get(h, "/family/"+token, nil); w.Code != http.StatusNotFound {
+	if w := get(h, "/track/"+token, nil); w.Code != http.StatusNotFound {
 		t.Errorf("a revoked link = %d, want 404", w.Code)
 	}
-	if w := get(h, "/family/", nil); w.Code == http.StatusOK {
+	if w := get(h, "/track/", nil); w.Code == http.StatusOK {
 		t.Error("an empty token opened a page: NULL must match nothing")
 	}
 }
 
-// On unless a school turns it off: then no column, no way to create a link,
+// On unless the library turns it off: then no column, no way to create a link,
 // and a link already given is closed.
-func TestASchoolCanTurnTheLoansLinksOff(t *testing.T) {
+func TestALibraryCanTurnTheLoansLinksOff(t *testing.T) {
 	a, h := testHandler(t)
 	c := signedIn(t, a)
 	const token = "0123456789abcdef0123456789abcdef"
-	if _, err := a.db.Exec(`UPDATE borrower SET family_token = ? WHERE id = 101`, token); err != nil {
+	if _, err := a.db.Exec(`UPDATE borrower SET tracking_token = ? WHERE id = 101`, token); err != nil {
 		t.Fatal(err)
 	}
-	loadSettingsCache(a.db) // a fresh database has no family_links row
-	t.Cleanup(func() { setFamilyLinks(true) })
-	if !familyLinks() {
+	loadSettingsCache(a.db) // a fresh database has no tracking_links row
+	t.Cleanup(func() { setTrackingLinks(true) })
+	if !trackingLinks() {
 		t.Fatal("the loans links are off in a fresh database")
 	}
 	if w := get(h, "/borrowers", c); !strings.Contains(w.Body.String(), "/borrowers/101/token") {
 		t.Error("the borrower list hides loans links by default")
 	}
 
-	if _, err := a.db.Exec(`INSERT INTO setting (key, value, label) VALUES ('family_links', '0', '')`); err != nil {
+	if _, err := a.db.Exec(`INSERT INTO setting (key, value, label) VALUES ('tracking_links', '0', '')`); err != nil {
 		t.Fatal(err)
 	}
 	loadSettingsCache(a.db)
-	if w := get(h, "/family/"+token, nil); w.Code != http.StatusNotFound {
+	if w := get(h, "/track/"+token, nil); w.Code != http.StatusNotFound {
 		t.Errorf("a given link while off = %d, want 404", w.Code)
 	}
 	if w := get(h, "/borrowers", c); strings.Contains(w.Body.String(), "/borrowers/101/token") {
@@ -211,37 +211,37 @@ func TestASchoolCanTurnTheLoansLinksOff(t *testing.T) {
 	if w.Code != http.StatusNotFound {
 		t.Errorf("creating a link while off = %d, want 404", w.Code)
 	}
-	if n := count(t, a.db, `SELECT COUNT(*) FROM borrower WHERE id = 102 AND family_token IS NOT NULL`); n != 0 {
+	if n := count(t, a.db, `SELECT COUNT(*) FROM borrower WHERE id = 102 AND tracking_token IS NOT NULL`); n != 0 {
 		t.Error("a link was created while off")
 	}
 }
 
-// The Mac and Windows apps start with -family-links=false: no family reaches
+// The Mac and Windows apps start with -tracking-links=false: no one else reaches
 // them, so the setting is greyed out and saving the screen leaves it alone.
 func TestASingleComputerInstallOffersNoLoansLinks(t *testing.T) {
 	a, h := testHandler(t)
 	c := signedIn(t, a)
 	const token = "0123456789abcdef0123456789abcdef"
-	if _, err := a.db.Exec(`UPDATE borrower SET family_token = ? WHERE id = 101`, token); err != nil {
+	if _, err := a.db.Exec(`UPDATE borrower SET tracking_token = ? WHERE id = 101`, token); err != nil {
 		t.Fatal(err)
 	}
 	loadSettingsCache(a.db)
-	allowFamilyLinks(false)
-	t.Cleanup(func() { allowFamilyLinks(true); setFamilyLinks(true) })
+	allowTrackingLinks(false)
+	t.Cleanup(func() { allowTrackingLinks(true); setTrackingLinks(true) })
 
-	if w := get(h, "/family/"+token, nil); w.Code != http.StatusNotFound {
+	if w := get(h, "/track/"+token, nil); w.Code != http.StatusNotFound {
 		t.Errorf("a given link on a single computer = %d, want 404", w.Code)
 	}
 	if w := get(h, "/borrowers", c); strings.Contains(w.Body.String(), "/borrowers/101/token") {
 		t.Error("the borrower list offers loans links on a single computer")
 	}
 	page := get(h, "/settings", c).Body.String()
-	if !strings.Contains(page, `name="family_links" value="1" disabled`) {
+	if !strings.Contains(page, `name="tracking_links" value="1" disabled`) {
 		t.Error("the loans links checkbox can be ticked on a single computer")
 	}
 
-	form := url.Values{"school_name": {""}, "language": {"fr"}, "theme": {defaultTheme},
-		"loan_days": {"14"}, "retention_years": {"3"}, "family_links": {"1"}}
+	form := url.Values{"library_name": {""}, "language": {"fr"}, "theme": {defaultTheme},
+		"loan_days": {"14"}, "retention_years": {"3"}, "tracking_links": {"1"}}
 	r := httptest.NewRequest(http.MethodPost, "/settings", strings.NewReader(form.Encode()))
 	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	r.AddCookie(c)
@@ -250,10 +250,10 @@ func TestASingleComputerInstallOffersNoLoansLinks(t *testing.T) {
 	if w.Code != http.StatusSeeOther {
 		t.Fatalf("saving the settings = %d, want 303", w.Code)
 	}
-	if n := count(t, a.db, `SELECT COUNT(*) FROM setting WHERE key = 'family_links'`); n != 0 {
+	if n := count(t, a.db, `SELECT COUNT(*) FROM setting WHERE key = 'tracking_links'`); n != 0 {
 		t.Error("saving the settings on a single computer wrote the loans links choice")
 	}
-	if familyLinks() {
+	if trackingLinks() {
 		t.Error("a forged form turned the loans links on for a single computer")
 	}
 }
@@ -429,7 +429,7 @@ func TestTheLoginPostPassesTheGuard(t *testing.T) {
 }
 
 // Every screen, every book and every borrower, over the demonstration data:
-// its NULLs (no ISBN, no class, no year, no location) and its lost, withdrawn
+// its NULLs (no ISBN, no group, no year, no location) and its lost, withdrawn
 // and anonymised rows are what a Scan into the wrong type trips on.
 func TestEveryScreenOpensOverTheDemonstrationData(t *testing.T) {
 	a, h := testHandler(t)

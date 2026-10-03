@@ -31,6 +31,8 @@ fi
 ADDR="${BIBLI_DEV_ADDR:-127.0.0.1:8080}"
 DB="${BIBLI_DEV_DB:-data/biblio.db}"
 PASSWORD="${BIBLI_ADMIN_PASSWORD:-dev}"
+# A fresh checkout has no data/ yet: SQLite will not create the directory.
+mkdir -p "$(dirname "$DB")"
 BIN="${TMPDIR:-/tmp}/bibli-dev-$$"
 STAMP="${TMPDIR:-/tmp}/bibli-dev-stamp-$$"
 PID=""

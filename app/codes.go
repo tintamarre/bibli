@@ -8,7 +8,7 @@ import (
 )
 
 // The internal codes printed as barcodes on cards and spine labels. Drawn
-// at random, so a card does not publish how many pupils are on file. The prefix
+// at random, so a card does not publish how many readers are on file. The prefix
 // must stay clear of A, Q, Z, W and M, which an AZERTY keyboard moves.
 const (
 	codePrefixCard = "LEC" // lector
@@ -87,7 +87,7 @@ func freshCopyCode(tx *sql.Tx) (string, error) {
 	return freshCode(tx, codePrefixCopy, copyDigits, `SELECT COUNT(*) FROM copy WHERE code = ?`)
 }
 
-// freshCardCode draws a card code no borrower holds yet; pupils and teachers
+// freshCardCode draws a card code no borrower holds yet; readers and staff
 // share the prefix.
 func freshCardCode(tx *sql.Tx) (string, error) {
 	return freshCode(tx, codePrefixCard, cardDigits, `SELECT COUNT(*) FROM borrower WHERE card_code = ?`)

@@ -410,7 +410,7 @@ document.addEventListener("keydown", function (ev) {
 });
 
 // The theme picker in /settings shows its choice on the page at once, before
-// the form is saved; leaving without saving puts the school's theme back.
+// the form is saved; leaving without saving puts the library's theme back.
 document.addEventListener("change", function (ev) {
   if (ev.target.matches && ev.target.matches("select[data-theme-preview]")) {
     document.documentElement.dataset.theme = ev.target.value;

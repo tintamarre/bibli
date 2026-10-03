@@ -59,12 +59,12 @@
      either side, so the print of a cover next to it stays out of the quiet
      zone a scanner needs. */
   .sticker svg.cb { width: 36mm; flex: 1 1 0; min-height: 5mm; }
-  .sticker .school { font-size: 5.5pt; line-height: 1.1; color: #777; width: 100%;
+  .sticker .library { font-size: 5.5pt; line-height: 1.1; color: #777; width: 100%;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .sticker .code { font-family: ui-monospace, monospace; font-size: 6.5pt; letter-spacing: .02em; color: #444; }
   /* A sticker already used on a sheet that went through the printer before. */
   .sticker.used { visibility: hidden; }
-  body.no-school .sticker .school { display: none; }
+  body.no-library .sticker .library { display: none; }
   .toolbar .opt input[type=number] { width: 4.5em; height: 44px; font: inherit; padding: 0 .5rem;
     border: 1px solid var(--border-strong); border-radius: var(--radius-s); background: var(--surface); }
   @media print {

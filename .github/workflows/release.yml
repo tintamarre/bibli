@@ -203,7 +203,7 @@ jobs:
             org.opencontainers.image.url=${{ github.server_url }}/${{ github.repository }}
           # GHCR reads a multi-arch package's description from the index, not the image labels.
           annotations: |
-            index:org.opencontainers.image.description=Library management for a primary school, run by volunteers
+            index:org.opencontainers.image.description=Library management for small organisations (schools, cultural centres, care homes), run by volunteers
             index:org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             index:org.opencontainers.image.licenses=AGPL-3.0
             index:org.opencontainers.image.version=${{ needs.version.outputs.version }}

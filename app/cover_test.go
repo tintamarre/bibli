@@ -178,8 +178,8 @@ func TestCoverCacheFallsBackWhenTheDirectoryIsUnusable(t *testing.T) {
 
 // --- Fetching -------------------------------------------------------------
 
-// The server fetches the thumbnail, so no pupil's browser calls a
-// third party, and only an ISBN leaves the school.
+// The server fetches the thumbnail, so no reader's browser calls a
+// third party, and only an ISBN leaves the server.
 
 func TestFetchCoverPrefersOpenLibrary(t *testing.T) {
 	calls := stubCatalogues(t, func(r *http.Request) (int, string, string) {

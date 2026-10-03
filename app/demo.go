@@ -10,7 +10,7 @@ import (
 )
 
 // Demonstration mode (BIBLI_DEMO_RESET=6h): the public instance reloads its
-// dataset on a timer. An environment variable, not a flag a school might copy.
+// dataset on a timer. An environment variable, not a flag an organisation might copy.
 
 //go:embed demo.sql
 var demoFS embed.FS

@@ -9,8 +9,8 @@
   <summary>{{template "icon-tools" "btn-icon"}}{{T "borrowers.tools"}} {{template "icon-chevron" "icon-chevron"}}</summary>
   <div class="menu-admin-panel">
     <a href="/borrowers/import">{{template "icon-import" "menu-icon"}}<span>{{T "borrowers.import_csv"}}</span></a>
-    <a href="/borrowers/cards{{with .Class}}?class={{.}}{{end}}" target="_blank" rel="noopener"
-      >{{template "icon-card" "menu-icon"}}<span>{{if .Class}}{{T "borrowers.print_cards_class" .Class}}{{else}}{{T "borrowers.print_cards_all"}}{{end}}</span></a>
+    <a href="/borrowers/cards{{with .Group}}?group={{.}}{{end}}" target="_blank" rel="noopener"
+      >{{template "icon-card" "menu-icon"}}<span>{{if .Group}}{{T "borrowers.print_cards_group" .Group}}{{else}}{{T "borrowers.print_cards_all"}}{{end}}</span></a>
     <a href="/borrowers/rollover">{{template "icon-rollover" "menu-icon"}}<span>{{T "borrowers.rollover_action"}}</span></a>
   </div>
 </details>
@@ -23,7 +23,7 @@
     <summary>{{T "borrowers.add_heading"}}</summary>
     <p class="note">{{T "borrowers.privacy_note"}}</p>
     {{/* Only the order is included, never the filter form whole: both forms
-         have a field called "class", and the handler would read whichever came
+         have a field called "group", and the handler would read whichever came
          first. */}}
     <form hx-post="/borrowers/add" hx-target="#borrower-list" hx-swap="outerHTML"
           hx-include="#br-sort, #br-page"
@@ -33,14 +33,9 @@
         <label class="field"><span>{{T "borrowers.f_last_name"}}</span><input name="last_name" required></label>
       </div>
       <div class="field-grid">
-        <label class="field"><span>{{T "loans.class"}}</span>
-          <input name="class" list="classes" placeholder="{{T "borrowers.f_class_placeholder"}}">
-          {{template "class_datalist"}}</label>
-        <label class="field"><span>{{T "borrowers.col_kind"}}</span>
-          <select name="kind">
-            <option value="student">{{T "borrower.kind_student"}}</option>
-            <option value="teacher">{{T "borrower.kind_teacher"}}</option>
-          </select></label>
+        <label class="field"><span>{{T "loans.group"}}</span>
+          <input name="group" list="groups" placeholder="{{T "borrowers.f_group_placeholder"}}">
+          {{template "group_datalist" .Groups}}</label>
       </div>
       <div class="form-actions">
         <button class="btn-primary" type="submit">{{T "borrowers.add"}}</button>
@@ -58,7 +53,7 @@
         hx-trigger="keyup changed delay:250ms from:find input[type=search], sortchange"
         hx-target="#borrower-list" hx-swap="outerHTML" hx-sync="this:replace">
     <input type="hidden" name="inactive" value="{{if .Inactive}}1{{else}}0{{end}}">
-    <input type="hidden" name="class" value="{{.Class}}">
+    <input type="hidden" name="group" value="{{.Group}}">
     <div class="search-wrap">{{template "icon-search" "search-icon"}}
       <input class="field-search" name="q" type="search"
              placeholder="{{T "borrowers.search_placeholder"}}" autocomplete="off">
@@ -72,16 +67,16 @@
   </form>
 
   <div class="filter-row">
-    {{template "class_filter" .}}
+    {{template "group_filter" .}}
   </div>
   <div class="filter-row">
     <span class="filter-label">{{T "filter.show"}}</span>
     {{/* Active or inactive: two tabs, two states of the same list. */}}
-    <nav class="class-tabs state-tabs" aria-label="{{T "filter.show"}}">
+    <nav class="group-tabs state-tabs" aria-label="{{T "filter.show"}}">
       <a class="tab{{if not .Inactive}} tab-active{{end}}"
-         href="/borrowers{{with .Class}}?class={{.}}{{end}}">{{T "borrowers.tab_active"}}</a>
+         href="/borrowers{{with .Group}}?group={{.}}{{end}}">{{T "borrowers.tab_active"}}</a>
       <a class="tab{{if .Inactive}} tab-active{{end}}"
-         href="/borrowers?inactive=1{{with .Class}}&amp;class={{.}}{{end}}">{{T "borrowers.tab_inactive"}}</a>
+         href="/borrowers?inactive=1{{with .Group}}&amp;group={{.}}{{end}}">{{T "borrowers.tab_inactive"}}</a>
     </nav>
   </div>
 </div>
@@ -95,7 +90,7 @@
   {{/* The page the list is at, posted by the row buttons (hx-include). Not in
        the filter form, which restarts at the top (pager.go). */}}
   <input type="hidden" id="br-page" name="offset" value="{{.Page.Offset}}">
-  <h2 class="subtitle">{{template "icon-borrowers" "subtitle-icon"}}{{if .Inactive}}{{Tn "borrowers.count_inactive" .Page.Total}}{{else}}{{Tn "borrowers.count_active" .Page.Total}}{{end}}{{with .Class}} {{T "borrowers.count_in_class" .}}{{end}}</h2>
+  <h2 class="subtitle">{{template "icon-borrowers" "subtitle-icon"}}{{if .Inactive}}{{Tn "borrowers.count_inactive" .Page.Total}}{{else}}{{Tn "borrowers.count_active" .Page.Total}}{{end}}{{with .Group}} {{T "borrowers.count_in_group" .}}{{end}}</h2>
   {{if .Inactive}}<p class="note">{{T "borrowers.inactive_note"}}</p>{{end}}
   {{if .Borrowers}}
   <div class="table-scroll">
@@ -103,13 +98,12 @@
     {{/* The three counts sort largest first (sortColDesc). */}}
     <thead><tr>
       <th>{{template "sort_head" (sortCol $.Filter "name" (T "loans.col_borrower"))}}</th>
-      <th>{{template "sort_head" (sortCol $.Filter "class" (T "loans.class"))}}</th>
-      <th>{{template "sort_head" (sortCol $.Filter "kind" (T "borrowers.col_kind"))}}</th>
+      <th>{{template "sort_head" (sortCol $.Filter "group" (T "loans.group"))}}</th>
       <th class="col-num">{{template "sort_head" (sortColDesc $.Filter "loans" (T "borrowers.col_loans"))}}</th>
       <th class="col-num">{{template "sort_head" (sortColDesc $.Filter "out" (T "borrowers.col_out"))}}</th>
       <th class="col-num">{{template "sort_head" (sortColDesc $.Filter "overdue" (T "borrowers.col_overdue"))}}</th>
       <th>{{template "sort_head" (sortCol $.Filter "card" (T "borrowers.col_card"))}}</th>
-      {{if familyLinks}}<th>{{T "borrowers.col_tracking_link"}}</th>{{end}}<th></th>
+      {{if trackingLinks}}<th>{{T "borrowers.col_tracking_link"}}</th>{{end}}<th></th>
     </tr></thead>
     <tbody>
     {{range .Borrowers}}{{template "borrower_row" .}}{{end}}
@@ -124,14 +118,13 @@
 {{define "borrower_row"}}
 <tr id="row-{{.ID}}">
   <td data-label="{{T "loans.col_borrower"}}"><a class="link-person" href="/borrowers/{{.ID}}">{{.FirstName}} {{.LastInitial}}</a></td>
-  <td data-label="{{T "loans.class"}}">{{with .Class}}<a class="link-quiet" href="/borrowers?class={{.}}">{{.}}</a>{{end}}</td>
-  <td data-label="{{T "borrowers.col_kind"}}">{{if eq .Kind "teacher"}}{{T "borrower.kind_teacher"}}{{else}}{{T "borrower.kind_student"}}{{end}}</td>
+  <td data-label="{{T "loans.group"}}">{{with .Group}}<a class="link-quiet" href="/borrowers?group={{.}}">{{.}}</a>{{end}}</td>
   <td data-label="{{T "borrowers.col_loans"}}" class="col-num">{{.TotalCount}}</td>
   <td data-label="{{T "borrowers.col_out"}}" class="col-num">{{.OutCount}}</td>
   {{/* Late alone in its column, empty when nothing is late. */}}
   <td data-label="{{T "borrowers.col_overdue"}}" class="col-num col-overdue">{{if gt .OverdueCount 0}}<span class="overdue">{{.OverdueCount}}</span>{{end}}</td>
   <td data-label="{{T "borrowers.col_card"}}" class="col-code"><span class="code">{{.CardCode}}</span></td>
-  {{if familyLinks}}<td data-label="{{T "borrowers.col_tracking_link"}}" class="col-tracking-link token-cell">{{template "token_cell" .}}</td>{{end}}
+  {{if trackingLinks}}<td data-label="{{T "borrowers.col_tracking_link"}}" class="col-tracking-link token-cell">{{template "token_cell" .}}</td>{{end}}
   {{/* Icons, the wording in title and aria-label; shown as text on a narrow
        screen. */}}
   <td class="col-actions">
@@ -163,18 +156,12 @@
     <input class="edit-field edit-first-name" name="first_name" value="{{.FirstName}}" required aria-label="{{T "borrowers.f_first_name"}}">
     <input class="edit-field edit-last-name" name="last_name" value="{{.LastInitial}}" required aria-label="{{T "borrowers.f_last_name"}}">
   </td>
-  <td data-label="{{T "loans.class"}}"><input class="edit-field" name="class" value="{{.Class}}" list="classes"></td>
-  <td data-label="{{T "borrowers.col_kind"}}">
-    <select class="edit-field" name="kind">
-      <option value="student"{{if ne .Kind "teacher"}} selected{{end}}>{{T "borrower.kind_student"}}</option>
-      <option value="teacher"{{if eq .Kind "teacher"}} selected{{end}}>{{T "borrower.kind_teacher"}}</option>
-    </select>
-  </td>
+  <td data-label="{{T "loans.group"}}"><input class="edit-field" name="group" value="{{.Group}}" list="groups"></td>
   <td data-label="{{T "borrowers.col_loans"}}" class="col-num">{{.TotalCount}}</td>
   <td data-label="{{T "borrowers.col_out"}}" class="col-num">{{.OutCount}}</td>
   <td data-label="{{T "borrowers.col_overdue"}}" class="col-num col-overdue">{{if gt .OverdueCount 0}}<span class="overdue">{{.OverdueCount}}</span>{{end}}</td>
   <td data-label="{{T "borrowers.col_card"}}" class="col-code"><span class="code">{{.CardCode}}</span></td>
-  {{if familyLinks}}<td data-label="{{T "borrowers.col_tracking_link"}}"></td>{{end}}
+  {{if trackingLinks}}<td data-label="{{T "borrowers.col_tracking_link"}}"></td>{{end}}
   <td class="col-actions">
     <button type="button" class="btn-link"
             hx-post="/borrowers/{{.ID}}" hx-include="closest tr" hx-target="#row-{{.ID}}" hx-swap="outerHTML">{{T "common.save"}}</button>
@@ -188,17 +175,17 @@
 {{with .Error}}<p class="err">{{.}}</p>{{end}}
 {{with .Skipped}}<p class="warning">{{Tn "import.skipped" .}}</p>{{end}}
 {{if .Rows}}
-<p class="ok">{{T "import.to_create" (Tn "import.pupils" .NewCount) (Tn "import.lines" (len .Rows))}}</p>
+<p class="ok">{{T "import.to_create" (Tn "import.readers" .NewCount) (Tn "import.lines" (len .Rows))}}</p>
 {{if .DuplicateCount}}
 <p class="tip">{{Tn "import.duplicates" .DuplicateCount}}</p>
 {{end}}
 <div class="preview-table">
   <table class="table">
-    <thead><tr><th>{{T "borrowers.f_first_name"}}</th><th>{{T "borrowers.f_last_name"}}</th><th>{{T "loans.class"}}</th><th>{{T "import.col_state"}}</th></tr></thead>
+    <thead><tr><th>{{T "borrowers.f_first_name"}}</th><th>{{T "borrowers.f_last_name"}}</th><th>{{T "loans.group"}}</th><th>{{T "import.col_state"}}</th></tr></thead>
     <tbody>{{range .Rows}}<tr{{if .Duplicate}} class="row-duplicate"{{end}}>
       <td data-label="{{T "borrowers.f_first_name"}}">{{.FirstName}}</td>
       <td data-label="{{T "borrowers.f_last_name"}}">{{.LastInitial}}</td>
-      <td data-label="{{T "loans.class"}}">{{with .Class}}<a class="link-quiet" href="/borrowers?class={{.}}">{{.}}</a>{{end}}</td>
+      <td data-label="{{T "loans.group"}}">{{with .Group}}<a class="link-quiet" href="/borrowers?group={{.}}">{{.}}</a>{{end}}</td>
       <td data-label="{{T "import.col_state"}}">{{if .Duplicate}}{{T "import.state_duplicate"}}{{else}}{{T "import.state_new"}}{{end}}</td>
     </tr>{{end}}</tbody>
   </table>

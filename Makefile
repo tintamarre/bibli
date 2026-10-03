@@ -1,4 +1,4 @@
-# Bibli — developer shortcuts. None of this is needed to run Bibli in a school:
+# Bibli — developer shortcuts. None of this is needed to run Bibli:
 # there, it is a single binary (README) or `docker compose up -d`.
 
 DEV_ADDR ?= 127.0.0.1:8080
@@ -14,7 +14,7 @@ help: ## Show this help
 dev: stop ## Run the dev server, rebuilding on every change (no Docker)
 	@BIBLI_DEV_ADDR=$(DEV_ADDR) BIBLI_DEV_DB=$(DEV_DB) sh scripts/dev.sh
 
-dev-docker: ## Same, but through the image a school would run
+dev-docker: ## Same, but through the image an organisation would run
 	docker compose -f docker-compose.dev.yml up --build
 
 stop: ## Stop the Docker dev container, which would hold the port and the database

@@ -1,6 +1,6 @@
 # Shared UI strings for the Bibli server scripts. The language follows the
 # Windows display language (Get-UICulture); anything other than nl or en falls
-# back to French, the reference (CLAUDE.md), suited to FWB schools. Only strings
+# back to French, the reference (CLAUDE.md), suited to FWB organisations. Only strings
 # a volunteer sees are translated — code, comments and bibli.exe's logs stay
 # English. Single-quoted here, so an apostrophe is doubled ('').
 function Get-BibliStrings {

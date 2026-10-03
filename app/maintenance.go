@@ -160,7 +160,7 @@ func gdprPurge(db *sql.DB) {
 	}
 	years := retentionYears(db)
 
-	// Returned loans change owner: the child-to-reading link goes, the count stays.
+	// Returned loans change owner: the reader-to-reading link goes, the count stays.
 	res, err := db.Exec(
 		`UPDATE loan SET borrower_id = ?
 		  WHERE returned_on IS NOT NULL
@@ -174,10 +174,10 @@ func gdprPurge(db *sql.DB) {
 		log.Printf("GDPR purge: %d loan(s) returned more than %d year(s) ago anonymised", n, years)
 	}
 
-	// A pupil long gone, named on no remaining loan, need not stay on file.
+	// A reader long gone, named on no remaining loan, need not stay on file.
 	res, err = db.Exec(
 		`UPDATE borrower
-		    SET first_name = ?, last_initial = '', class = NULL, card_code = NULL, family_token = NULL
+		    SET first_name = ?, last_initial = '', group_name = NULL, card_code = NULL, tracking_token = NULL
 		  WHERE active = 0
 		    AND id <> ?
 		    AND first_name <> ?

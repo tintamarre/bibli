@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-// Cover thumbnails, fetched by the server so no pupil's browser calls a third
+// Cover thumbnails, fetched by the server so no reader's browser calls a third
 // party. Cached in -cache-dir, one file per ISBN, indefinitely; nothing
 // goes in the database, so the folder can be emptied by hand.
 

@@ -11,30 +11,30 @@ import (
 // Operations: paper output (overdue lists, inventory) and CSV export.
 // Paper stays the last resort.
 
-// printLoans is the loans screen on paper, grouped by class, with the screen's
-// class and tab filters. /print/overdue is always the late ones only.
+// printLoans is the loans screen on paper, grouped by group, with the screen's
+// group and tab filters. /print/overdue is always the late ones only.
 func (a *app) printLoans(w http.ResponseWriter, r *http.Request) {
 	overdueOnly := r.URL.Path == "/print/overdue" || r.URL.Query().Get("overdue") == "1"
-	classValue, byClass := classFilter(r.URL.Query().Get("class"))
+	groupValue, byGroup := groupFilter(r.URL.Query().Get("group"))
 
-	query := `SELECT first_name, last_initial, COALESCE(class, ?), title, code,
+	query := `SELECT first_name, last_initial, COALESCE(group_name, ?), title, code,
 	                 due_on, days_overdue
 	            FROM v_active_loan`
-	args := []any{noClassLabel()}
+	args := []any{noGroupLabel()}
 	var where []string
 	if overdueOnly {
 		where = append(where, `days_overdue > 0`)
 	}
-	if byClass {
-		where = append(where, `COALESCE(class, '') = ?`)
-		args = append(args, classValue)
+	if byGroup {
+		where = append(where, `COALESCE(group_name, '') = ?`)
+		args = append(args, groupValue)
 	}
 	if len(where) > 0 {
 		query += ` WHERE ` + strings.Join(where, ` AND `)
 	}
 	// The grouping below folds consecutive rows, so the order has to be the
-	// grouping's: out of order, one class becomes two headings.
-	query += ` ORDER BY class, last_initial, first_name`
+	// grouping's: out of order, one group becomes two headings.
+	query += ` ORDER BY group_name, last_initial, first_name`
 
 	rows, err := a.db.Query(query, args...)
 	if err != nil {
@@ -49,24 +49,24 @@ func (a *app) printLoans(w http.ResponseWriter, r *http.Request) {
 		Days                                       int
 	}
 	type group struct {
-		Class string
+		Group string
 		Rows  []row
 	}
 	var groups []group
 	for rows.Next() {
-		var class string
+		var name string
 		var l row
 		var dueOn string
-		if err := rows.Scan(&l.FirstName, &l.LastInitial, &class, &l.Title, &l.Code, &dueOn, &l.Days); err != nil {
+		if err := rows.Scan(&l.FirstName, &l.LastInitial, &name, &l.Title, &l.Code, &dueOn, &l.Days); err != nil {
 			log.Printf("loans print (scan): %v", err)
 			internalError(w, r)
 			return
 		}
 		l.DueOn = shortDate(requestLang(r), dueOn)
-		if n := len(groups); n > 0 && groups[n-1].Class == class {
+		if n := len(groups); n > 0 && groups[n-1].Group == name {
 			groups[n-1].Rows = append(groups[n-1].Rows, l)
 		} else {
-			groups = append(groups, group{Class: class, Rows: []row{l}})
+			groups = append(groups, group{Group: name, Rows: []row{l}})
 		}
 	}
 	if err := rows.Err(); err != nil {
@@ -74,18 +74,18 @@ func (a *app) printLoans(w http.ResponseWriter, r *http.Request) {
 		internalError(w, r)
 		return
 	}
-	// The class the sheet is restricted to, named in the heading.
-	printedClass := ""
-	if byClass {
-		printedClass = classValue
-		if printedClass == "" {
-			printedClass = noClassLabel()
+	// The group the sheet is restricted to, named in the heading.
+	printedGroup := ""
+	if byGroup {
+		printedGroup = groupValue
+		if printedGroup == "" {
+			printedGroup = noGroupLabel()
 		}
 	}
 	a.renderDoc(w, r, "loans_print", map[string]any{
 		"Groups":      groups,
 		"OverdueOnly": overdueOnly,
-		"Class":       printedClass,
+		"Group":       printedGroup,
 		"Date":        shortDate(requestLang(r), today().Format("2006-01-02")),
 	})
 }
@@ -140,7 +140,7 @@ func (a *app) exportRows(f invFilter) ([][]string, error) {
 		`SELECT COALESCE(b.isbn13, ''), b.title, COALESCE(b.authors, ''),
 		        COALESCE(b.publisher, ''), COALESCE(b.year, ''),
 		        c.code, c.status, COALESCE(c.location, ''),
-		        COALESCE(br.first_name || ' ' || br.last_initial, ''), COALESCE(br.class, ''),
+		        COALESCE(br.first_name || ' ' || br.last_initial, ''), COALESCE(br.group_name, ''),
 		        COALESCE(l.loaned_on, ''), COALESCE(l.due_on, '')
 		   FROM copy c
 		   JOIN book b ON b.id = c.book_id
@@ -273,7 +273,7 @@ func csvColumnNames() []string {
 var csvColumns = []string{
 	"csv.isbn13", "csv.title", "csv.authors", "csv.publisher", "csv.year",
 	"csv.code", "csv.status", "csv.location",
-	"csv.borrower", "csv.borrower_class", "csv.loaned_on", "csv.due_on",
+	"csv.borrower", "csv.borrower_group", "csv.loaned_on", "csv.due_on",
 }
 
 func csvHeader(lang string) []string {

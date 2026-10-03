@@ -122,17 +122,17 @@ func TestGDPRPurgeAnonymisesLeavers(t *testing.T) {
 		t.Fatalf("read back: %v", err)
 	}
 	if firstName.String != anonymisedFirstName() {
-		t.Errorf("pupil gone beyond the delay: first name %q, want %q", firstName.String, anonymisedFirstName())
+		t.Errorf("reader gone beyond the delay: first name %q, want %q", firstName.String, anonymisedFirstName())
 	}
 	if card.Valid {
-		t.Error("the card of an anonymised pupil must be cleared")
+		t.Error("the card of an anonymised reader must be cleared")
 	}
 
 	if err := db.QueryRow(`SELECT first_name FROM borrower WHERE id = 104`).Scan(&firstName); err != nil {
 		t.Fatalf("read back: %v", err)
 	}
 	if firstName.String != "Noah" {
-		t.Errorf("pupil gone yesterday: first name %q, it must be kept for the retention period", firstName.String)
+		t.Errorf("reader gone yesterday: first name %q, it must be kept for the retention period", firstName.String)
 	}
 
 	// Léa (101) has an open loan: never touched.
@@ -517,7 +517,7 @@ func TestMigrationsAreAppliedOnce(t *testing.T) {
 	}
 	db.Close()
 
-	// Restart, as a school PC does every morning.
+	// Restart, as a small-office PC does every morning.
 	db, err = openDB(path)
 	if err != nil {
 		t.Fatalf("restart: %v", err)
@@ -551,7 +551,7 @@ func TestAFreshDatabaseIsUsable(t *testing.T) {
 			t.Errorf("view %s missing", name)
 		}
 	}
-	for _, key := range []string{"loan_days", "retention_years", "school_name", "language", "anonymous_borrower_id"} {
+	for _, key := range []string{"loan_days", "retention_years", "library_name", "language", "anonymous_borrower_id"} {
 		if n := count(t, db, `SELECT COUNT(*) FROM setting WHERE key = ?`, key); n != 1 {
 			t.Errorf("setting %s missing from a fresh database", key)
 		}
@@ -614,8 +614,8 @@ func TestDemoDatasetFitsTheSchema(t *testing.T) {
 	}{
 		{"works", `SELECT COUNT(*) FROM book`, 100},
 		{"copies", `SELECT COUNT(*) FROM copy`, 100},
-		{"pupils", `SELECT COUNT(*) FROM borrower WHERE kind = 'student' AND id <> 1`, 30},
-		{"teachers", `SELECT COUNT(*) FROM borrower WHERE kind = 'teacher'`, 3},
+		{"readers", `SELECT COUNT(*) FROM borrower WHERE group_name <> 'Enseignants' AND id <> 1`, 30},
+		{"staff", `SELECT COUNT(*) FROM borrower WHERE group_name = 'Enseignants'`, 3},
 		{"loans", `SELECT COUNT(*) FROM loan`, 300},
 		{"loans still out", `SELECT COUNT(*) FROM v_active_loan`, 10},
 		{"overdue loans", `SELECT COUNT(*) FROM v_overdue`, 1},
@@ -624,21 +624,21 @@ func TestDemoDatasetFitsTheSchema(t *testing.T) {
 		{"works without an ISBN", `SELECT COUNT(*) FROM book WHERE isbn13 IS NULL`, 1},
 		{"works without a year", `SELECT COUNT(*) FROM book WHERE year IS NULL`, 1},
 		{"works without a publisher", `SELECT COUNT(*) FROM book WHERE publisher IS NULL`, 1},
-		{"borrowers without a class", `SELECT COUNT(*) FROM borrower WHERE class IS NULL`, 1},
+		{"borrowers without a group", `SELECT COUNT(*) FROM borrower WHERE group_name IS NULL`, 1},
 	} {
 		if n := count(t, db, c.query); n < c.least {
 			t.Errorf("%s: %d, want at least %d", c.what, n, c.least)
 		}
 	}
 
-	// A pupil holds two books at most; a teacher borrows a batch.
+	// A reader holds two books at most; staff borrow batches.
 	if n := count(t, db,
 		`SELECT COALESCE(MAX(n), 0) FROM (
 		   SELECT COUNT(*) AS n FROM v_active_loan a
 		     JOIN borrower b ON b.id = a.borrower_id
-		    WHERE b.kind = 'student'
+		    WHERE b.group_name <> 'Enseignants'
 		    GROUP BY a.borrower_id)`); n > 2 {
-		t.Errorf("a pupil holds %d books at once, want 2 at most", n)
+		t.Errorf("a reader holds %d books at once, want 2 at most", n)
 	}
 
 	// The library opens once or twice a week, the same days: an offset's remainder
@@ -651,12 +651,12 @@ func TestDemoDatasetFitsTheSchema(t *testing.T) {
 			"(two openings, plus the two loans the README quotes)", n)
 	}
 
-	// Every class is shown borrowing.
+	// Every group is shown borrowing.
 	if n := count(t, db,
 		`SELECT COUNT(*) FROM (
-		   SELECT b.class FROM loan l JOIN borrower b ON b.id = l.borrower_id
-		    WHERE b.kind = 'student' GROUP BY b.class)`); n < 4 {
-		t.Errorf("only %d classes ever borrow, want 4", n)
+		   SELECT b.group_name FROM loan l JOIN borrower b ON b.id = l.borrower_id
+		    WHERE b.group_name <> 'Enseignants' GROUP BY b.group_name)`); n < 4 {
+		t.Errorf("only %d groups ever borrow, want 4", n)
 	}
 
 	// A lost or withdrawn copy has no open loan (inventory.go).
@@ -700,10 +700,10 @@ func TestDemoDatasetLoadsOnEveryDayOfTheWeek(t *testing.T) {
 				{"copies out more than once at a time",
 					`SELECT COUNT(*) FROM (SELECT copy_id FROM loan
 					   WHERE returned_on IS NULL GROUP BY copy_id HAVING COUNT(*) > 1)`},
-				{"pupils holding more than two books",
+				{"readers holding more than two books",
 					`SELECT COUNT(*) FROM (SELECT l.borrower_id FROM loan l
 					   JOIN borrower b ON b.id = l.borrower_id
-					  WHERE l.returned_on IS NULL AND b.kind = 'student'
+					  WHERE l.returned_on IS NULL AND b.group_name <> 'Enseignants'
 					  GROUP BY l.borrower_id HAVING COUNT(*) > 2)`},
 				{"loans given back before they were taken",
 					`SELECT COUNT(*) FROM loan WHERE returned_on < loaned_on`},
@@ -729,8 +729,8 @@ func TestSearchesFoldAccentsAndCase(t *testing.T) {
 		`INSERT INTO book (id, title, authors, language, source_metadata)
 		      VALUES (300, 'École des sorciers', 'Kästner, Erich', 'fr', 'test');
 		 INSERT INTO copy (id, book_id, code, status) VALUES (300, 300, 'VOL-E0001', 'available');
-		 INSERT INTO borrower (id, first_name, last_initial, class, kind, active)
-		      VALUES (300, 'Émile', 'Œ.', 'P5', 'student', 1)`); err != nil {
+		 INSERT INTO borrower (id, first_name, last_initial, group_name, active)
+		      VALUES (300, 'Émile', 'Œ.', 'P5', 1)`); err != nil {
 		t.Fatal(err)
 	}
 

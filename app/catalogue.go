@@ -13,7 +13,7 @@ import (
 // Cataloguing: scan the ISBN, fetch the metadata (enrichment.go), confirm on an
 // editable screen, create N copies with their internal code (VOL204517).
 //
-// Manual entry is always one click away: 10-15% of a school collection comes
+// Manual entry is always one click away: 10-15% of a small collection comes
 // back unresolved, and that is not an exception path.
 
 // catalogueForm is a book being catalogued, rendered by both the cataloguing

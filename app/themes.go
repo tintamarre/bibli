@@ -5,7 +5,7 @@ import (
 	"log"
 )
 
-// The colour themes a school can pick in /settings: only colour, one block of
+// The colour themes a library can pick in /settings: only colour, one block of
 // custom properties in app.css. Keep the list short: every colour role has
 // to be chosen in each.
 var themes = []string{"ink", "stamp", "crayons"}
@@ -19,7 +19,7 @@ const (
 )
 
 // retiredThemes maps a theme no longer offered to the one closest to it, so a
-// school that chose it keeps its look.
+// library that chose it keeps its look.
 var retiredThemes = map[string]string{"classic": "stamp"}
 
 // themeColor is the browser chrome colour of each theme (<meta name=

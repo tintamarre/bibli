@@ -30,7 +30,7 @@ type CopyRow struct {
 	BorrowerID          int64
 	BorrowerFirstName   string
 	BorrowerLastInitial string
-	BorrowerClass       string
+	BorrowerGroup       string
 	DueOn               string // open loan: when it is due back, "" on the shelf
 	DaysOverdue         int    // open loan: days past DueOn (> 0 = late)
 	New                 bool   // entered today, and still to be stickered
@@ -38,7 +38,7 @@ type CopyRow struct {
 
 type HistoryRow struct {
 	BorrowerID                    int64
-	FirstName, LastInitial, Class string
+	FirstName, LastInitial, Group string
 	LoanedOn                      string
 	ReturnedOn                    string
 	Days                          int
@@ -113,7 +113,7 @@ func (a *app) loadBookPage(id int64) (*BookPage, error) {
 	rows, err := a.db.Query(
 		`SELECT c.id, c.code, c.status, COALESCE(c.location, ''),
 		        CASE WHEN l.id IS NOT NULL THEN 1 ELSE 0 END,
-		        COALESCE(br.id, 0), COALESCE(br.first_name, ''), COALESCE(br.last_initial, ''), COALESCE(br.class, ''),
+		        COALESCE(br.id, 0), COALESCE(br.first_name, ''), COALESCE(br.last_initial, ''), COALESCE(br.group_name, ''),
 		        COALESCE(l.due_on, ''),
 		        COALESCE(CAST(julianday('now') - julianday(l.due_on) AS INTEGER), 0),
 		        CASE WHEN date(c.created_at) = date('now') THEN 1 ELSE 0 END
@@ -129,7 +129,7 @@ func (a *app) loadBookPage(id int64) (*BookPage, error) {
 		var cp CopyRow
 		var outFlag, newFlag int
 		if err := rows.Scan(&cp.ID, &cp.Code, &cp.Status, &cp.Location, &outFlag,
-			&cp.BorrowerID, &cp.BorrowerFirstName, &cp.BorrowerLastInitial, &cp.BorrowerClass,
+			&cp.BorrowerID, &cp.BorrowerFirstName, &cp.BorrowerLastInitial, &cp.BorrowerGroup,
 			&cp.DueOn, &cp.DaysOverdue, &newFlag); err != nil {
 			return nil, err
 		}
@@ -157,7 +157,7 @@ func (a *app) loadBookPage(id int64) (*BookPage, error) {
 	f.Deletable = f.LoansTotal == 0
 
 	hrows, err := a.db.Query(
-		`SELECT br.id, br.first_name, br.last_initial, COALESCE(br.class, ''), l.loaned_on,
+		`SELECT br.id, br.first_name, br.last_initial, COALESCE(br.group_name, ''), l.loaned_on,
 		        l.returned_on IS NULL AS en_cours, COALESCE(l.returned_on, ''),
 		        CAST(julianday(CASE WHEN l.returned_on IS NULL THEN date('now') ELSE l.returned_on END)
 		             - julianday(l.loaned_on) AS INTEGER)
@@ -173,7 +173,7 @@ func (a *app) loadBookPage(id int64) (*BookPage, error) {
 		var h HistoryRow
 		var outFlag int
 		var loanedOn, returnedOn string
-		if err := hrows.Scan(&h.BorrowerID, &h.FirstName, &h.LastInitial, &h.Class, &loanedOn, &outFlag, &returnedOn, &h.Days); err != nil {
+		if err := hrows.Scan(&h.BorrowerID, &h.FirstName, &h.LastInitial, &h.Group, &loanedOn, &outFlag, &returnedOn, &h.Days); err != nil {
 			return nil, err
 		}
 		h.Out = outFlag == 1

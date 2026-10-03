@@ -6,7 +6,7 @@
 # (app/setup_windows.go runs packaging/windows/install.ps1) and installs one of:
 # - the desktop app, for a single PC: no administrator needed, localhost only,
 #   it runs while its Edge window is open (app.ps1);
-# - the server for a whole school: a Windows service that starts with the PC
+# - the server for a whole organisation: a Windows service that starts with the PC
 #   and serves every device on the LAN, with a tray icon and an admin menu;
 # - on another computer, a Desktop shortcut to that server.
 # Double-clicking a newer one updates what is installed.

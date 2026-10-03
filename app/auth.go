@@ -161,7 +161,7 @@ func isPublicPath(path string) bool {
 	case path == "/logout":
 		// Signing out of an expired session must not detour through /login.
 		return true
-	case strings.HasPrefix(path, "/family/"):
+	case strings.HasPrefix(path, "/track/"):
 		return true
 	case strings.HasPrefix(path, "/static/"):
 		return true
@@ -226,10 +226,10 @@ func securityHeaders(next http.Handler) http.Handler {
 		h.Set("X-Frame-Options", "DENY")
 		h.Set("Referrer-Policy", "no-referrer")
 		if !strings.HasPrefix(r.URL.Path, "/static/") {
-			// Pupil data: "Back" after signing out must not show it from cache.
+			// Reader data: "Back" after signing out must not show it from cache.
 			h.Set("Cache-Control", "no-store")
 		}
-		if r.URL.Path == "/login" || strings.HasPrefix(r.URL.Path, "/family/") {
+		if r.URL.Path == "/login" || strings.HasPrefix(r.URL.Path, "/track/") {
 			h.Set("X-Robots-Tag", "noindex, nofollow")
 		}
 		next.ServeHTTP(w, r)

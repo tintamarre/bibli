@@ -48,6 +48,7 @@ SEED = 20260922          # the picture must be the same on every run
 WEEKS = 57               # weeks of history: a school year and the term before
 HISTORY = WEEKS * 7 + 7
 PERIOD = 21              # the loan period demo.sql sets in /settings
+TEACHERS_GROUP = "Enseignants"
 CLASSES = ["P1", "P2", "P3", "P4"]
 
 # Where the pupils the fixture shares must stay (app/testdata/fixture.sql is a
@@ -88,11 +89,13 @@ def read(path):
 
 
 def borrowers(sql):
-    """The students and teachers demo.sql declares, in file order."""
+    """The pupils and teachers demo.sql declares, in file order. The teachers
+    are the borrowers of the group TEACHERS_GROUP."""
     block = re.search(r"INSERT INTO borrower .*?;", sql, re.S).group(0)
     out = []
-    for row in re.finditer(r"\((\d+), '[^']*(?:''[^']*)*', '[^']*', (NULL|'[^']*'), '(\w+)'", block):
-        out.append((int(row.group(1)), row.group(3)))
+    for row in re.finditer(r"\((\d+), '[^']*(?:''[^']*)*', '[^']*', (NULL|'[^']*')", block):
+        kind = "teacher" if row.group(2) == "'%s'" % TEACHERS_GROUP else "student"
+        out.append((int(row.group(1)), kind))
     return out
 
 

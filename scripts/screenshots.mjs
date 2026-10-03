@@ -33,10 +33,10 @@ import { fileURLToPath } from 'node:url'
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const password = 'demo'
 
-// The school name and the tracking token are presentation, not data: demo.sql
+// The library name and the tracking token are presentation, not data: demo.sql
 // leaves both unset, since a bare instance starts that way. A screenshot wants
-// them filled — an empty header and a missing parent page show nothing.
-const school = 'École de Lincé'
+// them filled — an empty header and a missing tracking page show nothing.
+const library = 'Bibliothèque de Lincé'
 const token = '7f3c1a9b4e2d8c6f0a5b3e7d1c9f4a2b'
 const tokenBorrower = 'LEC10035' // Adam N., P4 — three books out, none late
 
@@ -114,12 +114,12 @@ const SHOTS = [
   { name: 'borrower', url: '/borrowers/121', height: 1200, fit: belowRow(7), wait: 800 },
   { name: 'inventory', url: '/inventory', height: 1200, fit: belowRow(6), wait: 2000 },
   { name: 'labels', url: `/print/labels?codes=${LABELS}`, width: 1100, fit: belowEverything, wait: 1500 },
-  { name: 'cards', url: '/borrowers/cards?class=P4', width: 1100, height: 880, wait: 1500 },
+  { name: 'cards', url: '/borrowers/cards?group=P4', width: 1100, height: 880, wait: 1500 },
   { name: 'stats', url: '/stats', height: 1400, fit: belowMain },
   { name: 'settings', url: '/settings', height: 1200, fit: belowMain },
 
-  // The parent page is read on a phone, so it is taken on one.
-  { name: 'family', url: `/family/${token}`, width: 430, height: 900, mobile: true, fit: belowMain },
+  // The tracking page is read on a phone, so it is taken on one.
+  { name: 'tracking', url: `/track/${token}`, width: 430, height: 900, mobile: true, fit: belowMain },
 
   {
     name: 'return',
@@ -301,8 +301,8 @@ run('sqlite3', [db], {
   stdio: ['pipe', 'inherit', 'inherit']
 })
 run('sqlite3', [db,
-  `UPDATE setting SET value = '${school}' WHERE key = 'school_name';` +
-  `UPDATE borrower SET family_token = '${token}' WHERE card_code = '${tokenBorrower}';`])
+  `UPDATE setting SET value = '${library}' WHERE key = 'library_name';` +
+  `UPDATE borrower SET tracking_token = '${token}' WHERE card_code = '${tokenBorrower}';`])
 
 const base = `http://127.0.0.1:${port}`
 server = await startServer(port)

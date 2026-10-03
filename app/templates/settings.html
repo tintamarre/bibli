@@ -23,9 +23,9 @@
       <div class="settings-list">
 
         <div class="setting">
-          <label class="field"><span>{{T "settings.school_name"}}</span>
-            <input name="school_name" value="{{.School}}" maxlength="120"
-                   placeholder="{{T "settings.school_name_placeholder"}}"></label>
+          <label class="field"><span>{{T "settings.library_name"}}</span>
+            <input name="library_name" value="{{.LibraryName}}" maxlength="120"
+                   placeholder="{{T "settings.library_name_placeholder"}}"></label>
         </div>
 
         <div class="setting">
@@ -76,13 +76,13 @@
 
         <div class="setting">
           <div class="field">
-            <span>{{T "settings.family_links"}}</span>
+            <span>{{T "settings.tracking_links"}}</span>
             <label class="field-check">
-              <input type="checkbox" name="family_links" value="1"{{if .FamilyLinks}} checked{{end}}{{if not .FamilyOffered}} disabled{{end}}>
-              <span>{{T "settings.family_links_label"}}</span>
+              <input type="checkbox" name="tracking_links" value="1"{{if .TrackingLinks}} checked{{end}}{{if not .TrackingOffered}} disabled{{end}}>
+              <span>{{T "settings.tracking_links_label"}}</span>
             </label>
           </div>
-          <p class="note">{{if .FamilyOffered}}{{T "settings.family_links_help"}}{{else}}{{T "settings.family_links_single"}}{{end}}</p>
+          <p class="note">{{if .TrackingOffered}}{{T "settings.tracking_links_help"}}{{else}}{{T "settings.tracking_links_single"}}{{end}}</p>
         </div>
 
       </div>

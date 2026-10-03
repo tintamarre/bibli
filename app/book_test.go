@@ -51,7 +51,7 @@ func TestComputeLinksOffersTheBnFSearchWithoutAnARK(t *testing.T) {
 	}
 }
 
-// A book with no ISBN — a picture book, a school-made album — still gets a way
+// A book with no ISBN — a picture book, a home-made album — still gets a way
 // to look it up, on its title and authors.
 func TestComputeLinksFallsBackToTheTitle(t *testing.T) {
 	f := &BookPage{Title: "Album maternelle", Authors: "Anonyme"}
@@ -109,7 +109,7 @@ func TestLoadBookPage(t *testing.T) {
 	if out == nil {
 		t.Fatal("no copy marked as out")
 	}
-	if out.BorrowerFirstName != "Tom" || out.BorrowerClass != "P3" {
+	if out.BorrowerFirstName != "Tom" || out.BorrowerGroup != "P3" {
 		t.Errorf("the copy that is out does not name its borrower: %+v", out)
 	}
 }

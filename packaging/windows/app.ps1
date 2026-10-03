@@ -46,7 +46,7 @@ if (-not (Test-Running)) {
   $env:BIBLI_ADMIN_PASSWORD = Get-Content -Raw $pwFile
   Start-Process -FilePath $bin -WindowStyle Hidden `
     -RedirectStandardError (Join-Path $data 'bibli.log') -RedirectStandardOutput (Join-Path $data 'bibli.out.log') `
-    -ArgumentList @('-db', "`"$data\biblio.db`"", '-addr', "127.0.0.1:$port", '-secure-cookies=false', '-family-links=false',
+    -ArgumentList @('-db', "`"$data\biblio.db`"", '-addr', "127.0.0.1:$port", '-secure-cookies=false', '-tracking-links=false',
                     '-backup-dir', "`"$data\backups`"", '-cache-dir', "`"$data\cache`"") | Out-Null
   Remove-Item Env:BIBLI_ADMIN_PASSWORD
   for ($i = 0; $i -lt 50 -and -not (Test-Running); $i++) { Start-Sleep -Milliseconds 200 }

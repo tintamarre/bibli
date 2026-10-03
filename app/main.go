@@ -52,12 +52,12 @@ func main() {
 		cacheDir      = flag.String("cache-dir", "cache", "cover cache directory (empty = disabled)")
 		secureCookies = flag.Bool("secure-cookies", true, "session cookies as Secure (disable for local HTTP dev)")
 		trustProxy    = flag.Bool("trust-proxy", false, "trust X-Forwarded-For to identify the client (only behind a reverse proxy)")
-		familyOffer   = flag.Bool("family-links", true, "offer the loans links for families (false for a single-computer install)")
+		trackingOffer = flag.Bool("tracking-links", true, "offer the secret tracking links (false for a single-computer install)")
 		logPath       = flag.String("log-file", "", "append the log to this file, rotated at 5 MB (empty = stderr)")
 		passwordFile  = flag.String("password-file", "", "read the librarian password from this file instead of BIBLI_ADMIN_PASSWORD")
 	)
 	flag.Parse()
-	allowFamilyLinks(*familyOffer)
+	allowTrackingLinks(*trackingOffer)
 
 	// A Windows service has no stderr: without a file, its log is lost.
 	if *logPath != "" {
@@ -215,7 +215,7 @@ func (a *app) handler() http.Handler {
 	mux.HandleFunc("GET /healthcheck", a.healthcheck)
 
 	// The page is public, protected by the token alone; managing tokens is not.
-	mux.HandleFunc("GET /family/{token}", a.familyScreen)
+	mux.HandleFunc("GET /track/{token}", a.trackingScreen)
 	mux.HandleFunc("POST /borrowers/{id}/token", a.borrowerTokenCreate)
 	mux.HandleFunc("POST /borrowers/{id}/token/revoke", a.borrowerTokenRevoke)
 
@@ -438,8 +438,8 @@ func logging(next http.Handler) http.Handler {
 			status = http.StatusOK // a body written without an explicit header
 		}
 		path := r.URL.Path
-		if strings.HasPrefix(path, "/family/") {
-			path = "/family/[token]"
+		if strings.HasPrefix(path, "/track/") {
+			path = "/track/[token]"
 		}
 
 		// Asset fetches are dimmed whole: the page request already said it.

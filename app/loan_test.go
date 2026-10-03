@@ -82,8 +82,8 @@ func TestOpenLoanWho(t *testing.T) {
 		p    OpenLoan
 		want string
 	}{
-		{OpenLoan{FirstName: "Léa", LastInitial: "D.", Class: "P4"}, "Léa D. (P4)"},
-		{OpenLoan{FirstName: "Claire", LastInitial: "L."}, "Claire L."}, // a teacher, no class
+		{OpenLoan{FirstName: "Léa", LastInitial: "D.", Group: "P4"}, "Léa D. (P4)"},
+		{OpenLoan{FirstName: "Claire", LastInitial: "L."}, "Claire L."}, // a staff member, no group
 		{OpenLoan{FirstName: "Tom"}, "Tom"},
 	}
 	for _, c := range cases {
@@ -182,9 +182,9 @@ func TestReturnChoiceRenders(t *testing.T) {
 	}
 	loans := []OpenLoan{
 		{LoanID: 7, CopyID: 1, Code: "VOL204572", Title: "Le Petit Prince",
-			FirstName: "Tom", LastInitial: "B.", Class: "P3", LoanedOn: "2026-08-20"},
+			FirstName: "Tom", LastInitial: "B.", Group: "P3", LoanedOn: "2026-08-20"},
 		{LoanID: 9, CopyID: 2, Code: "VOL204580", Title: "Le Petit Prince",
-			FirstName: "Zoé", LastInitial: "P.", Class: "P4", LoanedOn: "2026-09-01"},
+			FirstName: "Zoé", LastInitial: "P.", Group: "P4", LoanedOn: "2026-09-01"},
 	}
 	for _, lang := range langs {
 		var out strings.Builder
@@ -518,8 +518,8 @@ func TestSearchBorrowersCapsAtFive(t *testing.T) {
 	a := testApp(t)
 	for i := 0; i < 7; i++ {
 		if _, err := a.db.Exec(
-			`INSERT INTO borrower (first_name, last_initial, class, kind, active)
-			 VALUES (?, 'Z.', 'P5', 'student', 1)`, fmt.Sprintf("Camille%d", i)); err != nil {
+			`INSERT INTO borrower (first_name, last_initial, group_name, active)
+			 VALUES (?, 'Z.', 'P5', 1)`, fmt.Sprintf("Camille%d", i)); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -528,9 +528,9 @@ func TestSearchBorrowersCapsAtFive(t *testing.T) {
 	if len(found) != 5 || !tooMany {
 		t.Errorf("got %d result(s), tooMany=%v; want 5 and true", len(found), tooMany)
 	}
-	// Several words narrow rather than widen: "léa p4" is one pupil.
+	// Several words narrow rather than widen: "léa p4" is one reader.
 	if found, tooMany := a.searchBorrowers("léa p4"); len(found) != 1 || tooMany {
-		t.Errorf("got %d result(s), tooMany=%v; want the one pupil", len(found), tooMany)
+		t.Errorf("got %d result(s), tooMany=%v; want the one reader", len(found), tooMany)
 	}
 }
 
@@ -851,7 +851,7 @@ func TestReturnDestinationStaysLocal(t *testing.T) {
 	}
 }
 
-// Express cataloguing is on unless a school turns it off, including when the
+// Express cataloguing is on unless the library turns it off, including when the
 // setting is missing or unreadable.
 func TestExpressCatalogue(t *testing.T) {
 	a := testApp(t)

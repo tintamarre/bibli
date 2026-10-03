@@ -17,7 +17,7 @@ import (
 )
 
 // Enrichment: turning an ISBN into a record by asking public catalogues in
-// turn. Only the ISBN leaves the school, never pupil data.
+// turn. Only the ISBN leaves the server, never reader data.
 
 type Record struct {
 	ISBN13    string
@@ -39,7 +39,7 @@ type Record struct {
 // operator can reach the project at. The version comes from the build, so it is
 // never a stale literal; sourceURL is the one place the project's home is named.
 func userAgent() string {
-	return "Bibli/" + displayVersion() + " (school library; +" + sourceURL + ")"
+	return "Bibli/" + displayVersion() + " (small library; +" + sourceURL + ")"
 }
 
 type enrichSource struct {
@@ -80,7 +80,7 @@ func enrichWithin(w http.ResponseWriter, r *http.Request, budget time.Duration) 
 	return context.WithTimeout(r.Context(), budget)
 }
 
-// Catalogues rate-limit per IP and the school has one: a day's memory of
+// Catalogues rate-limit per IP and a library has one: a day's memory of
 // answers, and a forced rest after a 429, keep it from being blocked.
 
 const (

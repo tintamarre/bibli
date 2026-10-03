@@ -63,7 +63,7 @@ jobs:
           path: dist/Bibli-windows.exe
           retention-days: 3
 
-  # The whole life of the Windows service, in Windows PowerShell 5 as schools
+  # The whole life of the Windows service, in Windows PowerShell 5 as small organisations
   # run it: install, clean stop, crash and restart by Windows, update,
   # uninstall. Each step runs in its own process, as a double-click would.
   windows-server:
@@ -156,6 +156,6 @@ jobs:
           Write-Host 'all good'
 
 # The Docker image is not built here: it is heavy and per-commit :latest served
-# no one — schools deploy the release's :stable image, developers run `make dev`
+# no one — organisations deploy the release's :stable image, developers run `make dev`
 # (or `make dev-docker` to exercise the Dockerfile). The image is built, for
 # amd64 and arm64, only by the release workflow.

@@ -184,7 +184,7 @@ func (a *app) reviewCSV(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// reviewXLSX is the same file for a person to open, in the school's language.
+// reviewXLSX is the same file for a person to open, in the library's language.
 func (a *app) reviewXLSX(w http.ResponseWriter, r *http.Request) {
 	rows, err := a.reviewRows()
 	if err != nil {

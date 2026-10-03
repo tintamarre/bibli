@@ -40,7 +40,7 @@ func clearDeskLookup(id string) {
 }
 
 // deskNarrator is the chain's narrator for one desk scan: it names each
-// catalogue as it is asked, in the school's language.
+// catalogue as it is asked, in the library's language.
 func deskNarrator(r *http.Request, id string) enrichLog {
 	if !reDeskLookupID.MatchString(id) {
 		return enrichLog{}

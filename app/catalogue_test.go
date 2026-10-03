@@ -143,7 +143,7 @@ func TestCreateCopiesReusesTheWorkBehindAnISBN(t *testing.T) {
 	}
 }
 
-// A book with no ISBN — a picture book, a school-made album — gets its own work
+// A book with no ISBN — a picture book, a home-made album — gets its own work
 // every time: there is no key to match it on.
 func TestCreateCopiesWithoutAnISBN(t *testing.T) {
 	a := testApp(t)

@@ -8,7 +8,7 @@
   <div class="token-actions">
     <button type="button" class="btn-icon-action btn-copy-link"
             title="{{T "borrowers.copy_link"}}" aria-label="{{T "borrowers.copy_link"}}"
-            data-link="/family/{{.Token}}" onclick="copyLink(this)"
+            data-link="/track/{{.Token}}" onclick="copyLink(this)"
       >{{template "icon-copy" "action-icon"}}{{template "icon-check" "action-icon-copied"}}<span class="action-label">{{T "borrowers.copy_link"}}</span></button>
     <button type="button" class="btn-icon-action"
             title="{{T "borrowers.regenerate"}}" aria-label="{{T "borrowers.regenerate"}}"
@@ -32,7 +32,7 @@
 
 {{define "token_menu"}}
 {{if .Token}}
-  <button type="button" class="btn-copy-link" data-link="/family/{{.Token}}" onclick="copyLink(this)"
+  <button type="button" class="btn-copy-link" data-link="/track/{{.Token}}" onclick="copyLink(this)"
     >{{template "icon-copy" "menu-icon action-icon"}}{{template "icon-check" "menu-icon action-icon-copied"}}<span class="action-label">{{T "borrowers.copy_link"}}</span></button>
   <button type="button"
           hx-post="/borrowers/{{.ID}}/token" hx-vals='{"view": "menu"}' hx-target="closest .token-cell" hx-swap="innerHTML"

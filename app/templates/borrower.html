@@ -1,10 +1,10 @@
 {{define "title_icon"}}{{template "icon-person" "title-icon"}}{{end}}
-{{/* Class, kind and card code beside the name: what tells two Emmas apart. */}}
-{{define "title_aside"}}<span class="title-authors">{{if .E.Class}}{{.E.Class}} · {{end}}{{if eq .E.Kind "teacher"}}{{T "borrower.kind_teacher"}}{{else}}{{T "borrower.kind_student"}}{{end}}{{with .E.CardCode}} · <span class="code" title="{{T "borrowers.col_card"}}">{{.}}</span>{{end}}</span>{{end}}
+{{/* Group and card code beside the name: what tells two Emmas apart. */}}
+{{define "title_aside"}}<span class="title-authors">{{with .E.Group}}{{.}}{{end}}{{with .E.CardCode}}{{if $.E.Group}} · {{end}}<span class="code" title="{{T "borrowers.col_card"}}">{{.}}</span>{{end}}</span>{{end}}
 {{define "back_link"}}<p class="back-link"><a class="link-quiet" href="/borrowers">{{template "icon-back" "icon-inline"}}{{T "borrowers.back"}}</a></p>{{end}}
 {{/* The loans link, in the page's corner; explained when it is created
      (tracking_link.html). Hidden for a departed borrower with no link:
-     family.go refuses to create one; hidden for all when turned off in
+     tracking.go refuses to create one; hidden for all when turned off in
      /settings. */}}
 {{define "title_actions"}}
 {{/* Correcting the record opens the form below (app.js, openForm). Only while
@@ -13,7 +13,7 @@
 <button type="button" class="btn-secondary btn-open-form" onclick="openForm('edit-borrower')"
   >{{template "icon-edit" "btn-icon"}}{{T "common.edit"}}</button>
 {{end}}
-{{if and familyLinks (or .E.Active .E.Token)}}
+{{if and trackingLinks (or .E.Active .E.Token)}}
 <details class="page-menu page-menu-quiet" data-autoclose>
   <summary>{{template "icon-link" "btn-icon"}}{{T "borrowers.col_tracking_link"}} {{template "icon-chevron" "icon-chevron"}}</summary>
   <div class="menu-admin-panel token-cell">{{template "token_menu" .E}}</div>
@@ -23,7 +23,7 @@
 {{define "content"}}
 {{/* Loans over the last twelve months and the book-days behind them (tooltip
      explains); dropped when the year is empty. */}}
-{{/* A plain form and a redirect, not a swap: the name and class sit outside any
+{{/* A plain form and a redirect, not a swap: the name and group sit outside any
      fragment. "back" tells the handler to redirect here rather than answer with
      a list row (borrowers.go). */}}
 {{if .E.Active}}
@@ -39,15 +39,10 @@
         <input name="last_name" value="{{.E.LastInitial}}" required></label>
     </div>
     <div class="field-grid">
-      <label class="field"><span>{{T "loans.class"}}</span>
-        <input name="class" value="{{.E.Class}}" list="classes"
-               placeholder="{{T "borrowers.f_class_placeholder"}}">
-        {{template "class_datalist"}}</label>
-      <label class="field"><span>{{T "borrowers.col_kind"}}</span>
-        <select name="kind">
-          <option value="student"{{if ne .E.Kind "teacher"}} selected{{end}}>{{T "borrower.kind_student"}}</option>
-          <option value="teacher"{{if eq .E.Kind "teacher"}} selected{{end}}>{{T "borrower.kind_teacher"}}</option>
-        </select></label>
+      <label class="field"><span>{{T "loans.group"}}</span>
+        <input name="group" value="{{.E.Group}}" list="groups"
+               placeholder="{{T "borrowers.f_group_placeholder"}}">
+        {{template "group_datalist" .Groups}}</label>
     </div>
     <div class="form-actions">
       <button class="btn-primary" type="submit">{{T "common.save"}}</button>

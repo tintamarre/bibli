@@ -30,7 +30,7 @@ type backupStatus struct {
 // backupFile is one snapshot offered for download.
 type backupFile struct {
 	Name string // the file on disk, under its rotation slot name
-	When string // the day it was taken, in the school's wording
+	When string // the day it was taken, in the library's wording
 	Size string
 }
 
@@ -128,28 +128,28 @@ func backupView(r *http.Request, basePath, backupDir string) backupStatus {
 
 // settingsData is everything the settings screen shows, on opening as well as
 // after a rejected entry.
-func (a *app) settingsData(r *http.Request, schoolName, lang, theme string) map[string]any {
+func (a *app) settingsData(r *http.Request, libName, lang, theme string) map[string]any {
 	return map[string]any{
-		"Title":         tr(r, "nav.settings"),
-		"LoanDays":      a.loanDays(),
-		"School":        schoolName,
-		"Language":      lang,
-		"Languages":     offeredLangs(lang),
-		"Themes":        offeredThemes(requestLang(r), theme),
-		"Retention":     retentionYears(a.db),
-		"RetentionMax":  maxRetentionYears,
-		"Express":       a.expressCatalogue(),
-		"FamilyLinks":   familyLinks(),
-		"FamilyOffered": familyLinksOffered(),
-		"GoogleFromEnv": googleKeyFromEnv(),
-		"Backup":        backupView(r, a.dbPath, a.backupDir),
-		"Cache":         a.cacheView(requestLang(r)),
-		"AccessURL":     accessURL(r),
-		"AccessLocal":   accessIsLoopback(r.Host),
+		"Title":           tr(r, "nav.settings"),
+		"LoanDays":        a.loanDays(),
+		"LibraryName":     libName,
+		"Language":        lang,
+		"Languages":       offeredLangs(lang),
+		"Themes":          offeredThemes(requestLang(r), theme),
+		"Retention":       retentionYears(a.db),
+		"RetentionMax":    maxRetentionYears,
+		"Express":         a.expressCatalogue(),
+		"TrackingLinks":   trackingLinks(),
+		"TrackingOffered": trackingLinksOffered(),
+		"GoogleFromEnv":   googleKeyFromEnv(),
+		"Backup":          backupView(r, a.dbPath, a.backupDir),
+		"Cache":           a.cacheView(requestLang(r)),
+		"AccessURL":       accessURL(r),
+		"AccessLocal":     accessIsLoopback(r.Host),
 	}
 }
 
-// accessURL is the address a teacher on the network types to reach this
+// accessURL is the address a user on the network types to reach this
 // instance: the very address the browser used to open the page. Behind Docker
 // the server cannot see the host's LAN IP, so the request's Host is the honest
 // source — open Bibli by the machine's address and the settings screen shows it.
@@ -163,7 +163,7 @@ func accessURL(r *http.Request) string {
 
 // accessIsLoopback is true when the page was opened on the machine itself
 // (localhost), which no other device can reach: the shown address would not
-// help a teacher, so the screen says to open Bibli by the machine's LAN address.
+// help a user, so the screen says to open Bibli by the machine's LAN address.
 func accessIsLoopback(host string) bool {
 	h := host
 	if hostOnly, _, err := net.SplitHostPort(host); err == nil {
@@ -189,7 +189,7 @@ func offeredLangs(selected string) []offeredLang {
 }
 
 func (a *app) settingsScreen(w http.ResponseWriter, r *http.Request) {
-	d := a.settingsData(r, school(), instanceLang(), instanceTheme())
+	d := a.settingsData(r, libraryName(), instanceLang(), instanceTheme())
 	d["Ok"] = r.URL.Query().Get("ok") == "1"
 	// Absent is not zero: "0 forgotten" is said only to whoever just clicked.
 	if v := r.URL.Query().Get("forgotten"); v != "" {
@@ -214,7 +214,7 @@ func (a *app) settingsForgetAbsences(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/settings?forgotten="+strconv.Itoa(n), http.StatusSeeOther)
 }
 
-// settingsSave validates and stores the settings (loan period, school,
+// settingsSave validates and stores the settings (loan period, library name,
 // language, theme, loans links, Google Books key).
 func (a *app) settingsSave(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
@@ -222,9 +222,9 @@ func (a *app) settingsSave(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	schoolName := strings.TrimSpace(r.FormValue("school_name"))
-	if r := []rune(schoolName); len(r) > 120 {
-		schoolName = string(r[:120]) // by runes, so an accented letter is not split
+	libName := strings.TrimSpace(r.FormValue("library_name"))
+	if r := []rune(libName); len(r) > 120 {
+		libName = string(r[:120]) // by runes, so an accented letter is not split
 	}
 
 	lang := strings.TrimSpace(r.FormValue("language"))
@@ -254,7 +254,7 @@ func (a *app) settingsSave(w http.ResponseWriter, r *http.Request) {
 	if errMsg != "" {
 		// Keep the name as typed, so what was right is not typed again, and open
 		// the tab the faulty field is on.
-		d := a.settingsData(r, schoolName, lang, theme)
+		d := a.settingsData(r, libName, lang, theme)
 		d["Error"] = errMsg
 		d["ErrorTab"] = errTab
 		a.render(w, r, "settings", d)
@@ -268,18 +268,18 @@ func (a *app) settingsSave(w http.ResponseWriter, r *http.Request) {
 	}
 	writes := []settingWrite{
 		{"loan_days", strconv.Itoa(n), "Default loan period, in days"},
-		{"school_name", schoolName, "School name, shown in the header and on printouts"},
-		{"retention_years", strconv.Itoa(retention), "Years before returned loans and departed pupils are anonymised"},
+		{"library_name", libName, "Library name, shown in the header and on printouts"},
+		{"retention_years", strconv.Itoa(retention), "Years before returned loans and departed readers are anonymised"},
 		{"language", lang, "Language of the interface, the printouts and the exports"},
 		{"theme", theme, "Colour theme of the screens (themes.go); printouts ignore it"},
 		{"express_catalogue", express, "Allow cataloguing an unknown book from the lending desk"},
 	}
 	// A disabled checkbox sends nothing either: keep the stored choice.
-	family := familyLinks()
-	if familyLinksOffered() {
-		family = r.FormValue("family_links") != ""
-		writes = append(writes, settingWrite{"family_links", boolSetting(family),
-			"Offer the secret loans links for families (family.go)"})
+	tracking := trackingLinks()
+	if trackingLinksOffered() {
+		tracking = r.FormValue("tracking_links") != ""
+		writes = append(writes, settingWrite{"tracking_links", boolSetting(tracking),
+			"Offer the secret tracking links (tracking.go)"})
 	}
 
 	// One transaction: a failure part-way leaves no half-saved settings.
@@ -333,11 +333,11 @@ func (a *app) settingsSave(w http.ResponseWriter, r *http.Request) {
 		setGoogleKey("")
 		log.Print("Google Books: API key removed in /settings")
 	}
-	setSchool(schoolName)
+	setLibraryName(libName)
 	setLang(lang)
 	setTheme(theme)
-	if familyLinksOffered() {
-		setFamilyLinks(family)
+	if trackingLinksOffered() {
+		setTrackingLinks(tracking)
 	}
 	// The sentinel's stored name follows the language.
 	syncAnonymousName(a.db)

@@ -16,13 +16,13 @@ import (
 	"testing"
 )
 
-// The nominal year rollover: the whole school moves up one, P6 leaves. Only a
+// The nominal year rollover: everyone moves up one, P6 leaves. Only a
 // snapshot gets this right.
 func TestPlanRolloverFullChain(t *testing.T) {
-	classes := []string{"M1", "M2", "M3", "P1", "P2", "P3", "P4", "P5", "P6"}
-	var pupils []rolloverPupil
-	for i, c := range classes {
-		pupils = append(pupils, rolloverPupil{ID: int64(i + 1), FirstName: "e", LastInitial: "E.", Class: c})
+	groups := []string{"M1", "M2", "M3", "P1", "P2", "P3", "P4", "P5", "P6"}
+	var readers []rolloverReader
+	for i, c := range groups {
+		readers = append(readers, rolloverReader{ID: int64(i + 1), FirstName: "e", LastInitial: "E.", Group: c})
 	}
 	rules := []rolloverRule{
 		{Src: "M1", Dst: "M2"}, {Src: "M2", Dst: "M3"}, {Src: "M3", Dst: "P1"},
@@ -30,7 +30,7 @@ func TestPlanRolloverFullChain(t *testing.T) {
 		{Src: "P4", Dst: "P5"}, {Src: "P5", Dst: "P6"}, {Src: "P6", Leaving: true},
 	}
 
-	moved, leavers := planRollover(pupils, rules)
+	moved, leavers := planRollover(readers, rules)
 
 	// Each moves up exactly one.
 	want := map[int64]string{1: "M2", 2: "M3", 3: "P1", 4: "P2", 5: "P3", 6: "P4", 7: "P5", 8: "P6"}
@@ -39,7 +39,7 @@ func TestPlanRolloverFullChain(t *testing.T) {
 	}
 	for id, c := range want {
 		if moved[id] != c {
-			t.Errorf("pupil %d: want class %q, got %q", id, c, moved[id])
+			t.Errorf("reader %d: want group %q, got %q", id, c, moved[id])
 		}
 	}
 	// Only P6 leaves.
@@ -49,28 +49,28 @@ func TestPlanRolloverFullChain(t *testing.T) {
 }
 
 func TestPlanRolloverEdgeCases(t *testing.T) {
-	pupils := []rolloverPupil{
-		{ID: 1, Class: "P1"},
-		{ID: 2, Class: "P2"},
-		{ID: 3, Class: ""},   // no class
-		{ID: 4, Class: "P5"}, // no rule
+	readers := []rolloverReader{
+		{ID: 1, Group: "P1"},
+		{ID: 2, Group: "P2"},
+		{ID: 3, Group: ""},   // no group
+		{ID: 4, Group: "P5"}, // no rule
 	}
 	rules := []rolloverRule{
 		{Src: "P1", Dst: ""},                  // empty = unchanged
 		{Src: "P2", Dst: "P3", Leaving: true}, // leaving wins
-		{Src: "", Dst: "P1"},                  // the class-less enter P1
+		{Src: "", Dst: "P1"},                  // the group-less enter P1
 	}
 
-	moved, leavers := planRollover(pupils, rules)
+	moved, leavers := planRollover(readers, rules)
 
 	if _, ok := moved[1]; ok {
-		t.Error("empty destination: the class must stay unchanged")
+		t.Error("empty destination: the group must stay unchanged")
 	}
 	if _, ok := moved[4]; ok {
-		t.Error("no rule: the class must stay unchanged")
+		t.Error("no rule: the group must stay unchanged")
 	}
 	if moved[3] != "P1" {
-		t.Errorf("no class -> want P1, got %q", moved[3])
+		t.Errorf("no group -> want P1, got %q", moved[3])
 	}
 	if len(leavers) != 1 || leavers[0] != 2 {
 		t.Errorf("leavers: want [2], got %v", leavers)
@@ -80,10 +80,10 @@ func TestPlanRolloverEdgeCases(t *testing.T) {
 	}
 }
 
-// A destination equal to the current class produces no update.
+// A destination equal to the current group produces no update.
 func TestPlanRolloverNoChange(t *testing.T) {
-	pupils := []rolloverPupil{{ID: 1, Class: "P3"}, {ID: 2, Class: "P3"}}
-	moved, leavers := planRollover(pupils, []rolloverRule{{Src: "P3", Dst: "P3"}})
+	readers := []rolloverReader{{ID: 1, Group: "P3"}, {ID: 2, Group: "P3"}}
+	moved, leavers := planRollover(readers, []rolloverRule{{Src: "P3", Dst: "P3"}})
 	if len(moved) != 0 || len(leavers) != 0 {
 		t.Errorf("want no change, got %v / %v", moved, leavers)
 	}
@@ -91,12 +91,12 @@ func TestPlanRolloverNoChange(t *testing.T) {
 
 // The order of the rules does not change the result.
 func TestPlanRolloverOrderIndependent(t *testing.T) {
-	pupils := []rolloverPupil{{ID: 1, Class: "P1"}, {ID: 2, Class: "P2"}, {ID: 3, Class: "P3"}}
+	readers := []rolloverReader{{ID: 1, Group: "P1"}, {ID: 2, Group: "P2"}, {ID: 3, Group: "P3"}}
 	forward := []rolloverRule{{Src: "P1", Dst: "P2"}, {Src: "P2", Dst: "P3"}, {Src: "P3", Leaving: true}}
 	backward := []rolloverRule{{Src: "P3", Leaving: true}, {Src: "P2", Dst: "P3"}, {Src: "P1", Dst: "P2"}}
 
-	ra, sa := planRollover(pupils, forward)
-	rb, sb := planRollover(pupils, backward)
+	ra, sa := planRollover(readers, forward)
+	rb, sb := planRollover(readers, backward)
 
 	sort.Slice(sa, func(i, j int) bool { return sa[i] < sa[j] })
 	sort.Slice(sb, func(i, j int) bool { return sb[i] < sb[j] })
@@ -105,18 +105,18 @@ func TestPlanRolloverOrderIndependent(t *testing.T) {
 	}
 	for id, c := range ra {
 		if rb[id] != c {
-			t.Errorf("pupil %d: %q against %q depending on the rule order", id, c, rb[id])
+			t.Errorf("reader %d: %q against %q depending on the rule order", id, c, rb[id])
 		}
 	}
 }
 
-// A class that receives pupils while some of its own stay is a merge; one
+// A group that receives readers while some of its own stay is a merge; one
 // emptied or moving on in the same submission is not.
 func TestFindMerges(t *testing.T) {
-	pupils := []rolloverPupil{
-		{ID: 1, Class: "P5"}, {ID: 2, Class: "P5"},
-		{ID: 3, Class: "P6"}, {ID: 4, Class: "P6"}, {ID: 5, Class: "P6"},
-		{ID: 6, Class: "P5B"},
+	readers := []rolloverReader{
+		{ID: 1, Group: "P5"}, {ID: 2, Group: "P5"},
+		{ID: 3, Group: "P6"}, {ID: 4, Group: "P6"}, {ID: 5, Group: "P6"},
+		{ID: 6, Group: "P5B"},
 	}
 	cases := []struct {
 		name  string
@@ -126,15 +126,15 @@ func TestFindMerges(t *testing.T) {
 	}{
 		{"P6 left untouched", []rolloverRule{{Src: "P5", Dst: "P6"}}, "P6<P5", 3},
 		{"P6 kept by name", []rolloverRule{{Src: "P5", Dst: "P6"}, {Src: "P6", Dst: "P6"}}, "P6<P5", 3},
-		{"two classes into it", []rolloverRule{{Src: "P5", Dst: "P6"}, {Src: "P5B", Dst: "P6"}}, "P6<P5+P5B", 3},
+		{"two groups into it", []rolloverRule{{Src: "P5", Dst: "P6"}, {Src: "P5B", Dst: "P6"}}, "P6<P5+P5B", 3},
 		{"P6 leaving", []rolloverRule{{Src: "P5", Dst: "P6"}, {Src: "P6", Leaving: true}}, "", 0},
 		{"P6 moving on", []rolloverRule{{Src: "P5", Dst: "P6"}, {Src: "P6", Dst: "S1"}}, "", 0},
-		{"two classes into an empty one", []rolloverRule{{Src: "P5", Dst: "P7"}, {Src: "P5B", Dst: "P7"}}, "", 0},
-		{"a leaving class going nowhere", []rolloverRule{{Src: "P5", Dst: "P6", Leaving: true}}, "", 0},
+		{"two groups into an empty one", []rolloverRule{{Src: "P5", Dst: "P7"}, {Src: "P5B", Dst: "P7"}}, "", 0},
+		{"a leaving group going nowhere", []rolloverRule{{Src: "P5", Dst: "P6", Leaving: true}}, "", 0},
 		{"nothing moves", []rolloverRule{{Src: "P5"}, {Src: "P6"}}, "", 0},
 	}
 	for _, c := range cases {
-		merges := findMerges(pupils, c.rules)
+		merges := findMerges(readers, c.rules)
 		if got := mergeKey(merges); got != c.want {
 			t.Errorf("%s: merges %q, want %q", c.name, got, c.want)
 			continue
@@ -155,26 +155,26 @@ func TestRolloverRefusesAnUnconfirmedMerge(t *testing.T) {
 		t.Fatalf("loading the templates: %v", err)
 	}
 	a.pages = sets
-	classOf := func(name string) string {
+	groupOf := func(name string) string {
 		t.Helper()
 		var c string
-		if err := a.db.QueryRow(`SELECT COALESCE(class, '') FROM borrower WHERE first_name = ?`, name).Scan(&c); err != nil {
-			t.Fatalf("class of %s: %v", name, err)
+		if err := a.db.QueryRow(`SELECT COALESCE(group_name, '') FROM borrower WHERE first_name = ?`, name).Scan(&c); err != nil {
+			t.Fatalf("group of %s: %v", name, err)
 		}
 		return c
 	}
-	if classOf("Tom") != "P3" || classOf("Léa") != "P4" {
-		t.Fatalf("fixture: Tom in %q, Léa in %q, want P3 and P4", classOf("Tom"), classOf("Léa"))
+	if groupOf("Tom") != "P3" || groupOf("Léa") != "P4" {
+		t.Fatalf("fixture: Tom in %q, Léa in %q, want P3 and P4", groupOf("Tom"), groupOf("Léa"))
 	}
 	post := func(mergeOK string) {
 		t.Helper()
-		pupils, err := pupilsSnapshot(a.db)
+		readers, err := readersSnapshot(a.db)
 		if err != nil {
-			t.Fatalf("pupilsSnapshot: %v", err)
+			t.Fatalf("readersSnapshot: %v", err)
 		}
-		// P3 into P4, and the P4 row left empty: P4's own pupils stay.
+		// P3 into P4, and the P4 row left empty: P4's own readers stay.
 		form := url.Values{"n": {"2"}, "src_0": {"P4"}, "dst_0": {""},
-			"src_1": {"P3"}, "dst_1": {"P4"}, "state": {rolloverState(pupils)}}
+			"src_1": {"P3"}, "dst_1": {"P4"}, "state": {rolloverState(readers)}}
 		if mergeOK != "" {
 			form.Set("merge_ok", mergeOK)
 		}
@@ -188,23 +188,23 @@ func TestRolloverRefusesAnUnconfirmedMerge(t *testing.T) {
 	}
 
 	post("")
-	if got := classOf("Tom"); got != "P3" {
+	if got := groupOf("Tom"); got != "P3" {
 		t.Fatalf("an unconfirmed merge moved Tom to %q", got)
 	}
 	post("P4<P5")
-	if got := classOf("Tom"); got != "P3" {
+	if got := groupOf("Tom"); got != "P3" {
 		t.Fatalf("a confirmation of another merge moved Tom to %q", got)
 	}
 	post("P4<P3")
-	if got := classOf("Tom"); got != "P4" {
+	if got := groupOf("Tom"); got != "P4" {
 		t.Errorf("the confirmed merge left Tom in %q, want P4", got)
 	}
 }
 
 // One year up, except at the top of each series, where arithmetic would move
-// the leavers into a class that does not exist.
-func TestNextClasses(t *testing.T) {
-	got := nextClasses([]string{"M1", "M2", "M3", "P1", "P5", "P6", "P5A", "P5B", "P6B",
+// the leavers into a group that does not exist.
+func TestNextGroups(t *testing.T) {
+	got := nextGroups([]string{"M1", "M2", "M3", "P1", "P5", "P6", "P5A", "P5B", "P6B",
 		"3A", "4A", "L09", "L10", "Mme Dupont", "P5-6", "Aucune classe", "K%1", "K%2"})
 	want := map[string]string{
 		"M1": "M2", "M2": "M3", "P1": "P2", "P5": "P6",
@@ -225,11 +225,11 @@ func TestNextClasses(t *testing.T) {
 func TestMarkDuplicates(t *testing.T) {
 	existing := map[string]bool{borrowerKey("Léa", "D.", "P4"): true}
 	rows := []importRow{
-		{FirstName: "Léa", LastInitial: "D.", Class: "P4"}, // already on file
-		{FirstName: "léa", LastInitial: "d.", Class: "p4"}, // same, different case
-		{FirstName: "Tom", LastInitial: "B.", Class: "P3"}, // new
-		{FirstName: "Tom", LastInitial: "B.", Class: "P3"}, // repeated in the file
-		{FirstName: "Léa", LastInitial: "D.", Class: "P5"}, // same name, other class
+		{FirstName: "Léa", LastInitial: "D.", Group: "P4"}, // already on file
+		{FirstName: "léa", LastInitial: "d.", Group: "p4"}, // same, different case
+		{FirstName: "Tom", LastInitial: "B.", Group: "P3"}, // new
+		{FirstName: "Tom", LastInitial: "B.", Group: "P3"}, // repeated in the file
+		{FirstName: "Léa", LastInitial: "D.", Group: "P5"}, // same name, other group
 	}
 	count := markDuplicates(rows, existing)
 	if count != 3 {
@@ -239,7 +239,7 @@ func TestMarkDuplicates(t *testing.T) {
 	for i, a := range want {
 		if rows[i].Duplicate != a {
 			t.Errorf("row %d (%s %s %s): duplicate=%v, want %v",
-				i, rows[i].FirstName, rows[i].LastInitial, rows[i].Class, rows[i].Duplicate, a)
+				i, rows[i].FirstName, rows[i].LastInitial, rows[i].Group, rows[i].Duplicate, a)
 		}
 	}
 }
@@ -261,7 +261,7 @@ func TestParseCSV(t *testing.T) {
 			[]importRow{{"Durant, Léa", "D.", "P4", false}}},
 		{"blank lines ignored", "Léa,Durant,P4\n\n\nTom,Bernard,P3",
 			[]importRow{{"Léa", "D.", "P4", false}, {"Tom", "B.", "P3", false}}},
-		{"class missing", "Léa,Durant", []importRow{{"Léa", "D.", "", false}}},
+		{"group missing", "Léa,Durant", []importRow{{"Léa", "D.", "", false}}},
 		{"stray spaces", " Léa , Durant , P4 ",
 			[]importRow{{"Léa", "D.", "P4", false}}},
 		{"empty", "", nil},
@@ -327,7 +327,7 @@ func TestLastNameInitialKeepsOnlyTheInitial(t *testing.T) {
 // --- The borrower lists ---------------------------------------------------
 //
 // The fixture is app/testdata/fixture.sql (see testDB): Léa D. (P4), Tom B. (P3),
-// Zoé P. (P4), Noah M. (P3) and Claire L., a teacher with no class. Tom has one
+// Zoé P. (P4), Noah M. (P3) and Claire L., a staff member with no group. Tom has one
 // overdue loan, Léa one on time.
 
 func TestListBorrowersFiltered(t *testing.T) {
@@ -353,38 +353,38 @@ func TestListBorrowersFiltered(t *testing.T) {
 
 	cases := []struct {
 		q     string
-		class string
+		group string
 		want  int
 		why   string
 	}{
-		{"", "P4", 2, "class filter"},
-		{"", "P3", 2, "class filter"},
+		{"", "P4", 2, "group filter"},
+		{"", "P3", 2, "group filter"},
 		{"", "", 5, "no filter"},
 		{"léa", "", 1, "first name"},
 		{"LÉA", "", 1, "case does not matter"},
-		{"P3", "", 2, "class as a search word"},
+		{"P3", "", 2, "group as a search word"},
 		{"m.", "", 1, "last-name initial"},
-		{"léa", "P3", 0, "the class filter and the words both apply"},
+		{"léa", "P3", 0, "the group filter and the words both apply"},
 		// A card scanned into the search box finds its borrower.
-		{"LEC73048", "", 1, "a pupil's card code, as a scanner types it"},
+		{"LEC73048", "", 1, "a reader's card code, as a scanner types it"},
 		{"lec73048", "", 1, "case does not matter for a code either"},
-		{"LEC40275", "", 1, "a teacher's card code"},
-		{"LEC73048", "P3", 0, "the class filter still applies to a scan"},
+		{"LEC40275", "", 1, "a staff member's card code"},
+		{"LEC73048", "P3", 0, "the group filter still applies to a scan"},
 		{"zzz", "", 0, "no match"},
 	}
 	for _, c := range cases {
-		got, err := a.listBorrowersFiltered(brFilter{Q: c.q, Class: c.class})
+		got, err := a.listBorrowersFiltered(brFilter{Q: c.q, Group: c.group})
 		if err != nil {
-			t.Fatalf("listBorrowersFiltered(%q, %q): %v", c.q, c.class, err)
+			t.Fatalf("listBorrowersFiltered(%q, %q): %v", c.q, c.group, err)
 		}
 		if len(got) != c.want {
-			t.Errorf("listBorrowersFiltered(%q, class=%q) = %d, want %d (%s)",
-				c.q, c.class, len(got), c.want, c.why)
+			t.Errorf("listBorrowersFiltered(%q, group=%q) = %d, want %d (%s)",
+				c.q, c.group, len(got), c.want, c.why)
 		}
 	}
 }
 
-// A deactivated pupil leaves the list without leaving the database: GDPR rules forbid
+// A deactivated reader leaves the list without leaving the database: GDPR rules forbid
 // deleting, and a mistaken deactivation has to be undoable.
 func TestListBorrowersSeparatesTheInactive(t *testing.T) {
 	loadForTest(t)
@@ -505,8 +505,8 @@ func TestPageBorrowers(t *testing.T) {
 	}
 	for i := 0; i < 2*pageSize+5; i++ {
 		if _, err := tx.Exec(
-			`INSERT INTO borrower (first_name, last_initial, class, kind, card_code, active)
-			 VALUES (?, 'X.', 'P6', 'student', ?, 1)`,
+			`INSERT INTO borrower (first_name, last_initial, group_name, card_code, active)
+			 VALUES (?, 'X.', 'P6', ?, 1)`,
 			fmt.Sprintf("Élève%d", i), fmt.Sprintf("LEC-9%03d", i)); err != nil {
 			t.Fatal(err)
 		}
@@ -574,7 +574,7 @@ func TestBorrowerCounters(t *testing.T) {
 	if err != nil {
 		t.Fatalf("loadBorrower: %v", err)
 	}
-	if tom.FirstName != "Tom" || tom.LastInitial != "B." || tom.Class != "P3" {
+	if tom.FirstName != "Tom" || tom.LastInitial != "B." || tom.Group != "P3" {
 		t.Errorf("borrower: %+v", tom)
 	}
 	if tom.TotalCount != 1 || tom.OutCount != 1 || tom.OverdueCount != 1 {
@@ -609,44 +609,44 @@ func TestLoadBorrowerUnknownID(t *testing.T) {
 	}
 }
 
-// Teachers have no class and must not turn up as one in the filter tabs.
-func TestListClasses(t *testing.T) {
+// Staff may have no group and must not turn up as one in the filter tabs.
+func TestListGroups(t *testing.T) {
 	loadForTest(t)
 	restoreSettings(t)
 	a := testApp(t)
 	setAnonymousID(anonymousBorrowerID(a.db))
 
-	classes, err := a.listClasses(true)
+	groups, err := a.listGroups(true)
 	if err != nil {
-		t.Fatalf("listClasses: %v", err)
+		t.Fatalf("listGroups: %v", err)
 	}
-	// The classless are one of the entries, so teachers can be reached.
+	// The groupless are one of the entries, so the ungrouped can be reached.
 	want := map[string]int{"P3": 2, "P4": 2, "": 1}
-	if len(classes) != len(want) {
-		t.Fatalf("classes = %+v, want %v", classes, want)
+	if len(groups) != len(want) {
+		t.Fatalf("groups = %+v, want %v", groups, want)
 	}
-	for _, c := range classes {
-		if want[c.Class] != c.Count {
-			t.Errorf("class %q: %d pupils, want %d", c.Class, c.Count, want[c.Class])
+	for _, c := range groups {
+		if want[c.Group] != c.Count {
+			t.Errorf("group %q: %d readers, want %d", c.Group, c.Count, want[c.Group])
 		}
 	}
-	// Sorted, with the classless last.
-	if classes[0].Class != "P3" {
-		t.Errorf("classes not sorted: %+v", classes)
+	// Sorted, with the groupless last.
+	if groups[0].Group != "P3" {
+		t.Errorf("groups not sorted: %+v", groups)
 	}
-	if classes[len(classes)-1].Class != "" {
-		t.Errorf("the classless are not last: %+v", classes)
+	if groups[len(groups)-1].Group != "" {
+		t.Errorf("the groupless are not last: %+v", groups)
 	}
-	// The anonymisation sentinel has no class and is not a person: it must not
+	// The anonymisation sentinel has no group and is not a person: it must not
 	// be counted among them.
-	for _, c := range classes {
-		if c.Class == "" && c.Count != 1 {
-			t.Errorf("the classless count is %d, want 1 (the teacher alone)", c.Count)
+	for _, c := range groups {
+		if c.Group == "" && c.Count != 1 {
+			t.Errorf("the groupless count is %d, want 1 (the staff member alone)", c.Count)
 		}
 	}
 }
 
-// A second import of the same list must not duplicate pupils.
+// A second import of the same list must not duplicate readers.
 func TestExistingBorrowersFeedsTheDuplicateCheck(t *testing.T) {
 	a := testApp(t)
 
@@ -655,22 +655,22 @@ func TestExistingBorrowersFeedsTheDuplicateCheck(t *testing.T) {
 		t.Fatalf("existingBorrowers: %v", err)
 	}
 	if !existing[borrowerKey("Léa", "D.", "P4")] {
-		t.Error("a pupil on file was not recognised")
+		t.Error("a reader on file was not recognised")
 	}
 	// The key is built on the initial, which is all that is stored, and
 	// ignores case and stray spaces — a September list has both.
 	if !existing[borrowerKey("  léa  ", "d.", "P4")] {
 		t.Error("the key is sensitive to case or spacing")
 	}
-	// The same first name in another class is another child.
+	// The same first name in another group is another reader.
 	if existing[borrowerKey("Léa", "D.", "P5")] {
-		t.Error("the class is not part of the key")
+		t.Error("the group is not part of the key")
 	}
 
 	rows := []importRow{
-		{FirstName: "Léa", LastInitial: "D.", Class: "P4"},  // already on file
-		{FirstName: "Nina", LastInitial: "V.", Class: "P4"}, // new
-		{FirstName: "Nina", LastInitial: "V.", Class: "P4"}, // repeated in the file
+		{FirstName: "Léa", LastInitial: "D.", Group: "P4"},  // already on file
+		{FirstName: "Nina", LastInitial: "V.", Group: "P4"}, // new
+		{FirstName: "Nina", LastInitial: "V.", Group: "P4"}, // repeated in the file
 	}
 	if n := markDuplicates(rows, existing); n != 2 {
 		t.Errorf("%d duplicates found, want 2", n)
@@ -680,8 +680,8 @@ func TestExistingBorrowersFeedsTheDuplicateCheck(t *testing.T) {
 	}
 }
 
-// A deactivated pupil is not on file for the import: re-importing them is how
-// a child who comes back is re-entered.
+// A deactivated reader is not on file for the import: re-importing them is how
+// a reader who comes back is re-entered.
 func TestExistingBorrowersIgnoresTheInactive(t *testing.T) {
 	a := testApp(t)
 	if _, err := a.db.Exec(`UPDATE borrower SET active = 0 WHERE id = 101`); err != nil {
@@ -692,11 +692,11 @@ func TestExistingBorrowersIgnoresTheInactive(t *testing.T) {
 		t.Fatalf("existingBorrowers: %v", err)
 	}
 	if existing[borrowerKey("Léa", "D.", "P4")] {
-		t.Error("a deactivated pupil blocks their own re-entry")
+		t.Error("a deactivated reader blocks their own re-entry")
 	}
 }
 
-// Pupils and teachers carry the same kind of card (codes.go): the kind is a
+// Readers and staff carry the same kind of card (codes.go): the group is a
 // column, and a card cannot be reprinted every time it changes.
 func TestCardCodesAreTheSameForEveryone(t *testing.T) {
 	a := testApp(t)
@@ -749,8 +749,8 @@ func TestCardCodesAvoidWhatIsAlreadyTaken(t *testing.T) {
 		}
 		seen[code] = true
 		if _, err := tx.Exec(
-			`INSERT INTO borrower (first_name, last_initial, kind, card_code, active)
-			 VALUES ('Nina', 'V.', 'student', ?, 1)`, code); err != nil {
+			`INSERT INTO borrower (first_name, last_initial, card_code, active)
+			 VALUES ('Nina', 'V.', ?, 1)`, code); err != nil {
 			t.Fatalf("insert %s: %v", code, err)
 		}
 	}
@@ -758,19 +758,20 @@ func TestCardCodesAvoidWhatIsAlreadyTaken(t *testing.T) {
 
 // The rollover reasons on a snapshot, and the snapshot must carry what stops a
 // leaver being deactivated: the books still in their hands.
-func TestPupilsSnapshot(t *testing.T) {
+func TestReadersSnapshot(t *testing.T) {
 	a := testApp(t)
 
-	pupils, err := pupilsSnapshot(a.db)
+	readers, err := readersSnapshot(a.db)
 	if err != nil {
-		t.Fatalf("pupilsSnapshot: %v", err)
+		t.Fatalf("readersSnapshot: %v", err)
 	}
-	// Claire is a teacher: the rollover is about classes moving up.
-	if len(pupils) != 4 {
-		t.Fatalf("%d pupils, want 4 (the teacher is not one)", len(pupils))
+	// Claire has no group: she is listed under "no group", whose rule defaults to
+	// staying put.
+	if len(readers) != 5 {
+		t.Fatalf("%d readers, want 5 (every active borrower, the ungrouped included)", len(readers))
 	}
-	byName := make(map[string]rolloverPupil, len(pupils))
-	for _, p := range pupils {
+	byName := make(map[string]rolloverReader, len(readers))
+	for _, p := range readers {
 		byName[p.FirstName] = p
 	}
 	if byName["Tom"].OutCount != 1 {
@@ -779,58 +780,58 @@ func TestPupilsSnapshot(t *testing.T) {
 	if byName["Zoé"].OutCount != 0 {
 		t.Errorf("Zoé has nothing out, OutCount = %d", byName["Zoé"].OutCount)
 	}
-	if byName["Tom"].Class != "P3" {
-		t.Errorf("Tom's class: %q, want P3", byName["Tom"].Class)
+	if byName["Tom"].Group != "P3" {
+		t.Errorf("Tom's group: %q, want P3", byName["Tom"].Group)
 	}
 }
 
-// HTMX actions do not carry the class filter, so it is recovered from the URL
+// HTMX actions do not carry the group filter, so it is recovered from the URL
 // the browser shows — which HTMX sends as a header.
-func TestCurrentClass(t *testing.T) {
+func TestCurrentGroup(t *testing.T) {
 	// The form field wins when there is one.
-	r := httptest.NewRequest("POST", "/borrowers/search", strings.NewReader("class=P4"))
+	r := httptest.NewRequest("POST", "/borrowers/search", strings.NewReader("group=P4"))
 	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	r.Header.Set("HX-Current-URL", "https://bibli.example.org/borrowers?class=P3")
-	if got := currentClass(r); got != "P4" {
-		t.Errorf("currentClass = %q, want P4 (the posted field)", got)
+	r.Header.Set("HX-Current-URL", "https://bibli.example.org/borrowers?group=P3")
+	if got := currentGroup(r); got != "P4" {
+		t.Errorf("currentGroup = %q, want P4 (the posted field)", got)
 	}
 
-	// Otherwise the class comes off the URL the browser is showing.
+	// Otherwise the group comes off the URL the browser is showing.
 	r = httptest.NewRequest("POST", "/borrowers/search", nil)
-	r.Header.Set("HX-Current-URL", "https://bibli.example.org/borrowers?class=P3")
-	if got := currentClass(r); got != "P3" {
-		t.Errorf("currentClass = %q, want P3 (from HX-Current-URL)", got)
+	r.Header.Set("HX-Current-URL", "https://bibli.example.org/borrowers?group=P3")
+	if got := currentGroup(r); got != "P3" {
+		t.Errorf("currentGroup = %q, want P3 (from HX-Current-URL)", got)
 	}
 
 	// No filter anywhere: everything.
 	r = httptest.NewRequest("POST", "/borrowers/search", nil)
-	if got := currentClass(r); got != "" {
-		t.Errorf("currentClass = %q, want empty", got)
+	if got := currentGroup(r); got != "" {
+		t.Errorf("currentGroup = %q, want empty", got)
 	}
 	// A header that is not a URL must not take the screen down.
 	r = httptest.NewRequest("POST", "/borrowers/search", nil)
 	r.Header.Set("HX-Current-URL", "://not a url")
-	if got := currentClass(r); got != "" {
-		t.Errorf("currentClass = %q on a malformed header, want empty", got)
+	if got := currentGroup(r); got != "" {
+		t.Errorf("currentGroup = %q on a malformed header, want empty", got)
 	}
 }
 
-// The add form posts a "class" of its own — the new pupil's — and the list it
-// swaps in must stay on the class the screen was filtered to.
-func TestUrlClassIgnoresThePostedField(t *testing.T) {
-	r := httptest.NewRequest("POST", "/borrowers/add", strings.NewReader("first_name=Léa&last_name=Durant&class=P4"))
+// The add form posts a "group" of its own — the new reader's — and the list it
+// swaps in must stay on the group the screen was filtered to.
+func TestUrlGroupIgnoresThePostedField(t *testing.T) {
+	r := httptest.NewRequest("POST", "/borrowers/add", strings.NewReader("first_name=Léa&last_name=Durant&group=P4"))
 	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	r.Header.Set("HX-Current-URL", "https://bibli.example.org/borrowers?class=P3")
-	if got := urlClass(r); got != "P3" {
-		t.Errorf("urlClass = %q, want P3 (the filter, not the new borrower's class)", got)
+	r.Header.Set("HX-Current-URL", "https://bibli.example.org/borrowers?group=P3")
+	if got := urlGroup(r); got != "P3" {
+		t.Errorf("urlGroup = %q, want P3 (the filter, not the new borrower's group)", got)
 	}
 
 	// An unfiltered list stays unfiltered.
-	r = httptest.NewRequest("POST", "/borrowers/add", strings.NewReader("class=P4"))
+	r = httptest.NewRequest("POST", "/borrowers/add", strings.NewReader("group=P4"))
 	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	r.Header.Set("HX-Current-URL", "https://bibli.example.org/borrowers")
-	if got := urlClass(r); got != "" {
-		t.Errorf("urlClass = %q, want empty", got)
+	if got := urlGroup(r); got != "" {
+		t.Errorf("urlGroup = %q, want empty", got)
 	}
 }
 
@@ -890,16 +891,16 @@ func TestReadIncomingCSV(t *testing.T) {
 	}
 }
 
-// Pupils with no class are grouped under a label, which is shown on screen and
+// Readers with no group are grouped under a label, which is shown on screen and
 // posted back by the rollover form — so it follows the instance language.
-func TestNoClassLabel(t *testing.T) {
+func TestNoGroupLabel(t *testing.T) {
 	loadForTest(t)
 	restoreSettings(t)
 
 	setLang("fr")
-	fr := noClassLabel()
+	fr := noGroupLabel()
 	setLang("en")
-	en := noClassLabel()
+	en := noGroupLabel()
 
 	if fr == "" || en == "" {
 		t.Fatalf("empty label: fr %q, en %q", fr, en)
@@ -907,43 +908,43 @@ func TestNoClassLabel(t *testing.T) {
 	if fr == en {
 		t.Errorf("the label does not follow the language: %q in both", fr)
 	}
-	if fr == "borrower.no_class" {
+	if fr == "borrower.no_group" {
 		t.Error("the key is showing through instead of the string")
 	}
 }
 
-// "Every class" is the empty value, so the classless need one of their own.
-func TestClassFilter(t *testing.T) {
+// "Every group" is the empty value, so the groupless need one of their own.
+func TestGroupFilter(t *testing.T) {
 	cases := []struct {
 		in     string
 		value  string
 		filter bool
 		why    string
 	}{
-		{"", "", false, "the dropdown's own \"every class\""},
-		{"   ", "", false, "whitespace is still every class"},
-		{classFilterNone, "", true, "the borrowers with no class"},
-		{"P3", "P3", true, "one class"},
+		{"", "", false, "the dropdown's own \"every group\""},
+		{"   ", "", false, "whitespace is still every group"},
+		{groupFilterNone, "", true, "the borrowers with no group"},
+		{"P3", "P3", true, "one group"},
 		{" P3 ", "P3", true, "trimmed"},
 	}
 	for _, c := range cases {
-		value, filter := classFilter(c.in)
+		value, filter := groupFilter(c.in)
 		if value != c.value || filter != c.filter {
-			t.Errorf("classFilter(%q) = (%q, %v), want (%q, %v) — %s",
+			t.Errorf("groupFilter(%q) = (%q, %v), want (%q, %v) — %s",
 				c.in, value, filter, c.value, c.filter, c.why)
 		}
 	}
-	// The two must not collapse into each other: every class and no class are
+	// The two must not collapse into each other: every group and no group are
 	// different screens.
-	_, allFilters := classFilter("")
-	_, noneFilters := classFilter(classFilterNone)
+	_, allFilters := groupFilter("")
+	_, noneFilters := groupFilter(groupFilterNone)
 	if allFilters == noneFilters {
-		t.Error("every class and the classless produce the same filter")
+		t.Error("every group and the groupless produce the same filter")
 	}
 }
 
-// The card sheet reads the dropdown's "-" as the borrowers who have no class.
-func TestListCardsFollowsTheClassFilter(t *testing.T) {
+// The card sheet reads the dropdown's "-" as the borrowers who have no group.
+func TestListCardsFollowsTheGroupFilter(t *testing.T) {
 	a := testApp(t)
 
 	all, err := a.listCards("")
@@ -962,12 +963,12 @@ func TestListCardsFollowsTheClassFilter(t *testing.T) {
 		t.Errorf("%d cards for P3, want 2", len(p3))
 	}
 
-	none, err := a.listCards(classFilterNone)
+	none, err := a.listCards(groupFilterNone)
 	if err != nil {
-		t.Fatalf("listCards(%q): %v", classFilterNone, err)
+		t.Fatalf("listCards(%q): %v", groupFilterNone, err)
 	}
 	if len(none) != 1 || none[0].FirstName != "Claire" {
-		t.Errorf("cards for the classless = %+v, want the teacher alone", none)
+		t.Errorf("cards for the groupless = %+v, want the staff member alone", none)
 	}
 }
 
@@ -996,7 +997,7 @@ func TestBorrowerPageEditPostsTheFieldTheHandlerReads(t *testing.T) {
 }
 
 // Posting the same rollover form twice (a reload, a second tab) must not move
-// the school up twice: the second post finds the classes changed and refuses.
+// everyone up twice: the second post finds the groups changed and refuses.
 func TestRolloverRefusesAStaleForm(t *testing.T) {
 	loadForTest(t)
 	a := testApp(t)
@@ -1006,24 +1007,24 @@ func TestRolloverRefusesAStaleForm(t *testing.T) {
 	}
 	a.pages = sets
 
-	pupils, err := pupilsSnapshot(a.db)
+	readers, err := readersSnapshot(a.db)
 	if err != nil {
-		t.Fatalf("pupilsSnapshot: %v", err)
+		t.Fatalf("readersSnapshot: %v", err)
 	}
-	classOf := func(name string) string {
+	groupOf := func(name string) string {
 		t.Helper()
 		var c string
-		if err := a.db.QueryRow(`SELECT COALESCE(class, '') FROM borrower WHERE first_name = ?`, name).Scan(&c); err != nil {
-			t.Fatalf("class of %s: %v", name, err)
+		if err := a.db.QueryRow(`SELECT COALESCE(group_name, '') FROM borrower WHERE first_name = ?`, name).Scan(&c); err != nil {
+			t.Fatalf("group of %s: %v", name, err)
 		}
 		return c
 	}
-	if classOf("Tom") != "P3" {
-		t.Fatalf("fixture: Tom is in %q, want P3", classOf("Tom"))
+	if groupOf("Tom") != "P3" {
+		t.Fatalf("fixture: Tom is in %q, want P3", groupOf("Tom"))
 	}
 	// The same form posted twice, as a reload resends it.
 	form := url.Values{"n": {"2"}, "src_0": {"P3"}, "dst_0": {"P4"},
-		"src_1": {"P4"}, "dst_1": {"P5"}, "state": {rolloverState(pupils)}}
+		"src_1": {"P4"}, "dst_1": {"P5"}, "state": {rolloverState(readers)}}
 	post := func() {
 		r := httptest.NewRequest("POST", "/borrowers/rollover", strings.NewReader(form.Encode()))
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -1035,16 +1036,16 @@ func TestRolloverRefusesAStaleForm(t *testing.T) {
 	}
 
 	post()
-	if got := classOf("Tom"); got != "P4" {
+	if got := groupOf("Tom"); got != "P4" {
 		t.Fatalf("first post: Tom in %q, want P4", got)
 	}
 	post()
-	if got := classOf("Tom"); got != "P4" {
+	if got := groupOf("Tom"); got != "P4" {
 		t.Errorf("a stale form moved Tom again, to %q", got)
 	}
 }
 
-// Reactivation brings back a pupil who left, never the sentinel nor a record
+// Reactivation brings back a reader who left, never the sentinel nor a record
 // the purge has emptied; deactivating twice keeps the first date, which
 // the retention period counts from.
 func TestReactivationGuards(t *testing.T) {
@@ -1096,7 +1097,7 @@ func TestReactivationGuards(t *testing.T) {
 	// And she can still come back.
 	post(103, "reactivate")
 	if active, _ := state(103); !active {
-		t.Error("a deactivated pupil could not be reactivated")
+		t.Error("a deactivated reader could not be reactivated")
 	}
 
 	// Once the purge has emptied her record, there is no one to bring back.
@@ -1154,7 +1155,7 @@ func TestDecodeCSVBytesReadsWindows1252(t *testing.T) {
 }
 
 // The empty sheet is a workbook Excel opens, headed in the instance language
-// with words the import skips, so pasting it whole imports the pupils only.
+// with words the import skips, so pasting it whole imports the readers only.
 func TestImportTemplateRoundTrips(t *testing.T) {
 	loadForTest(t)
 	a := testApp(t)
@@ -1188,7 +1189,7 @@ func TestImportTemplateRoundTrips(t *testing.T) {
 			t.Errorf("%s: the empty sheet carries a data row", lang)
 		}
 		if !isHeader(header[0]) {
-			t.Errorf("%s: isHeader(%q) = false, so a pasted header row would import as a pupil", lang, header[0])
+			t.Errorf("%s: isHeader(%q) = false, so a pasted header row would import as a reader", lang, header[0])
 		}
 
 		// The sheet filled in and pasted back: cells arrive tab-separated.

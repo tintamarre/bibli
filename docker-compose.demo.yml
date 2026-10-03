@@ -3,7 +3,7 @@
 #     docker compose -f docker-compose.demo.yml up -d
 #
 # A separate file rather than a profile in docker-compose.yml: BIBLI_DEMO_RESET
-# deletes the whole collection every time it fires, and a school must not be
+# deletes the whole collection every time it fires, and an organisation must not be
 # able to reach it by uncommenting a line in the file it was given.
 #
 # No backups (the binary turns them off in demonstration mode) and a named

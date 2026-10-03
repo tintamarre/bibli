@@ -107,9 +107,9 @@ func TestIconsShareOneGrid(t *testing.T) {
 				t.Errorf("%s: %s missing — the set no longer draws to one grid", name, want)
 			}
 		}
-		// The class a caller passes is what sizes the icon.
+		// The group a caller passes is what sizes the icon.
 		if !strings.Contains(svg, `class="{{.}}"`) {
-			t.Errorf("%s: does not take its class from the caller", name)
+			t.Errorf("%s: does not take its group from the caller", name)
 		}
 		// A hard-coded width or height would defeat the CSS slot.
 		if strings.Contains(svg, "<svg") && strings.Contains(svg[:strings.Index(svg, ">")], " width=") {
@@ -120,7 +120,7 @@ func TestIconsShareOneGrid(t *testing.T) {
 
 // Every slot an icon is handed must exist in the stylesheet, otherwise the icon
 // renders at the SVG default of 300x150 and blows the layout apart.
-func TestEveryIconClassIsStyled(t *testing.T) {
+func TestEveryIconGroupIsStyled(t *testing.T) {
 	css, err := os.ReadFile("static/app.css")
 	if err != nil {
 		t.Fatal(err)
@@ -142,7 +142,7 @@ func TestEveryIconClassIsStyled(t *testing.T) {
 			}
 			seen[m[1]] = true
 			if !strings.Contains(string(css), "."+m[1]) {
-				t.Errorf("%s: class %q has no rule in app.css — the icon would render at 300x150",
+				t.Errorf("%s: group %q has no rule in app.css — the icon would render at 300x150",
 					filepath.Base(path), m[1])
 			}
 		}
@@ -167,7 +167,7 @@ func TestEveryPageNamesItsTitleIcon(t *testing.T) {
 		}
 		s := string(content)
 		// Only pages inside the shared layout have a title to put an icon beside;
-		// a "document" (login, the printouts, the parent space) draws its own head.
+		// a "document" (login, the printouts, the tracking page) draws its own head.
 		if !strings.Contains(s, `{{define "content"}}`) {
 			continue
 		}
@@ -182,7 +182,7 @@ func TestEveryPageNamesItsTitleIcon(t *testing.T) {
 	}
 }
 
-// The width class a page asks for must exist in app.css, or the page silently
+// The width group a page asks for must exist in app.css, or the page silently
 // renders at full width.
 func TestEveryPageWidthIsStyled(t *testing.T) {
 	css, err := os.ReadFile("static/app.css")
@@ -213,8 +213,8 @@ func TestEveryPageWidthIsStyled(t *testing.T) {
 	}
 }
 
-// builtAtRuntime are the classes no template spells out: htmx's, the status
-// classes ("status-{{.Status}}") and the heatmap shades ("hm-l{{.Level}}").
+// builtAtRuntime are the groups no template spells out: htmx's, the status
+// groups ("status-{{.Status}}") and the heatmap shades ("hm-l{{.Level}}").
 var builtAtRuntime = map[string]bool{
 	"htmx-request":     true,
 	"status-available": true,
@@ -227,16 +227,16 @@ var builtAtRuntime = map[string]bool{
 	"hm-l4":            true,
 }
 
-// The other direction of TestEveryIconClassIsStyled: no CSS rule for markup that has gone.
+// The other direction of TestEveryIconGroupIsStyled: no CSS rule for markup that has gone.
 func TestEveryStyleRuleIsUsed(t *testing.T) {
 	css, err := os.ReadFile("static/app.css")
 	if err != nil {
 		t.Fatal(err)
 	}
-	// Class names inside comments are prose, not rules.
+	// Group names inside comments are prose, not rules.
 	stripped := regexp.MustCompile(`(?s)/\*.*?\*/`).ReplaceAllString(string(css), "")
 	// Quoted strings hold file names ("atkinson-400.woff2") and attribute
-	// values, never a class.
+	// values, never a group.
 	stripped = regexp.MustCompile(`"[^"]*"`).ReplaceAllString(stripped, `""`)
 
 	var used strings.Builder
@@ -267,10 +267,10 @@ func TestEveryStyleRuleIsUsed(t *testing.T) {
 		seen[name] = true
 		if !strings.Contains(haystack, name) {
 			t.Errorf("app.css: .%s is styled but nothing names it — a dead rule, "+
-				"or a class built at runtime that belongs in builtAtRuntime", name)
+				"or a group built at runtime that belongs in builtAtRuntime", name)
 		}
 	}
 	if len(seen) == 0 {
-		t.Fatal("no class found in app.css")
+		t.Fatal("no group found in app.css")
 	}
 }

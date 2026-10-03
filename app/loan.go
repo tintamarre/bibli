@@ -59,33 +59,33 @@ type OpenLoan struct {
 	Title       string
 	FirstName   string
 	LastInitial string
-	Class       string
+	Group       string
 	LoanedOn    string
 }
 
 // Who renders the borrower in plain words, "Amy S. (P4)".
 func (p OpenLoan) Who() string {
 	s := strings.TrimSpace(p.FirstName + " " + p.LastInitial)
-	if p.Class != "" {
-		s += " (" + p.Class + ")"
+	if p.Group != "" {
+		s += " (" + p.Group + ")"
 	}
 	return s
 }
 
 const openLoanColumns = `l.id, c.id, c.code, c.status, b.title,
-	br.first_name, br.last_initial, COALESCE(br.class, ''), l.loaned_on`
+	br.first_name, br.last_initial, COALESCE(br.group_name, ''), l.loaned_on`
 
 func scanOpenLoan(sc rowScanner, p *OpenLoan) error {
 	return sc.Scan(&p.LoanID, &p.CopyID, &p.Code, &p.Status, &p.Title,
-		&p.FirstName, &p.LastInitial, &p.Class, &p.LoanedOn)
+		&p.FirstName, &p.LastInitial, &p.Group, &p.LoanedOn)
 }
 
 // borrowerLiteCols and scanBorrowerLite are the borrower fields the lending
-// screen shows; the class can be NULL, hence *string in Borrower.
-const borrowerLiteCols = "id, first_name, last_initial, class"
+// screen shows; the group can be NULL, hence *string in Borrower.
+const borrowerLiteCols = "id, first_name, last_initial, group_name"
 
 func scanBorrowerLite(sc rowScanner, b *Borrower) error {
-	return sc.Scan(&b.ID, &b.FirstName, &b.LastInitial, &b.Class)
+	return sc.Scan(&b.ID, &b.FirstName, &b.LastInitial, &b.Group)
 }
 
 // activeBorrowerByID loads an active borrower for the lending screen; a missing
@@ -110,7 +110,7 @@ const openLoanJoins = `
 	   JOIN borrower br ON br.id = l.borrower_id`
 
 // A title with several copies can be out several times at once: picking the
-// oldest loan would close another child's, with no undo, so the screen asks.
+// oldest loan would close another reader's, with no undo, so the screen asks.
 func (a *app) openLoansByISBN(scan string) ([]OpenLoan, string, error) {
 	i13, i10, e := ISBNForms(scan)
 	if e != nil {
@@ -150,17 +150,17 @@ func (a *app) openLoansByISBN(scan string) ([]OpenLoan, string, error) {
 func (a *app) openLoansForScan(code string) ([]OpenLoan, string, error) {
 	var p OpenLoan
 	var loanID sql.NullInt64
-	var firstName, lastName, class, loanedOn sql.NullString
+	var firstName, lastName, group, loanedOn sql.NullString
 	err := a.db.QueryRow(
 		`SELECT l.id, c.id, c.code, c.status, b.title,
-		        br.first_name, br.last_initial, br.class, l.loaned_on
+		        br.first_name, br.last_initial, br.group_name, l.loaned_on
 		   FROM copy c
 		   JOIN book b ON b.id = c.book_id
 		   LEFT JOIN loan l ON l.copy_id = c.id AND l.returned_on IS NULL
 		   LEFT JOIN borrower br ON br.id = l.borrower_id
 		  WHERE c.code = ?`, code,
 	).Scan(&loanID, &p.CopyID, &p.Code, &p.Status, &p.Title,
-		&firstName, &lastName, &class, &loanedOn)
+		&firstName, &lastName, &group, &loanedOn)
 	switch {
 	case err == sql.ErrNoRows:
 		// Internal code unknown: it may be the ISBN on the back of the book.
@@ -171,19 +171,19 @@ func (a *app) openLoansForScan(code string) ([]OpenLoan, string, error) {
 		return nil, p.Title, errNotOnLoan
 	}
 	p.LoanID = loanID.Int64
-	p.FirstName, p.LastInitial, p.Class, p.LoanedOn = firstName.String, lastName.String, class.String, loanedOn.String
+	p.FirstName, p.LastInitial, p.Group, p.LoanedOn = firstName.String, lastName.String, group.String, loanedOn.String
 	return []OpenLoan{p}, p.Title, nil
 }
 
 // Lending and returning, built around the USB scanner (a keyboard that submits
 // with Enter): one field always focused, no mouse needed.
 
-// Pupil or teacher. The class can be NULL.
+// Reader or staff member. The group can be NULL.
 type Borrower struct {
 	ID          int64
 	FirstName   string
 	LastInitial string
-	Class       *string
+	Group       *string
 	// What this borrower already has out, shown the moment the card is scanned.
 	OutCount     int
 	OverdueCount int
@@ -370,7 +370,7 @@ func (a *app) borrowBorrower(w http.ResponseWriter, r *http.Request) {
 		`SELECT `+borrowerLiteCols+` FROM borrower WHERE card_code = ? AND active = 1`, code), &borrower)
 	switch {
 	case err == sql.ErrNoRows:
-		// Not a known card: fuzzy search on first name, last name and class.
+		// Not a known card: fuzzy search on first name, last name and group.
 		res, tooMany := a.searchBorrowers(code)
 		if len(res) == 1 && !tooMany {
 			a.borrowSection(w, r, res[0], "")
@@ -400,12 +400,12 @@ func (a *app) searchBorrowers(q string) ([]Borrower, bool) {
 	var args []any
 	for _, mot := range strings.Fields(q) {
 		like := "%" + foldSearch(mot) + "%"
-		conds = append(conds, "(fold(first_name) LIKE ? OR fold(last_initial) LIKE ? OR fold(COALESCE(class,'')) LIKE ?)")
+		conds = append(conds, "(fold(first_name) LIKE ? OR fold(last_initial) LIKE ? OR fold(COALESCE(group_name,'')) LIKE ?)")
 		args = append(args, like, like, like)
 	}
 	query := `SELECT ` + borrowerLiteCols + ` FROM borrower
 	             WHERE active = 1 AND ` + strings.Join(conds, " AND ") + `
-	             ORDER BY class, last_initial, first_name LIMIT 6`
+	             ORDER BY group_name, last_initial, first_name LIMIT 6`
 	rows, err := a.db.Query(query, args...)
 	if err != nil {
 		log.Printf("borrower search: %v", err)
@@ -522,7 +522,7 @@ func (a *app) borrowAdd(w http.ResponseWriter, r *http.Request) {
 			return
 		case sql.ErrNoRows:
 			// Valid ISBN absent from the catalogue: look it up and offer prefilled
-			// express cataloguing before the loan — unless the school has asked
+			// express cataloguing before the loan — unless the library has asked
 			// that its catalogue be added to somewhere other than the desk.
 			if i13, i10, e := ISBNForms(code); e == nil {
 				if !a.expressCatalogue() {
@@ -554,7 +554,7 @@ func (a *app) borrowAdd(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			// Probably a title: offer the matching books, to be chosen explicitly.
-			// A random book in a child's bag is worse than one more click.
+			// A random book in a reader's bag is worse than one more click.
 			if books, tooMany := a.searchAvailableBooks(code, basketCopies(r)); len(books) > 0 || tooMany {
 				a.fragment(w, r, "borrow", "borrow_book_results", map[string]any{
 					"Results": books, "TooMany": tooMany, "Search": code,
@@ -584,17 +584,17 @@ func (a *app) borrowAdd(w http.ResponseWriter, r *http.Request) {
 	var pren string
 	var cls *string
 	err = a.db.QueryRow(
-		`SELECT br.first_name, br.class
+		`SELECT br.first_name, br.group_name
 		   FROM loan l JOIN borrower br ON br.id = l.borrower_id
 		  WHERE l.copy_id = ? AND l.returned_on IS NULL`, exID,
 	).Scan(&pren, &cls)
 	switch {
 	case err == nil:
-		// Two whole sentences rather than a conditional concatenation: the class
+		// Two whole sentences rather than a conditional concatenation: the group
 		// goes in brackets at the end in French, elsewhere it may not.
 		msg := tr(r, "loan.err_already_out", title, pren)
 		if cls != nil {
-			msg = tr(r, "loan.err_already_out_class", title, pren, *cls)
+			msg = tr(r, "loan.err_already_out_group", title, pren, *cls)
 		}
 		a.fragment(w, r, "borrow", "borrow_add_err", msg)
 		return
@@ -707,7 +707,7 @@ func (a *app) borrowConfirm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Reload the pupil: needed for the display, and confirms they are still active.
+	// Reload the reader: needed for the display, and confirms they are still active.
 	borrower, err := a.activeBorrowerByID(borrowerID)
 	if err == sql.ErrNoRows {
 		a.fragment(w, r, "borrow", "borrow_step1", map[string]any{"Error": tr(r, "loan.err_borrower_gone")})
@@ -820,7 +820,7 @@ func uniqueIDs(raw []string) []int64 {
 	return ids
 }
 
-// One field, scan the book. No need to look up the pupil.
+// One field, scan the book. No need to look up the reader.
 func (a *app) returnScreen(w http.ResponseWriter, r *http.Request) {
 	a.render(w, r, "return", map[string]any{"Title": tr(r, "return.title")})
 }
@@ -867,7 +867,7 @@ func (a *app) returnScan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Picking one at random would close another child's loan, with no way to undo.
+	// Picking one at random would close another reader's loan, with no way to undo.
 	if len(loans) > 1 {
 		a.fragment(w, r, "return", "return_choice", map[string]any{"Title": title, "Loans": loans})
 		return
@@ -917,7 +917,7 @@ func (a *app) loanExtend(w http.ResponseWriter, r *http.Request) {
 }
 
 // maxLoanDays bounds both the loan period in /settings and the count the
-// extend dialog opens on: a year is already longer than a school one.
+// extend dialog opens on: a year is already longer than the usual loan.
 const maxLoanDays = 365
 
 // extendDefaultDays is what the extend dialog opens on: a week, not the loan

@@ -19,7 +19,7 @@ type roundTripFunc func(*http.Request) (*http.Response, error)
 
 func (f roundTripFunc) RoundTrip(r *http.Request) (*http.Response, error) { return f(r) }
 
-// catalogueCalls records what left the school: only an ISBN may.
+// catalogueCalls records what left the server: only an ISBN may.
 type catalogueCalls struct {
 	mu   sync.Mutex
 	urls []string
@@ -233,9 +233,9 @@ func TestAnExhaustedBudgetRemembersNothing(t *testing.T) {
 	}
 }
 
-// Only an ISBN leaves the school, and both forms go out — a pre-2007 work
+// Only an ISBN leaves the server, and both forms go out — a pre-2007 work
 // may be indexed under its ISBN-10 alone.
-func TestOnlyTheISBNLeavesTheSchool(t *testing.T) {
+func TestOnlyTheISBNLeavesTheServer(t *testing.T) {
 	calls := stubCatalogues(t, nothingFound)
 	enrich(context.Background(), petitPrince13, petitPrince10)
 
@@ -312,7 +312,7 @@ func TestRequestDoesNotRetryOnAPermanentFailure(t *testing.T) {
 	}
 }
 
-// After a 429 the catalogue is left alone: the school shares one IP address.
+// After a 429 the catalogue is left alone: the library shares one IP address.
 func TestARateLimitedSourceIsPutToRest(t *testing.T) {
 	calls := stubCatalogues(t, func(r *http.Request) (int, string, string) {
 		return 429, "", "slow down"

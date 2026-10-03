@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="{{themeColor}}">
-<title>{{.Title}} · Bibli{{with school}} · {{.}}{{end}}</title>
+<title>{{.Title}} · Bibli{{with libraryName}} · {{.}}{{end}}</title>
 <link rel="icon" type="image/svg+xml" href="{{asset "/static/favicon.svg"}}">
 <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
 <link rel="manifest" href="/manifest.webmanifest">
@@ -24,9 +24,9 @@
 </head>
 <body>
 <header class="header">
-  {{/* The school's name is part of the home link: on a phone it is the only way
+  {{/* The library's name is part of the home link: on a phone it is the only way
        home short of the menu. */}}
-  <a class="brand" href="/" aria-label="{{T "nav.home_aria"}}">{{template "logo" "logo-brand"}}<span class="brand-text"><span class="brand-name">Bibli</span>{{with school}}<span class="brand-school">{{.}}</span>{{end}}</span></a>
+  <a class="brand" href="/" aria-label="{{T "nav.home_aria"}}">{{template "logo" "logo-brand"}}<span class="brand-text"><span class="brand-name">Bibli</span>{{with libraryName}}<span class="brand-library">{{.}}</span>{{end}}</span></a>
 
   {{/* The desk, then from 64rem the two management screens after a divider;
        below that width they live in the drop-down only (.nav-wide). */}}

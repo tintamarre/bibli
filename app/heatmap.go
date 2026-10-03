@@ -5,12 +5,12 @@ import (
 	"time"
 )
 
-// A school year drawn one cell per day: weeks down the columns, the days of a
+// An activity year drawn one cell per day: weeks down the columns, the days of a
 // week across the seven rows. Nothing is stored.
 
-// The year runs 1 August to 31 July: wide enough to hold any school year, and
+// The year runs 1 August to 31 July: wide enough to hold any activity year, and
 // no decree moves these two dates.
-const schoolYearStart = time.August
+const activityYearStart = time.August
 
 // Seven rows and not five: a loan recorded on a Saturday must have somewhere
 // to go.
@@ -34,7 +34,7 @@ type heatMonth struct {
 }
 
 type heatmap struct {
-	Start, End string // ISO bounds of the school year
+	Start, End string // ISO bounds of the activity year
 	Weeks      int    // columns
 	Rows       [][]heatCell
 	Months     []heatMonth
@@ -43,18 +43,18 @@ type heatmap struct {
 	Busiest    string // empty when the year holds no loans
 }
 
-// schoolYearBounds gives the first and last day of the school year containing
+// activityYearBounds gives the first and last day of the activity year containing
 // the given day.
-func schoolYearBounds(todayISO string) (string, string) {
+func activityYearBounds(todayISO string) (string, string) {
 	t, ok := parseDate(todayISO)
 	if !ok {
 		t = today()
 	}
 	year := t.Year()
-	if t.Month() < schoolYearStart {
+	if t.Month() < activityYearStart {
 		year--
 	}
-	start := time.Date(year, schoolYearStart, 1, 0, 0, 0, 0, time.UTC)
+	start := time.Date(year, activityYearStart, 1, 0, 0, 0, 0, time.UTC)
 	return start.Format("2006-01-02"), start.AddDate(1, 0, -1).Format("2006-01-02")
 }
 
@@ -68,13 +68,13 @@ var monthKeys = [...]string{
 func monthLabel(lang string, m time.Month) string { return T(lang, monthKeys[int(m)-1]) }
 
 // mondayIndex numbers the days of the week from Monday, which is the row a
-// school week starts on.
+// week starts on.
 func mondayIndex(w time.Weekday) int { return (int(w) + 6) % 7 }
 
 // newHeatmap lays the counts out on the grid. counts is keyed by ISO day; days
 // it does not mention held no loan.
 func newHeatmap(lang, todayISO string, counts map[string]int) heatmap {
-	startISO, endISO := schoolYearBounds(todayISO)
+	startISO, endISO := activityYearBounds(todayISO)
 	start, _ := parseDate(startISO)
 	end, _ := parseDate(endISO)
 	now, ok := parseDate(todayISO)
@@ -99,7 +99,7 @@ func newHeatmap(lang, todayISO string, counts map[string]int) heatmap {
 			day := first.AddDate(0, 0, col*heatRows+row)
 			iso := day.Format("2006-01-02")
 			if iso < startISO || iso > endISO {
-				continue // padding: outside the school year
+				continue // padding: outside the activity year
 			}
 			c := heatCell{Date: iso, Count: counts[iso], Ahead: day.After(now)}
 			c.Level = heatLevel(c.Count, thresholds)

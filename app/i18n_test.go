@@ -182,7 +182,7 @@ func TestTemplatesHaveNoHardCodedText(t *testing.T) {
 	}
 }
 
-// Detection catches French without accents, and ignores French class names.
+// Detection catches French without accents, and ignores French group names.
 func TestVisibleText(t *testing.T) {
 	cases := []struct {
 		name   string
@@ -420,7 +420,7 @@ func TestJSKeys(t *testing.T) {
 var frenchSegments = []string{
 	"emprunteur", "emprunteurs", "emprunter", "prets", "pret", "retour",
 	"rendre", "cataloguer", "inventaire", "reglages", "livre", "exemplaire",
-	"couverture", "famille", "imprimer", "connexion", "deconnexion",
+	"couverture", "famille", "groupe", "suivi", "imprimer", "connexion", "deconnexion",
 	"a-propos", "retards", "jeton", "revoquer", "editer", "desactiver",
 	"reactiver", "importer", "valider", "cartes", "rentree", "ajouter",
 	"rechercher", "enregistrer", "manuel", "etiquettes", "enrichir",
@@ -624,6 +624,34 @@ func TestEveryKeyNamedInGoExists(t *testing.T) {
 				continue
 			}
 			// Tn asks for a plural form, so either half proves the key.
+			if _, ok := catalogues[defaultLang][key]; ok {
+				continue
+			}
+			if _, ok := catalogues[defaultLang][key+".one"]; ok {
+				continue
+			}
+			t.Errorf("%s names %q, which is in no catalogue", f, key)
+		}
+	}
+}
+
+// Guard rail 10 — every key a template looks up exists, for the same reason as
+// above: renaming a key in the catalogues and missing one {{T "…"}} would
+// otherwise pass every test.
+func TestEveryKeyNamedInTemplatesExists(t *testing.T) {
+	loadForTest(t)
+	files, err := filepath.Glob("templates/*.html")
+	if err != nil {
+		t.Fatal(err)
+	}
+	call := regexp.MustCompile(`\b(?:T|Tn) "([^"]+)"`)
+	for _, f := range files {
+		src, err := os.ReadFile(f)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, m := range call.FindAllStringSubmatch(string(src), -1) {
+			key := m[1]
 			if _, ok := catalogues[defaultLang][key]; ok {
 				continue
 			}

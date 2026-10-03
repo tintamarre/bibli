@@ -5,40 +5,40 @@
 <script src="{{asset "/static/vendor/jsbarcode.min.js"}}"></script>
 {{template "sticker_style"}}
 <style>
-  /* The name is what a child recognises as theirs: the largest thing on it. */
+  /* The name is what a reader recognises as theirs: the largest thing on it. */
   .sticker .name { font-weight: 700; font-size: 9pt; line-height: 1.15; width: 100%;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .sticker .class { font-size: 6pt; line-height: 1.1; color: #555; }
-  /* A card is kept for years and a class lasts one, so the class is off the
+  .sticker .group { font-size: 6pt; line-height: 1.1; color: #555; }
+  /* A card is kept for years and a group lasts one, so the group is off the
      card unless it is asked for — see the toolbar. Hidden rather than left
      out, so the choice costs no round trip and the sheet does not reflow
      between two prints. */
-  body:not(.with-class) .sticker .class { display: none; }
+  body:not(.with-group) .sticker .group { display: none; }
 </style>
 </head>
 <body>
 <div class="toolbar toolbar-sticker">
   <div class="tb-row">
-    {{if .Cards}}<p class="tb-summary"><strong>{{Tn "cards.sheet_count" (len .Cards)}}</strong>{{with .Class}}<span>{{T "cards.class" .}}</span>{{end}}</p>{{end}}
+    {{if .Cards}}<p class="tb-summary"><strong>{{Tn "cards.sheet_count" (len .Cards)}}</strong>{{with .Group}}<span>{{T "cards.group" .}}</span>{{end}}</p>{{end}}
     <div class="tb-actions">{{template "sheet_print"}}{{template "sheet_close"}}</div>
   </div>
   <div class="tb-options">
     <div class="tb-group">{{template "sticker_controls"}}</div>
-    {{/* Off by default: the class printed on a card is wrong again every
+    {{/* Off by default: the group printed on a card is wrong again every
          September. */}}
     <div class="tb-group"><label class="opt"><input type="checkbox"
-      onchange="document.body.classList.toggle('with-class', this.checked)"> {{T "cards.show_class"}}</label></div>
+      onchange="document.body.classList.toggle('with-group', this.checked)"> {{T "cards.show_group"}}</label></div>
   </div>
   {{template "sticker_note"}}
 </div>
 {{/* The heading says which stack of cards this is, and on plain paper heads
-     the class sheet the desk scans from: printed in each page's top margin. */}}
-<div class="sheet" data-head="{{T "cards.title"}}{{with .Class}} — {{T "cards.class" .}}{{end}}{{with school}} · {{.}}{{end}}">
+     the group sheet the desk scans from: printed in each page's top margin. */}}
+<div class="sheet" data-head="{{T "cards.title"}}{{with .Group}} — {{T "cards.group" .}}{{end}}{{with libraryName}} · {{.}}{{end}}">
   {{range .Cards}}
   <div class="sticker">
-    <span class="school">{{with school}}{{.}}{{else}}{{T "cards.fallback_mark"}}{{end}}</span>
+    <span class="library">{{with libraryName}}{{.}}{{else}}{{T "cards.fallback_mark"}}{{end}}</span>
     <span class="name">{{.FirstName}} {{.LastInitial}}</span>
-    {{if .Class}}<span class="class">{{.Class}}</span>{{end}}
+    {{if .Group}}<span class="group">{{.Group}}</span>{{end}}
     <svg class="cb" data-code="{{.Code}}"></svg>
     <span class="code">{{.Code}}</span>
   </div>

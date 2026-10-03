@@ -6,8 +6,8 @@
 Project bibli {
   database_type: 'SQLite'
   Note: '''
-    Library management for a school (primary or secondary).
-    Up to ~20000 copies and ~1000 pupils, a few dozen loans a week.
+    Library management for a small group (school, cultural centre, care home…).
+    Up to ~50000 copies and ~2500 readers, a few dozen loans a week.
     One SQLite file, one writer: backup is copying that file (with VACUUM INTO).
   '''
 }
@@ -17,11 +17,6 @@ Enum copy_status {
   damaged    [note: 'kept, not lendable']
   lost       [note: 'closes any open loan']
   withdrawn  [note: 'out of the collection']
-}
-
-Enum borrower_kind {
-  student
-  teacher  [note: 'borrows in batches for a lesson']
 }
 
 Table book {
@@ -70,23 +65,22 @@ Table borrower {
   id integer [pk, increment]
   first_name text [not null]
   last_initial text [not null, note: '"Durant" is stored as "D." — never the full last name']
-  class text [note: 'P3A; changes every school year']
-  kind borrower_kind [not null, default: 'student']
-  card_code text [unique, note: 'card barcode, e.g. LEC73048, pupil or teacher alike']
+  group_name text [note: 'class, floor, team: P3A, 2nd floor; changes every year']
+  card_code text [unique, note: 'card barcode, e.g. LEC73048']
   active integer [not null, default: 1, note: 'CHECK (active IN (0,1)). Never deleted, deactivated then anonymised']
-  family_token text [note: '128-bit secret for /family/{token}; NULL by default, revocable']
+  tracking_token text [note: '128-bit secret for /track/{token}; NULL by default, revocable']
   deactivated_on text [note: 'start of the anonymisation delay']
   created_at text [not null, default: `datetime('now')`]
 
   indexes {
-    class [name: 'idx_borrower_class', note: 'partial: WHERE active = 1']
+    group_name [name: 'idx_borrower_group', note: 'partial: WHERE active = 1']
     (last_initial, first_name) [name: 'idx_borrower_name']
-    family_token [unique, name: 'idx_borrower_token', note: 'partial: WHERE family_token IS NOT NULL']
+    tracking_token [unique, name: 'idx_borrower_token', note: 'partial: WHERE tracking_token IS NOT NULL']
   }
 
   Note: '''
-    Pupils and teachers together. Minors' data, so only first name, last-name
-    initial and class: a leak of this file stays barely identifying.
+    Readers and staff alike. Minors' data, so only first name, last-name
+    initial and group: a leak of this file stays barely identifying.
     Row id 1 is the inactive sentinel receiving anonymised loans; its name
     is filled at startup from the locale catalogue.
   '''
@@ -123,7 +117,7 @@ Table setting {
 
   Note: '''
     Settings changeable without redeploying:
-    loan_days (14), retention_years (3), school_name, language (fr),
+    loan_days (14), retention_years (3), library_name, language (fr),
     theme (ink), express_catalogue (1), anonymous_borrower_id (1), and
     session_secret — drawn at first start by auth.go, never seeded.
   '''
@@ -140,6 +134,6 @@ Table schema_migrations {
 // Views — no DBML equivalent.
 //   v_available    copies on the shelf: status = 'available' and no open loan.
 //   v_active_loan  who has what right now, with days_overdue computed.
-//   v_overdue      v_active_loan where days_overdue > 0, ordered by class.
+//   v_overdue      v_active_loan where days_overdue > 0, ordered by group.
 //                  A loan due today is not overdue.
 // ---------------------------------------------------------------------------

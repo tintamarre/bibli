@@ -360,7 +360,7 @@ func TestIsPublicPath(t *testing.T) {
 	public := []string{
 		"/", "/login", "/logout", "/healthcheck",
 		"/static/app.js", "/static/vendor/htmx.min.js",
-		"/family/AbCdEf0123456789012345",
+		"/track/AbCdEf0123456789012345",
 	}
 	for _, p := range public {
 		if !isPublicPath(p) {
@@ -372,7 +372,7 @@ func TestIsPublicPath(t *testing.T) {
 		"/settings", "/book/1", "/export.csv", "/export.xlsx", "/print/overdue", "/print/loans",
 		"/loans", "/about",
 		// Neighbours of a public prefix, which must not inherit it.
-		"/staticfiles", "/family", "/logout/all", "/login2",
+		"/staticfiles", "/track", "/logout/all", "/login2",
 	}
 	for _, p := range private {
 		if isPublicPath(p) {

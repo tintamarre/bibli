@@ -5,14 +5,14 @@ import (
 	"net/http"
 )
 
-// manifest is the web app manifest a phone reads when a teacher adds Bibli to
+// manifest is the web app manifest a phone reads when someone adds Bibli to
 // the home screen: it gives the shortcut its name, its icon and a window of its
 // own (display standalone), so it opens like an app rather than a browser tab.
-// Served fresh (the school name and theme may change) and without a session,
+// Served fresh (the library name and theme may change) and without a session,
 // since the browser fetches it before anyone signs in.
 func (a *app) manifest(w http.ResponseWriter, r *http.Request) {
 	name := "Bibli"
-	if s := school(); s != "" {
+	if s := libraryName(); s != "" {
 		name = "Bibli — " + s
 	}
 	m := map[string]any{

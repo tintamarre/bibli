@@ -22,27 +22,27 @@
     <p>{{T "rollover.merge_fix"}}</p>
   </div>
   {{end}}
-  <p>{{T "rollover.help_1"}} <b>{{T "rollover.help_new_class"}}</b> {{T "rollover.help_2"}}
+  <p>{{T "rollover.help_1"}} <b>{{T "rollover.help_new_group"}}</b> {{T "rollover.help_2"}}
      <b>{{T "rollover.help_leaving"}}</b> {{T "rollover.help_3"}}</p>
   {{if not .Merges}}<p class="note">{{T "rollover.help_prefilled"}}</p>{{end}}
-  {{if .Classes}}
+  {{if .Groups}}
   <form method="post" action="/borrowers/rollover" class="scan-block"
         data-confirm="{{T "rollover.confirm"}}">
-    <input type="hidden" name="n" value="{{len .Classes}}">
+    <input type="hidden" name="n" value="{{len .Groups}}">
     <input type="hidden" name="state" value="{{.State}}">
     <table class="table">
-      <thead><tr><th>{{T "rollover.col_current"}}</th><th class="col-num">{{T "rollover.col_pupils"}}</th><th>{{T "rollover.col_new"}}</th><th class="col-centre">{{T "rollover.col_leaving"}}</th></tr></thead>
+      <thead><tr><th>{{T "rollover.col_current"}}</th><th class="col-num">{{T "rollover.col_readers"}}</th><th>{{T "rollover.col_new"}}</th><th class="col-centre">{{T "rollover.col_leaving"}}</th></tr></thead>
       <tbody>
-      {{range $i, $c := .Classes}}
+      {{range $i, $c := .Groups}}
       <tr>
-        <td data-label="{{T "rollover.col_current"}}">{{$c.Class}}<input type="hidden" name="src_{{$i}}" value="{{$c.Class}}"></td>
-        <td data-label="{{T "rollover.col_pupils"}}" class="col-num">{{$c.Count}}</td>
-        <td data-label="{{T "rollover.col_new"}}"><input name="dst_{{$i}}" placeholder="{{$c.Class}}" value="{{$c.Dst}}"></td>
+        <td data-label="{{T "rollover.col_current"}}">{{$c.Group}}<input type="hidden" name="src_{{$i}}" value="{{$c.Group}}"></td>
+        <td data-label="{{T "rollover.col_readers"}}" class="col-num">{{$c.Count}}</td>
+        <td data-label="{{T "rollover.col_new"}}"><input name="dst_{{$i}}" placeholder="{{$c.Group}}" value="{{$c.Dst}}"></td>
         {{/* A wrapped box, a larger target for a click that deactivates a
-             class; named for a screen reader, class included. */}}
+             group; named for a screen reader, group included. */}}
         <td data-label="{{T "rollover.col_leaving"}}" class="col-centre"><label class="check-cell"><input
               type="checkbox" name="out_{{$i}}" value="1"{{if $c.Leaving}} checked{{end}}
-              aria-label="{{T "rollover.col_leaving"}} {{$c.Class}}"></label></td>
+              aria-label="{{T "rollover.col_leaving"}} {{$c.Group}}"></label></td>
       </tr>
       {{end}}
       </tbody>
@@ -53,7 +53,7 @@
     {{if .Merges}}<button class="btn-secondary" type="submit" name="merge_ok" value="{{.MergeKey}}">{{T "rollover.merge_anyway"}}</button>{{end}}
   </form>
   {{else}}
-  <p class="empty">{{template "icon-empty" "empty-icon"}}{{T "rollover.no_class"}}</p>
+  <p class="empty">{{template "icon-empty" "empty-icon"}}{{T "rollover.no_group"}}</p>
   {{end}}
 {{end}}
 {{end}}

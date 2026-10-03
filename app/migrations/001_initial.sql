@@ -45,19 +45,17 @@ CREATE TABLE copy (
 ) STRICT;
 
 -- ---------------------------------------------------------------------------
--- Pupils and teachers together (kind). Minors' data: first name, last-name
--- initial and class only — never the full last name.
+-- Readers and staff alike. Minors' data: first name, last-name initial and
+-- group only — never the full last name.
 -- ---------------------------------------------------------------------------
 CREATE TABLE borrower (
     id             INTEGER PRIMARY KEY,
     first_name     TEXT    NOT NULL,
     last_initial   TEXT    NOT NULL,         -- "Durant" is stored as "D."
-    class          TEXT,                     -- 'P3A' — changes every school year
-    kind           TEXT    NOT NULL DEFAULT 'student'
-                   CHECK (kind IN ('student','teacher')),
-    card_code      TEXT    UNIQUE,           -- card barcode, e.g. 'LEC73048', pupil or teacher alike
+    group_name     TEXT,                     -- class, floor, team: 'P3A', '2nd floor'. Changes every year
+    card_code      TEXT    UNIQUE,           -- card barcode, e.g. 'LEC73048'
     active         INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0,1)),
-    family_token   TEXT,                     -- parent access, NULL by default
+    tracking_token TEXT,                     -- read-only link to the open loans, NULL by default
     deactivated_on TEXT,                     -- start of the anonymisation delay
 
     created_at     TEXT    NOT NULL DEFAULT (datetime('now'))
@@ -92,10 +90,10 @@ CREATE TABLE setting (
 CREATE INDEX idx_book_title  ON book(title);
 CREATE INDEX idx_book_isbn10 ON book(isbn10) WHERE isbn10 IS NOT NULL;
 CREATE INDEX idx_copy_book ON copy(book_id);
-CREATE INDEX idx_borrower_class ON borrower(class) WHERE active = 1;
+CREATE INDEX idx_borrower_group ON borrower(group_name) WHERE active = 1;
 CREATE INDEX idx_borrower_name  ON borrower(last_initial, first_name);
-CREATE UNIQUE INDEX idx_borrower_token ON borrower(family_token)
-    WHERE family_token IS NOT NULL;
+CREATE UNIQUE INDEX idx_borrower_token ON borrower(tracking_token)
+    WHERE tracking_token IS NOT NULL;
 CREATE UNIQUE INDEX idx_loan_copy_active ON loan(copy_id) WHERE returned_on IS NULL;
 CREATE INDEX idx_loan_borrower_active    ON loan(borrower_id) WHERE returned_on IS NULL;
 CREATE INDEX idx_loan_overdue            ON loan(due_on) WHERE returned_on IS NULL;
@@ -128,7 +126,7 @@ CREATE VIEW v_active_loan AS
 SELECT l.id  AS loan_id,
        br.id AS borrower_id,
        b.id  AS book_id,
-       br.first_name, br.last_initial, br.class,
+       br.first_name, br.last_initial, br.group_name,
        c.code,
        b.title,
        l.loaned_on,
@@ -140,19 +138,19 @@ JOIN book     b  ON b.id  = c.book_id
 JOIN borrower br ON br.id = l.borrower_id
 WHERE l.returned_on IS NULL;
 
--- Overdue loans, by class (printable weekly reminder).
+-- Overdue loans, by group (printable weekly reminder).
 CREATE VIEW v_overdue AS
 SELECT * FROM v_active_loan
 WHERE days_overdue > 0
-ORDER BY class, last_initial, first_name;
+ORDER BY group_name, last_initial, first_name;
 
 -- ---------------------------------------------------------------------------
 -- The sentinel borrower that receives anonymised loans: inactive, so it
 -- never shows up at the desk. Its name comes from the locale catalogue, filled
 -- at startup by syncAnonymousName().
 -- ---------------------------------------------------------------------------
-INSERT INTO borrower (id, first_name, last_initial, class, kind, card_code, active, deactivated_on)
-VALUES (1, '', '', NULL, 'student', NULL, 0, NULL);
+INSERT INTO borrower (id, first_name, last_initial, group_name, card_code, active, deactivated_on)
+VALUES (1, '', '', NULL, NULL, 0, NULL);
 
 -- ---------------------------------------------------------------------------
 -- Default settings. session_secret is absent on purpose: auth.go draws it at
@@ -160,10 +158,10 @@ VALUES (1, '', '', NULL, 'student', NULL, 0, NULL);
 -- ---------------------------------------------------------------------------
 INSERT INTO setting (key, value, label) VALUES
  ('loan_days',             '14', 'Default loan period, in days'),
- ('school_name',           '',   'School name, shown in the header and on printouts'),
+ ('library_name',          '',   'Library name, shown in the header and on printouts'),
  ('language',              'fr', 'Language of the interface, the printouts and the exports'),
  ('theme',                 'ink',   'Colour theme of the screens (themes.go); printouts ignore it'),
- ('retention_years',       '3',  'Years before returned loans and departed pupils are anonymised'),
+ ('retention_years',       '3',  'Years before returned loans and departed readers are anonymised'),
  -- Cataloguing an unknown ISBN at the desk. Only '0' turns it off;
  -- any other value, or no row at all, leaves it on (expressCatalogue()).
  ('express_catalogue',     '1',  'Allow cataloguing an unknown book from the lending desk'),

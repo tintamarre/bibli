@@ -25,7 +25,7 @@
   body.one-line .sticker .ti-tail { flex-shrink: 0; white-space: pre; }
 </style>
 </head>
-{{/* The body starts in the state the boxes show: one line of title, no ISBN, the school shown, no cut lines. */}}
+{{/* The body starts in the state the boxes show: one line of title, no ISBN, the library name shown, no cut lines. */}}
 <body class="one-line no-isbn">
 <div class="toolbar toolbar-sticker">
   <div class="tb-row">
@@ -43,8 +43,8 @@
       onchange="document.body.classList.toggle('no-isbn', !this.checked)"> {{T "labels.opt_isbn"}}</label>
     <label class="opt"><input type="checkbox" checked
       onchange="document.body.classList.toggle('one-line', this.checked)"> {{T "labels.opt_one_line"}}</label>
-    {{if school}}<label class="opt"><input type="checkbox" checked
-      onchange="document.body.classList.toggle('no-school', !this.checked)"> {{T "labels.opt_school"}}</label>{{end}}
+    {{if libraryName}}<label class="opt"><input type="checkbox" checked
+      onchange="document.body.classList.toggle('no-library', !this.checked)"> {{T "labels.opt_library"}}</label>{{end}}
     </div>
   </div>
   {{template "sticker_note"}}
@@ -52,7 +52,7 @@
 <div class="sheet">
   {{range .Rows}}
   <div class="sticker">
-    {{with school}}<span class="school">{{.}}</span>{{end}}
+    {{with libraryName}}<span class="library">{{.}}</span>{{end}}
     {{/* Two spans so a one-line label clips the MIDDLE of a title, keeping a
          series' tome. No whitespace between the tags: head and tail must rejoin
          seamlessly. */}}

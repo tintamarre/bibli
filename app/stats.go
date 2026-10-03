@@ -151,7 +151,7 @@ type IdleTitle struct {
 // readings runs the four in order, each one drained before the next: one
 // connection.
 func (a *app) readings(lang, todayISO string) Readings {
-	start, _ := schoolYearBounds(todayISO)
+	start, _ := activityYearBounds(todayISO)
 	return Readings{
 		Year:   newHeatmap(lang, todayISO, a.loansByDay(todayISO)),
 		Months: a.monthBars(lang, todayISO),
@@ -160,9 +160,9 @@ func (a *app) readings(lang, todayISO string) Readings {
 	}
 }
 
-// loansByDay counts the loans started on each day of the school year.
+// loansByDay counts the loans started on each day of the activity year.
 func (a *app) loansByDay(todayISO string) map[string]int {
-	start, end := schoolYearBounds(todayISO)
+	start, end := activityYearBounds(todayISO)
 	counts := map[string]int{}
 	rows, err := a.db.Query(
 		`SELECT loaned_on, COUNT(*) FROM loan
@@ -189,7 +189,7 @@ func (a *app) loansByDay(todayISO string) map[string]int {
 }
 
 // monthBars reads the twelve months up to and including this one: a rolling
-// year on purpose, where the grid reads the school year. The months come
+// year on purpose, where the grid reads the activity year. The months come
 // from Go, since a month with no loan returns no row.
 func (a *app) monthBars(lang, todayISO string) []MonthBar {
 	t, ok := parseDate(todayISO)
@@ -242,7 +242,7 @@ func (a *app) monthBars(lang, todayISO string) []MonthBar {
 	return bars
 }
 
-// topTitles names what moved this school year, copies of one work counted
+// topTitles names what moved this activity year, copies of one work counted
 // together. Loans reassigned to the anonymisation sentinel still count.
 func (a *app) topTitles(start string) []TopTitle {
 	rows, err := a.db.Query(

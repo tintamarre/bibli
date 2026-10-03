@@ -100,7 +100,7 @@ if ! grep -qxF "Exec=$EXEC" "$ENTRY" 2> /dev/null; then
 [Desktop Entry]
 Type=Application
 Name=Bibli
-Comment=La bibliothèque de l'école
+Comment=La bibliothèque
 Exec=$EXEC
 Icon=$HERE/bibli.png
 Terminal=false
@@ -113,10 +113,10 @@ fi
 was_running=0
 running && was_running=1
 if [ $was_running = 0 ]; then
-  # Plain HTTP on localhost: a Secure cookie would be dropped. No family
+  # Plain HTTP on localhost: a Secure cookie would be dropped. No one else
   # reaches localhost, so no loans links.
   BIBLI_ADMIN_PASSWORD="$(cat "$PWFILE")" nohup "$BIN" -db "$DATA/biblio.db" \
-    -addr "127.0.0.1:$PORT" -secure-cookies=false -family-links=false \
+    -addr "127.0.0.1:$PORT" -secure-cookies=false -tracking-links=false \
     -backup-dir "$DATA/backups" -cache-dir "$DATA/cache" \
     >> "$DATA/bibli.log" 2>&1 &
   for _ in $(seq 1 50); do running && break; sleep 0.2; done

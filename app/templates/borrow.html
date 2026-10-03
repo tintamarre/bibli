@@ -36,7 +36,7 @@
       <button type="button" class="borrower-result"
               hx-post="/borrow/borrower-id" hx-vals='{"borrower_id": "{{.ID}}"}'
               hx-target="#loan" hx-swap="outerHTML">
-        {{.FirstName}} {{.LastInitial}}{{with .Class}} · {{.}}{{end}}
+        {{.FirstName}} {{.LastInitial}}{{with .Group}} · {{.}}{{end}}
       </button>
     </li>
     {{end}}
@@ -59,7 +59,7 @@
     <span>{{T "loan.borrower_label"}}
       <a class="link-person borrower-link" href="/borrowers/{{.Borrower.ID}}"
          target="_blank" rel="noopener"
-         title="{{T "loan.open_borrower"}}"><b>{{.Borrower.FirstName}} {{.Borrower.LastInitial}}</b></a>{{with .Borrower.Class}} · {{.}}{{end}}</span>
+         title="{{T "loan.open_borrower"}}"><b>{{.Borrower.FirstName}} {{.Borrower.LastInitial}}</b></a>{{with .Borrower.Group}} · {{.}}{{end}}</span>
     <span class="borrower-loans">
       {{if .Borrower.OutCount}}
         {{template "icon-borrow" "borrower-loans-icon"}}<b>{{Tn "loan.borrower_out" .Borrower.OutCount}}</b>

@@ -9,7 +9,7 @@
 -- its way.
 --
 -- What is in it: 100 works and 115 copies, 12 titles having two or three;
--- two classes of fifteen pupils and three teachers; six months of loans —
+-- four classes of about eight pupils and three teachers; six months of loans —
 -- 355 of them, 30 still out, 2 of those overdue. Enough that every screen
 -- shows what it looks like in use: the lists are long enough to need their
 -- filters, the label sheet fills pages, and the overdue list has names on it.
@@ -23,7 +23,7 @@
 -- Dates are relative to the day it is loaded ('-12 days'), never fixed, so the
 -- demonstration is never out of date. The rules a real database holds to are
 -- held to here: a copy is out at most once at a time, a pupil holds at most
--- three books at once, a teacher borrows in batches for a lesson, and a copy
+-- two books at once, a teacher borrows in batches for a lesson, and a copy
 -- that is lost or withdrawn is not out. The loan period is the 21 days this
 -- demonstration sets below (a fresh install starts at 14): every loan runs
 -- exactly that, except six that were extended by three weeks — two still out,
@@ -272,43 +272,43 @@ INSERT INTO copy (id, book_id, code, location, status, acquired_on, created_at) 
  (114, 99, 'VOL785258', 'Albums 6/8', 'available', NULL, datetime('now', '-813 days')),
  (115, 100, 'VOL074095', 'Documentaires 8/10', 'available', date('now', '-559 days'), datetime('now', '-559 days'));
 
--- Pupils, and the three teachers ---------------------------------------------
+-- Readers, and the three teachers (a group of their own) ---------------------------------------------
 -- Only the initial of the family name is kept (data minimisation).
 -- Codes carry no order: LEC or VOL, random digits, a check digit (codes.go).
-INSERT INTO borrower (id, first_name, last_initial, class, kind, card_code, active) VALUES
- (101, 'Léa', 'D.', 'P4', 'student', 'LEC73048', 1),
- (102, 'Tom', 'B.', 'P3', 'student', 'LEC28462', 1),
- (103, 'Zoé', 'P.', 'P4', 'student', 'LEC51932', 1),
- (104, 'Noah', 'M.', 'P3', 'student', 'LEC06813', 1),
- (105, 'Claire', 'L.', NULL, 'teacher', 'LEC40275', 1),
- (106, 'Lucas', 'V.', 'P4', 'student', 'LEC75451', 1),
- (107, 'Emma', 'D.', 'P4', 'student', 'LEC56692', 1),
- (108, 'Jade', 'R.', 'P2', 'student', 'LEC57425', 1),
- (109, 'Louis', 'C.', 'P2', 'student', 'LEC14618', 1),
- (110, 'Alice', 'G.', 'P2', 'student', 'LEC86602', 1),
- (111, 'Hugo', 'S.', 'P1', 'student', 'LEC90650', 1),
- (112, 'Chloé', 'M.', 'P2', 'student', 'LEC44902', 1),
- (113, 'Arthur', 'L.', 'P3', 'student', 'LEC01108', 1),
- (114, 'Mila', 'T.', 'P4', 'student', 'LEC34007', 1),
- (115, 'Sacha', 'W.', 'P4', 'student', 'LEC93167', 1),
- (116, 'Nina', 'P.', 'P1', 'student', 'LEC70941', 1),
- (117, 'Ibrahim', 'K.', 'P3', 'student', 'LEC19645', 1),
- (118, 'Elena', 'F.', 'P2', 'student', 'LEC73393', 1),
- (119, 'Gabriel', 'H.', 'P1', 'student', 'LEC52662', 1),
- (120, 'Inès', 'B.', 'P3', 'student', 'LEC56226', 1),
- (121, 'Adam', 'N.', 'P3', 'student', 'LEC10035', 1),
- (122, 'Manon', 'J.', 'P1', 'student', 'LEC33500', 1),
- (123, 'Raphaël', 'A.', 'P3', 'student', 'LEC83007', 1),
- (124, 'Lina', 'O.', 'P1', 'student', 'LEC89837', 1),
- (125, 'Victor', 'E.', 'P1', 'student', 'LEC15249', 1),
- (126, 'Camille', 'Y.', 'P3', 'student', 'LEC23664', 1),
- (127, 'Amir', 'Z.', 'P1', 'student', 'LEC28172', 1),
- (128, 'Juliette', 'Q.', 'P2', 'student', 'LEC21229', 1),
- (129, 'Maël', 'U.', 'P2', 'student', 'LEC50148', 1),
- (130, 'Sofia', 'I.', 'P4', 'student', 'LEC13101', 1),
- (131, 'Ethan', 'X.', 'P4', 'student', 'LEC15510', 1),
- (132, 'Marc', 'V.', NULL, 'teacher', 'LEC19172', 1),
- (133, 'Fatima', 'B.', NULL, 'teacher', 'LEC49963', 1);
+INSERT INTO borrower (id, first_name, last_initial, group_name, card_code, active) VALUES
+ (101, 'Léa', 'D.', 'P4', 'LEC73048', 1),
+ (102, 'Tom', 'B.', 'P3', 'LEC28462', 1),
+ (103, 'Zoé', 'P.', 'P4', 'LEC51932', 1),
+ (104, 'Noah', 'M.', 'P3', 'LEC06813', 1),
+ (105, 'Claire', 'L.', 'Enseignants', 'LEC40275', 1),
+ (106, 'Lucas', 'V.', 'P4', 'LEC75451', 1),
+ (107, 'Emma', 'D.', 'P4', 'LEC56692', 1),
+ (108, 'Jade', 'R.', 'P2', 'LEC57425', 1),
+ (109, 'Louis', 'C.', 'P2', 'LEC14618', 1),
+ (110, 'Alice', 'G.', 'P2', 'LEC86602', 1),
+ (111, 'Hugo', 'S.', 'P1', 'LEC90650', 1),
+ (112, 'Chloé', 'M.', 'P2', 'LEC44902', 1),
+ (113, 'Arthur', 'L.', 'P3', 'LEC01108', 1),
+ (114, 'Mila', 'T.', 'P4', 'LEC34007', 1),
+ (115, 'Sacha', 'W.', 'P4', 'LEC93167', 1),
+ (116, 'Nina', 'P.', 'P1', 'LEC70941', 1),
+ (117, 'Ibrahim', 'K.', 'P3', 'LEC19645', 1),
+ (118, 'Elena', 'F.', 'P2', 'LEC73393', 1),
+ (119, 'Gabriel', 'H.', 'P1', 'LEC52662', 1),
+ (120, 'Inès', 'B.', 'P3', 'LEC56226', 1),
+ (121, 'Adam', 'N.', 'P3', 'LEC10035', 1),
+ (122, 'Manon', 'J.', 'P1', 'LEC33500', 1),
+ (123, 'Raphaël', 'A.', 'P3', 'LEC83007', 1),
+ (124, 'Lina', 'O.', 'P1', 'LEC89837', 1),
+ (125, 'Victor', 'E.', 'P1', 'LEC15249', 1),
+ (126, 'Camille', 'Y.', 'P3', 'LEC23664', 1),
+ (127, 'Amir', 'Z.', 'P1', 'LEC28172', 1),
+ (128, 'Juliette', 'Q.', 'P2', 'LEC21229', 1),
+ (129, 'Maël', 'U.', 'P2', 'LEC50148', 1),
+ (130, 'Sofia', 'I.', 'P4', 'LEC13101', 1),
+ (131, 'Ethan', 'X.', 'P4', 'LEC15510', 1),
+ (132, 'Marc', 'V.', 'Enseignants', 'LEC19172', 1),
+ (133, 'Fatima', 'B.', 'Enseignants', 'LEC49963', 1);
 
 -- Six months of loans --------------------------------------------------------
 -- 355 in all. The last two are the ones the README quotes: Léa has
@@ -949,7 +949,7 @@ INSERT INTO loan (copy_id, borrower_id, loaned_on, due_on, returned_on) VALUES
 -- signs the cookies, and not anonymous_borrower_id, which names the sentinel.
 -- The school is invented: a demonstration must not put a real school's name on
 -- screens holding pupils who do not exist.
-UPDATE setting SET value = 'École du Marque-Page'   WHERE key = 'school_name';
+UPDATE setting SET value = 'École du Marque-Page'   WHERE key = 'library_name';
 UPDATE setting SET value = '21'                     WHERE key = 'loan_days';
 UPDATE setting SET value = 'fr'                     WHERE key = 'language';
 UPDATE setting SET value = '3'                      WHERE key = 'retention_years';

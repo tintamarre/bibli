@@ -123,8 +123,8 @@ func TestSettingsData(t *testing.T) {
 		t.Errorf("RetentionMax = %v, want %d", d["RetentionMax"], maxRetentionYears)
 	}
 	// The values passed in are echoed back, not re-read from the database.
-	if d["School"] != "École communale" || d["Language"] != "en" {
-		t.Errorf("School = %v, Language = %v", d["School"], d["Language"])
+	if d["LibraryName"] != "École communale" || d["Language"] != "en" {
+		t.Errorf("LibraryName = %v, Language = %v", d["LibraryName"], d["Language"])
 	}
 	langs, ok := d["Languages"].([]offeredLang)
 	if !ok {
@@ -221,7 +221,7 @@ func TestListBackupsGroupsByDay(t *testing.T) {
 	}
 }
 
-// The access block turns the request's own address into what a teacher types,
+// The access block turns the request's own address into what a user types,
 // and recognises a localhost-only opening (which no other device can reach).
 func TestAccessAddress(t *testing.T) {
 	loadForTest(t)
@@ -249,15 +249,15 @@ func TestAccessAddress(t *testing.T) {
 	}
 }
 
-// A very long school name is cut to 120 runes, not 120 bytes: cutting mid-rune
+// A very long library name is cut to 120 runes, not 120 bytes: cutting mid-rune
 // would store invalid UTF-8. The transactional save must still land it.
-func TestSettingsSaveCutsTheSchoolNameByRunes(t *testing.T) {
+func TestSettingsSaveCutsTheLibraryNameByRunes(t *testing.T) {
 	loadForTest(t)
 	restoreSettings(t)
 	a, h := testHandler(t)
 	c := signedIn(t, a)
 	form := url.Values{
-		"school_name":     {strings.Repeat("é", 200)}, // 200 runes, 400 bytes
+		"library_name":    {strings.Repeat("é", 200)}, // 200 runes, 400 bytes
 		"language":        {"fr"},
 		"theme":           {defaultTheme},
 		"loan_days":       {"14"},
@@ -272,11 +272,11 @@ func TestSettingsSaveCutsTheSchoolNameByRunes(t *testing.T) {
 		t.Fatalf("save = %d, want 303", w.Code)
 	}
 	var got string
-	if err := a.db.QueryRow(`SELECT value FROM setting WHERE key = 'school_name'`).Scan(&got); err != nil {
+	if err := a.db.QueryRow(`SELECT value FROM setting WHERE key = 'library_name'`).Scan(&got); err != nil {
 		t.Fatal(err)
 	}
 	if !utf8.ValidString(got) {
-		t.Error("the stored school name is not valid UTF-8 — a rune was split")
+		t.Error("the stored library name is not valid UTF-8 — a rune was split")
 	}
 	if n := utf8.RuneCountInString(got); n != 120 {
 		t.Errorf("stored %d runes, want 120", n)

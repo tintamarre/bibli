@@ -87,7 +87,7 @@ func TestCSVColumnNamesAreStableAndMachineReadable(t *testing.T) {
 	}
 
 	// The names are the same in every language, which is the point: the
-	// spreadsheet is where the school's own wording belongs.
+	// spreadsheet is where the library's own wording belongs.
 	for _, lang := range langs {
 		if h := csvHeader(lang); len(h) != len(names) {
 			t.Errorf("%s: the spreadsheet heading has %d columns, the CSV %d",

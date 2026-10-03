@@ -2,22 +2,22 @@
      page clones (loadTemplatesFor): it defines neither "content" nor
      "document". */}}
 
-{{/* The class dropdown. The caller passes Action, Classes, Class (chosen) and
+{{/* The group dropdown. The caller passes Action, Groups, Group (chosen) and
      Extra (the other filter, as hidden fields). Submits on change; the button
      is for a browser without the script. */}}
-{{define "class_filter"}}
+{{define "group_filter"}}
 <form method="get" action="{{.FilterAction}}" class="filter-form">
   {{/* Built in Go (FilterExtra) so this template need not branch on the screen. */}}
   {{range $name, $value := .FilterExtra}}<input type="hidden" name="{{$name}}" value="{{$value}}">{{end}}
-  <label class="filter-label" for="class-filter">{{T "filter.class"}}</label>
-  <select class="filter-select" id="class-filter" name="class" onchange="this.form.submit()">
-    <option value=""{{if not .Class}} selected{{end}}>{{T "filter.all_classes"}}</option>
-    {{range .Classes}}
-      {{/* The sentinel, not empty: empty already means "all classes"
+  <label class="filter-label" for="group-filter">{{T "filter.group"}}</label>
+  <select class="filter-select" id="group-filter" name="group" onchange="this.form.submit()">
+    <option value=""{{if not .Group}} selected{{end}}>{{T "filter.all_groups"}}</option>
+    {{range .Groups}}
+      {{/* The sentinel, not empty: empty already means "all groups"
            (classFilterNone). */}}
-      {{$value := .Class}}{{if not $value}}{{$value = "-"}}{{end}}
-      <option value="{{$value}}"{{if eq $value $.Class}} selected{{end}}
-        >{{if .Class}}{{T "filter.class_count" .Class .Count}}{{else}}{{T "filter.class_count" (T "filter.no_class") .Count}}{{end}}</option>
+      {{$value := .Group}}{{if not $value}}{{$value = "-"}}{{end}}
+      <option value="{{$value}}"{{if eq $value $.Group}} selected{{end}}
+        >{{if .Group}}{{T "filter.name_count" .Group .Count}}{{else}}{{T "filter.name_count" (T "filter.no_group") .Count}}{{end}}</option>
     {{end}}
   </select>
   <noscript><button class="btn-secondary btn-small" type="submit">{{T "filter.apply"}}</button></noscript>
@@ -26,7 +26,7 @@
 
 {{/* The location dropdown, shared by the inventory and the label sheet. Options
      are the locations typed into copies; the unfiled submit a sentinel, as the
-     class filter does. It renders the <select> alone; the form is the screen's. */}}
+     group filter does. It renders the <select> alone; the form is the screen's. */}}
 {{define "location_select"}}
 <label class="filter-label" for="location-filter">{{T "filter.location"}}</label>
 <select class="filter-select" id="location-filter" name="location">
@@ -34,19 +34,15 @@
   {{range .Locations}}
     {{$value := .Location}}{{if not $value}}{{$value = "-"}}{{end}}
     <option value="{{$value}}"{{if eq $value $.Filter.Location}} selected{{end}}
-      >{{if .Location}}{{T "filter.class_count" .Location .Count}}{{else}}{{T "filter.class_count" (T "filter.no_location") .Count}}{{end}}</option>
+      >{{if .Location}}{{T "filter.name_count" .Location .Count}}{{else}}{{T "filter.name_count" (T "filter.no_location") .Count}}{{end}}</option>
   {{end}}
 </select>
 {{end}}
 
-{{/* Class suggestions, not a closed list: the box stays free text. Defined once
-     for both forms that ask for a class. */}}
-{{define "class_datalist"}}
-<datalist id="classes">
-  <option value="M1"><option value="M2"><option value="M3">
-  <option value="P1"><option value="P2"><option value="P3">
-  <option value="P4"><option value="P5"><option value="P6">
-</datalist>
+{{/* Group suggestions, not a closed list: the box stays free text. Defined once
+     for both forms that ask for a group; handed the screen's Groups. */}}
+{{define "group_datalist"}}
+<datalist id="groups">{{range .}}{{if .Group}}<option value="{{.Group}}">{{end}}{{end}}</datalist>
 {{end}}
 
 {{/* A sortable column heading: a button, since the list redraws in place. The

@@ -12,7 +12,7 @@
 # version replaces the app and keeps the library. The first launch asks for the
 # librarian password and keeps it there, readable by the user alone.
 #
-# Deliberately a single-Mac setup, not a school deployment (README): it listens
+# Deliberately a single-Mac setup, not a shared deployment (README): it listens
 # on localhost only, so no tablet reaches it, and nothing restarts it after a
 # power cut. Nothing is signed by Apple: on another Mac, the first launch is
 # right-click → Open, or "Open Anyway" under Privacy & Security.
@@ -107,9 +107,9 @@ was_running=0
 running && was_running=1
 if [ $was_running = 0 ]; then
   # Plain HTTP on localhost: a Secure cookie would be dropped by Safari. No
-  # family reaches localhost, so no loans links.
+  # only this Mac reaches localhost, so no loans links.
   BIBLI_ADMIN_PASSWORD="$(cat "$PWFILE")" nohup "$BIN" -db "$DATA/biblio.db" \
-    -addr "127.0.0.1:$PORT" -secure-cookies=false -family-links=false \
+    -addr "127.0.0.1:$PORT" -secure-cookies=false -tracking-links=false \
     -backup-dir "$DATA/backups" -cache-dir "$DATA/cache" \
     >> "$DATA/bibli.log" 2>&1 &
   for _ in $(seq 1 50); do running && break; sleep 0.2; done

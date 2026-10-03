@@ -20,17 +20,16 @@ import (
 )
 
 // Borrowers: entry, CSV import with preview, barcode cards, year rollover.
-// Teachers are borrowers of a particular kind, and borrow in their own name.
+// Staff borrow in their own name, like readers: a group of their own tells them apart.
 
 type BorrowerRow struct {
 	ID           int64
 	FirstName    string
 	LastInitial  string
-	Class        string
-	Kind         string
+	Group        string
 	CardCode     string
-	Token        string // parent link token, empty when not created
-	Active       bool   // false = left the school, kept for the history
+	Token        string // tracking link token, empty when not created
+	Active       bool   // false = left the library, kept for the history
 	TotalCount   int    // loans in total
 	OutCount     int    // open loans
 	OverdueCount int    // open loans that are overdue
@@ -38,15 +37,15 @@ type BorrowerRow struct {
 
 // Columns common to borrower queries, with counters named so an ORDER BY can
 // refer to them (brSortColumns).
-const borrowerColumns = `br.id, br.first_name, br.last_initial, COALESCE(br.class, ''), br.kind, COALESCE(br.card_code, ''),
-	COALESCE(br.family_token, ''), br.active,
+const borrowerColumns = `br.id, br.first_name, br.last_initial, COALESCE(br.group_name, ''), COALESCE(br.card_code, ''),
+	COALESCE(br.tracking_token, ''), br.active,
 	(SELECT COUNT(*) FROM loan l WHERE l.borrower_id = br.id) AS total_count,
 	(SELECT COUNT(*) FROM loan l WHERE l.borrower_id = br.id AND l.returned_on IS NULL) AS out_count,
 	(SELECT COUNT(*) FROM loan l WHERE l.borrower_id = br.id AND l.returned_on IS NULL AND l.due_on < date('now')) AS overdue_count`
 
 func scanBorrower(sc rowScanner, e *BorrowerRow) error {
 	var active int
-	err := sc.Scan(&e.ID, &e.FirstName, &e.LastInitial, &e.Class, &e.Kind, &e.CardCode, &e.Token, &active,
+	err := sc.Scan(&e.ID, &e.FirstName, &e.LastInitial, &e.Group, &e.CardCode, &e.Token, &active,
 		&e.TotalCount, &e.OutCount, &e.OverdueCount)
 	e.Active = active == 1
 	return err
@@ -59,7 +58,7 @@ func (e BorrowerRow) Anonymised() bool {
 }
 
 // "Durant" -> "D.". The full last name is NEVER stored (GDPR): should the
-// database leak, "first name + D. + class" stays barely identifying.
+// database leak, "first name + D. + group" stays barely identifying.
 func lastNameInitial(lastName string) string {
 	lastName = strings.TrimSpace(lastName)
 	if lastName == "" {
@@ -72,23 +71,23 @@ func lastNameInitial(lastName string) string {
 type importRow struct {
 	FirstName   string
 	LastInitial string
-	Class       string
+	Group       string
 	Duplicate   bool // already on file, or already met in the file
 }
 
-// First name + last name initial + class: the full last name is not stored.
-func borrowerKey(firstName, lastName, class string) string {
+// First name + last name initial + group: the full last name is not stored.
+func borrowerKey(firstName, lastName, group string) string {
 	n := func(s string) string { return strings.ToLower(strings.TrimSpace(s)) }
-	return n(firstName) + "|" + n(lastName) + "|" + n(class)
+	return n(firstName) + "|" + n(lastName) + "|" + n(group)
 }
 
 // Flags rows already on file and repetitions inside the file: a second import
-// would otherwise duplicate every pupil, and there is no deletion to undo it.
+// would otherwise duplicate every reader, and there is no deletion to undo it.
 func markDuplicates(rows []importRow, existing map[string]bool) int {
 	seen := make(map[string]bool, len(rows))
 	count := 0
 	for i := range rows {
-		c := borrowerKey(rows[i].FirstName, rows[i].LastInitial, rows[i].Class)
+		c := borrowerKey(rows[i].FirstName, rows[i].LastInitial, rows[i].Group)
 		if existing[c] || seen[c] {
 			rows[i].Duplicate = true
 			count++
@@ -101,18 +100,18 @@ func markDuplicates(rows []importRow, existing map[string]bool) int {
 // Read BEFORE opening a transaction (one-connection pool, see openDB).
 func (a *app) existingBorrowers() (map[string]bool, error) {
 	rows, err := a.db.Query(
-		`SELECT first_name, last_initial, COALESCE(class, '') FROM borrower WHERE active = 1`)
+		`SELECT first_name, last_initial, COALESCE(group_name, '') FROM borrower WHERE active = 1`)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 	m := make(map[string]bool)
 	for rows.Next() {
-		var firstName, lastName, class string
-		if err := rows.Scan(&firstName, &lastName, &class); err != nil {
+		var firstName, lastName, group string
+		if err := rows.Scan(&firstName, &lastName, &group); err != nil {
 			return nil, err
 		}
-		m[borrowerKey(firstName, lastName, class)] = true
+		m[borrowerKey(firstName, lastName, group)] = true
 	}
 	return m, rows.Err()
 }
@@ -122,7 +121,7 @@ func (a *app) existingBorrowers() (map[string]bool, error) {
 type brFilter struct {
 	Q        string
 	Inactive bool
-	Class    string
+	Group    string
 	Sort     string // a key of brSortColumns; "" is the standing order
 	Dir      string // "asc" or "desc"
 }
@@ -131,7 +130,7 @@ func readBrFilter(r *http.Request) brFilter {
 	return brFilter{
 		Q:        strings.TrimSpace(r.FormValue("q")),
 		Inactive: r.FormValue("inactive") == "1",
-		Class:    currentClass(r),
+		Group:    currentGroup(r),
 		Sort:     r.FormValue("sort"),
 		Dir:      r.FormValue("dir"),
 	}
@@ -147,17 +146,16 @@ func (f brFilter) SortForm() string            { return "br-filter" }
 // ties do not shuffle between draws.
 var brSortColumns = map[string]string{
 	"name":    `br.first_name {dir}, br.last_initial {dir}`,
-	"class":   `COALESCE(br.class, '') = '' {dir}, COALESCE(br.class, '') {dir}, br.first_name, br.last_initial`,
-	"kind":    `br.kind {dir}, br.first_name, br.last_initial`,
+	"group":   `COALESCE(br.group_name, '') = '' {dir}, COALESCE(br.group_name, '') {dir}, br.first_name, br.last_initial`,
 	"loans":   `total_count {dir}, br.first_name, br.last_initial`,
 	"out":     `out_count {dir}, br.first_name, br.last_initial`,
 	"overdue": `overdue_count {dir}, br.first_name, br.last_initial`,
 	"card":    `COALESCE(br.card_code, '') {dir}, br.first_name, br.last_initial`,
 }
 
-// The standing order of an unsorted list: pupils then teachers, by class, by
+// The standing order of an unsorted list: by group (the ungrouped last), by
 // name. It is no one column, so no heading shows the sorted arrow.
-const brStandingOrder = `br.kind, br.class, br.last_initial, br.first_name`
+const brStandingOrder = `br.group_name IS NULL, br.group_name, br.last_initial, br.first_name`
 
 func brOrderBy(f brFilter) string {
 	expr, ok := brSortColumns[f.Sort]
@@ -177,8 +175,8 @@ func brWhere(f brFilter) (where string, args []any) {
 	// The sentinel borrower of anonymised loans is not a person.
 	where = ` WHERE br.active = ? AND br.id <> ?`
 	args = []any{b2i(f.Active()), anonymousID()}
-	if value, filter := classFilter(f.Class); filter {
-		where += ` AND COALESCE(br.class, '') = ?`
+	if value, filter := groupFilter(f.Group); filter {
+		where += ` AND COALESCE(br.group_name, '') = ?`
 		args = append(args, value)
 	}
 	// The card code is searched too, so scanning a card into the box finds its
@@ -186,7 +184,7 @@ func brWhere(f brFilter) (where string, args []any) {
 	for _, word := range strings.Fields(f.Q) {
 		like := "%" + foldSearch(word) + "%"
 		where += ` AND (fold(br.first_name) LIKE ? OR fold(br.last_initial) LIKE ?
-		            OR fold(COALESCE(br.class,'')) LIKE ? OR fold(COALESCE(br.card_code,'')) LIKE ?)`
+		            OR fold(COALESCE(br.group_name,'')) LIKE ? OR fold(COALESCE(br.card_code,'')) LIKE ?)`
 		args = append(args, like, like, like, like)
 	}
 	return where, args
@@ -231,46 +229,46 @@ func (a *app) queryBorrowers(query string, args []any) ([]BorrowerRow, error) {
 	return out, rows.Err()
 }
 
-// classFilterNone is what the class dropdown submits for "no class", since
-// empty already means "every class".
-const classFilterNone = "-"
+// groupFilterNone is what the group dropdown submits for "no group", since
+// empty already means "every group".
+const groupFilterNone = "-"
 
-// classFilter turns the ?class= parameter into the value to compare against
-// COALESCE(class, ”), and whether to compare at all.
-func classFilter(v string) (value string, filter bool) {
+// groupFilter turns the ?group= parameter into the value to compare against
+// COALESCE(group, ”), and whether to compare at all.
+func groupFilter(v string) (value string, filter bool) {
 	switch v = strings.TrimSpace(v); v {
 	case "":
-		return "", false // every class
-	case classFilterNone:
+		return "", false // every group
+	case groupFilterNone:
 		return "", true // the borrowers who have none
 	default:
 		return v, true
 	}
 }
 
-// A class and its headcount, for the filter dropdown.
-type ClassCount struct {
-	Class string
+// A group and its headcount, for the filter dropdown.
+type GroupCount struct {
+	Group string
 	Count int
 }
 
-// The classless come last, under an empty Class. The sentinel borrower of
+// The classless come last, under an empty Group. The sentinel borrower of
 // anonymised loans is excluded.
-func (a *app) listClasses(active bool) ([]ClassCount, error) {
+func (a *app) listGroups(active bool) ([]GroupCount, error) {
 	rows, err := a.db.Query(
-		`SELECT COALESCE(class, ''), COUNT(*) FROM borrower
+		`SELECT COALESCE(group_name, ''), COUNT(*) FROM borrower
 		  WHERE active = ? AND id <> ?
-		  GROUP BY COALESCE(class, '')
-		  ORDER BY CASE WHEN COALESCE(class, '') = '' THEN 1 ELSE 0 END, class`,
+		  GROUP BY COALESCE(group_name, '')
+		  ORDER BY CASE WHEN COALESCE(group_name, '') = '' THEN 1 ELSE 0 END, group_name`,
 		b2i(active), anonymousID())
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var out []ClassCount
+	var out []GroupCount
 	for rows.Next() {
-		var c ClassCount
-		if err := rows.Scan(&c.Class, &c.Count); err != nil {
+		var c GroupCount
+		if err := rows.Scan(&c.Group, &c.Count); err != nil {
 			return nil, err
 		}
 		out = append(out, c)
@@ -278,20 +276,20 @@ func (a *app) listClasses(active bool) ([]ClassCount, error) {
 	return out, rows.Err()
 }
 
-// HTMX actions do not carry the class filter, so it is recovered from the URL
+// HTMX actions do not carry the group filter, so it is recovered from the URL
 // the browser shows, which HTMX sends as a header.
-func currentClass(r *http.Request) string {
-	if c := strings.TrimSpace(r.FormValue("class")); c != "" {
+func currentGroup(r *http.Request) string {
+	if c := strings.TrimSpace(r.FormValue("group")); c != "" {
 		return c
 	}
-	return urlClass(r)
+	return urlGroup(r)
 }
 
-// The class the list is filtered to, from the URL alone: the add form posts a
-// "class" field of its own, which is not the filter.
-func urlClass(r *http.Request) string {
+// The group the list is filtered to, from the URL alone: the add form posts a
+// "group" field of its own, which is not the filter.
+func urlGroup(r *http.Request) string {
 	if u, err := url.Parse(r.Header.Get("HX-Current-URL")); err == nil {
-		return strings.TrimSpace(u.Query().Get("class"))
+		return strings.TrimSpace(u.Query().Get("group"))
 	}
 	return ""
 }
@@ -315,7 +313,7 @@ func (a *app) borrowersSearch(w http.ResponseWriter, r *http.Request) {
 	}
 	a.fragment(w, r, "borrowers", "borrowers_list", map[string]any{
 		"Borrowers": borrowers, "Page": pg,
-		"Inactive": f.Inactive, "Class": f.Class, "Filter": f,
+		"Inactive": f.Inactive, "Group": f.Group, "Filter": f,
 	})
 }
 
@@ -395,9 +393,18 @@ func (a *app) borrowerDetail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// After the loans: one connection, and their rows are closed by now.
+	groups, err := a.listGroups(true)
+	if err != nil {
+		log.Printf("borrower/detail (groups): %v", err)
+		internalError(w, r)
+		return
+	}
+
 	a.render(w, r, "borrower", map[string]any{
 		"Title":      e.FirstName + " " + e.LastInitial,
 		"E":          e,
+		"Groups":     groups,
 		"Out":        out,
 		"Past":       past,
 		"ExtendDays": extendDefaultDays, // what the extend dialog opens on, as on /loans
@@ -433,11 +440,7 @@ func (a *app) borrowerUpdate(w http.ResponseWriter, r *http.Request) {
 	}
 	firstName := strings.TrimSpace(r.FormValue("first_name"))
 	lastName := strings.TrimSpace(r.FormValue("last_name"))
-	class := strings.TrimSpace(r.FormValue("class"))
-	kind := r.FormValue("kind")
-	if kind != "teacher" {
-		kind = "student"
-	}
+	group := strings.TrimSpace(r.FormValue("group"))
 	// From the list, the row swaps itself back; from the borrower's own page,
 	// the form posts backField and gets a redirect.
 	back := r.FormValue(backField)
@@ -450,15 +453,15 @@ func (a *app) borrowerUpdate(w http.ResponseWriter, r *http.Request) {
 		}
 		// Stay in edit mode with the values typed.
 		e, _ := a.loadBorrower(id)
-		e.FirstName, e.LastInitial, e.Kind = firstName, lastName, kind
-		cl := class
-		e.Class = cl
+		e.FirstName, e.LastInitial = firstName, lastName
+		cl := group
+		e.Group = cl
 		a.fragment(w, r, "borrowers", "borrower_edit", e)
 		return
 	}
 	if _, err := a.db.Exec(
-		`UPDATE borrower SET first_name = ?, last_initial = ?, class = ?, kind = ? WHERE id = ?`,
-		firstName, lastNameInitial(lastName), nullable(class), kind, id,
+		`UPDATE borrower SET first_name = ?, last_initial = ?, group_name = ? WHERE id = ?`,
+		firstName, lastNameInitial(lastName), nullable(group), id,
 	); err != nil {
 		log.Printf("borrower/update: %v", err)
 		internalError(w, r)
@@ -481,7 +484,7 @@ func (a *app) borrowersDeactivate(w http.ResponseWriter, r *http.Request) {
 	id := pathID(r)
 
 	// Refuse while they still have books: they would vanish from the list, their
-	// loans would stay open, and their parent page would stop answering. The
+	// loans would stay open, and their tracking page would stop answering. The
 	// no-open-loan test is part of the UPDATE, so a loan recorded at another desk
 	// between a check and the write cannot slip a book past it. active = 1 keeps
 	// a second deactivation from restarting the retention clock.
@@ -509,7 +512,7 @@ func (a *app) borrowersDeactivate(w http.ResponseWriter, r *http.Request) {
 	a.borrowersFragment(w, r, "", false)
 }
 
-// A rollover mistake, or a pupil who comes back. Not the sentinel, which is
+// A rollover mistake, or a reader who comes back. Not the sentinel, which is
 // not a person, nor an anonymised borrower, who has nothing left to bring back.
 func (a *app) borrowerReactivate(w http.ResponseWriter, r *http.Request) {
 	id := pathID(r)
@@ -542,16 +545,16 @@ func (a *app) borrowerReactivate(w http.ResponseWriter, r *http.Request) {
 func (a *app) borrowersScreen(w http.ResponseWriter, r *http.Request) {
 	f := readBrFilter(r)
 	f.Q = "" // the search box starts empty; the list is everything the filters allow
-	inactive, class := f.Inactive, f.Class
+	inactive, group := f.Inactive, f.Group
 	borrowers, pg, err := a.pageBorrowers(f, readOffset(r))
 	if err != nil {
 		log.Printf("borrowers: %v", err)
 		internalError(w, r)
 		return
 	}
-	classes, err := a.listClasses(!inactive)
+	groups, err := a.listGroups(!inactive)
 	if err != nil {
-		log.Printf("borrowers (classes): %v", err)
+		log.Printf("borrowers (groups): %v", err)
 		internalError(w, r)
 		return
 	}
@@ -559,8 +562,8 @@ func (a *app) borrowersScreen(w http.ResponseWriter, r *http.Request) {
 	if inactive {
 		title = tr(r, "borrowers.title_inactive")
 	}
-	if class != "" {
-		title += " · " + class
+	if group != "" {
+		title += " · " + group
 	}
 	extra := map[string]string{}
 	if inactive {
@@ -569,7 +572,7 @@ func (a *app) borrowersScreen(w http.ResponseWriter, r *http.Request) {
 	a.render(w, r, "borrowers", map[string]any{
 		"Title": title, "Borrowers": borrowers, "Page": pg,
 		"Inactive": inactive, "Filter": f,
-		"Classes": classes, "Class": class,
+		"Groups": groups, "Group": group,
 		"FilterAction": "/borrowers", "FilterExtra": extra,
 	})
 }
@@ -577,11 +580,7 @@ func (a *app) borrowersScreen(w http.ResponseWriter, r *http.Request) {
 func (a *app) borrowersAdd(w http.ResponseWriter, r *http.Request) {
 	firstName := strings.TrimSpace(r.FormValue("first_name"))
 	lastName := strings.TrimSpace(r.FormValue("last_name"))
-	class := strings.TrimSpace(r.FormValue("class"))
-	kind := r.FormValue("kind")
-	if kind != "teacher" {
-		kind = "student"
-	}
+	group := strings.TrimSpace(r.FormValue("group"))
 	if firstName == "" || lastName == "" {
 		a.borrowersFragment(w, r, tr(r, "borrowers.err_name_required"), false)
 		return
@@ -602,9 +601,9 @@ func (a *app) borrowersAdd(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if _, err := tx.Exec(
-		`INSERT INTO borrower (first_name, last_initial, class, kind, card_code, active)
-		 VALUES (?, ?, ?, ?, ?, 1)`,
-		firstName, lastNameInitial(lastName), nullable(class), kind, code,
+		`INSERT INTO borrower (first_name, last_initial, group_name, card_code, active)
+		 VALUES (?, ?, ?, ?, 1)`,
+		firstName, lastNameInitial(lastName), nullable(group), code,
 	); err != nil {
 		log.Printf("borrowers/add (insert): %v", err)
 		internalError(w, r)
@@ -624,7 +623,7 @@ func (a *app) borrowersFragment(w http.ResponseWriter, r *http.Request, errMsg s
 	f := readBrFilter(r)
 	f.Inactive = inactive
 	f.Q = ""              // these come from a button, not from the search box
-	f.Class = urlClass(r) // nor is the class filter theirs to carry (urlClass)
+	f.Group = urlGroup(r) // nor is the group filter theirs to carry (urlGroup)
 	borrowers, pg, err := a.pageBorrowers(f, readOffset(r))
 	if err != nil {
 		log.Printf("borrowers (list): %v", err)
@@ -633,11 +632,11 @@ func (a *app) borrowersFragment(w http.ResponseWriter, r *http.Request, errMsg s
 	}
 	a.fragment(w, r, "borrowers", "borrowers_list", map[string]any{
 		"Borrowers": borrowers, "Error": errMsg, "Page": pg,
-		"Inactive": f.Inactive, "Class": f.Class, "Filter": f,
+		"Inactive": f.Inactive, "Group": f.Group, "Filter": f,
 	})
 }
 
-// Reads "first name, last name, class". Detects the separator and skips a header.
+// Reads "first name, last name, group". Detects the separator and skips a header.
 // A line without both names is skipped and counted: a full name typed in one
 // cell would otherwise be stored whole as the first name.
 func parseCSV(raw string) (rows []importRow, skipped int) {
@@ -677,7 +676,7 @@ func parseCSV(raw string) (rows []importRow, skipped int) {
 			}
 			return ""
 		}
-		firstName, lastName, class := field(0), field(1), field(2)
+		firstName, lastName, group := field(0), field(1), field(2)
 		if i == 0 && isHeader(firstName) {
 			continue
 		}
@@ -689,7 +688,7 @@ func parseCSV(raw string) (rows []importRow, skipped int) {
 			continue
 		}
 		// Minimisation at import time: only the last name initial is kept.
-		rows = append(rows, importRow{FirstName: firstName, LastInitial: lastNameInitial(lastName), Class: class})
+		rows = append(rows, importRow{FirstName: firstName, LastInitial: lastNameInitial(lastName), Group: group})
 		if len(rows) >= 2000 {
 			break
 		}
@@ -712,7 +711,7 @@ func (a *app) borrowersImportScreen(w http.ResponseWriter, r *http.Request) {
 // importHeader is the row the empty sheet starts with, in the words the
 // preview uses; isHeader must recognise its first cell in every language.
 func importHeader(lang string) []string {
-	return []string{T(lang, "borrowers.f_first_name"), T(lang, "borrowers.f_last_name"), T(lang, "loans.class")}
+	return []string{T(lang, "borrowers.f_first_name"), T(lang, "borrowers.f_last_name"), T(lang, "loans.group")}
 }
 
 // borrowersImportTemplate hands out an empty sheet to fill in and paste back:
@@ -807,7 +806,7 @@ func (a *app) borrowersImportConfirm(w http.ResponseWriter, r *http.Request) {
 	defer tx.Rollback()
 
 	stmt, err := tx.Prepare(
-		`INSERT INTO borrower (first_name, last_initial, class, kind, card_code, active) VALUES (?, ?, ?, 'student', ?, 1)`)
+		`INSERT INTO borrower (first_name, last_initial, group_name, card_code, active) VALUES (?, ?, ?, ?, 1)`)
 	if err != nil {
 		log.Printf("import/confirm (prepare): %v", err)
 		internalError(w, r)
@@ -819,14 +818,13 @@ func (a *app) borrowersImportConfirm(w http.ResponseWriter, r *http.Request) {
 		if l.FirstName == "" && l.LastInitial == "" {
 			continue
 		}
-		// The import creates pupils; a teacher is added one at a time.
 		code, err := freshCardCode(tx)
 		if err != nil {
 			log.Printf("import/confirm (card code): %v", err)
 			internalError(w, r)
 			return
 		}
-		if _, err := stmt.Exec(l.FirstName, l.LastInitial, nullable(l.Class), code); err != nil {
+		if _, err := stmt.Exec(l.FirstName, l.LastInitial, nullable(l.Group), code); err != nil {
 			log.Printf("import/confirm (insert): %v", err)
 			internalError(w, r)
 			return
@@ -882,19 +880,19 @@ var cp1252 = [32]rune{
 }
 
 // Card is one printable barcode card.
-type Card struct{ FirstName, LastInitial, Class, Code string }
+type Card struct{ FirstName, LastInitial, Group, Code string }
 
-// listCards gathers the cards to print. The class goes through classFilter, as
+// listCards gathers the cards to print. The group goes through groupFilter, as
 // everything the dropdown drives does, so "-" selects the classless.
-func (a *app) listCards(class string) ([]Card, error) {
-	query := `SELECT first_name, last_initial, COALESCE(class, ''), card_code
+func (a *app) listCards(group string) ([]Card, error) {
+	query := `SELECT first_name, last_initial, COALESCE(group_name, ''), card_code
 	              FROM borrower WHERE active = 1 AND card_code IS NOT NULL`
 	args := []any{}
-	if value, filter := classFilter(class); filter {
-		query += ` AND COALESCE(class, '') = ?`
+	if value, filter := groupFilter(group); filter {
+		query += ` AND COALESCE(group_name, '') = ?`
 		args = append(args, value)
 	}
-	query += ` ORDER BY class, last_initial, first_name`
+	query += ` ORDER BY group_name, last_initial, first_name`
 
 	rows, err := a.db.Query(query, args...)
 	if err != nil {
@@ -904,7 +902,7 @@ func (a *app) listCards(class string) ([]Card, error) {
 	var cards []Card
 	for rows.Next() {
 		var c Card
-		if err := rows.Scan(&c.FirstName, &c.LastInitial, &c.Class, &c.Code); err != nil {
+		if err := rows.Scan(&c.FirstName, &c.LastInitial, &c.Group, &c.Code); err != nil {
 			return nil, err
 		}
 		cards = append(cards, c)
@@ -912,84 +910,84 @@ func (a *app) listCards(class string) ([]Card, error) {
 	return cards, rows.Err()
 }
 
-// Printable card sheet, optionally filtered by ?class=P3A.
+// Printable card sheet, optionally filtered by ?group=P3A.
 func (a *app) borrowersCards(w http.ResponseWriter, r *http.Request) {
-	class := strings.TrimSpace(r.URL.Query().Get("class"))
-	cards, err := a.listCards(class)
+	group := strings.TrimSpace(r.URL.Query().Get("group"))
+	cards, err := a.listCards(group)
 	if err != nil {
 		log.Printf("cards: %v", err)
 		internalError(w, r)
 		return
 	}
-	a.renderDoc(w, r, "cards", map[string]any{"Cards": cards, "Class": class})
+	a.renderDoc(w, r, "cards", map[string]any{"Cards": cards, "Group": group})
 }
 
 // Year rollover.
 
-// noClassLabel is the on-screen label for pupils whose class is NULL, and the
+// noGroupLabel is the on-screen label for readers whose group is NULL, and the
 // value the form posts back; localised, since it is shown.
-func noClassLabel() string {
-	return T(instanceLang(), "borrower.no_class")
+func noGroupLabel() string {
+	return T(instanceLang(), "borrower.no_group")
 }
 
-type rolloverPupil struct {
+type rolloverReader struct {
 	ID          int64
 	FirstName   string
 	LastInitial string
-	Class       string // "" = no class
+	Group       string // "" = no group
 	OutCount    int    // books still in hand
 }
 
-// What happens to a class at rollover.
+// What happens to a group at rollover.
 type rolloverRule struct {
-	Src     string // current class ("" = no class)
-	Dst     string // new class ("" = unchanged)
-	Leaving bool   // the pupils of this class are leaving the school
+	Src     string // current group ("" = no group)
+	Dst     string // new group ("" = unchanged)
+	Leaving bool   // the readers of this group are leaving
 }
 
 // Works on a SNAPSHOT, and must: applying "P1 -> P2" then "P2 -> P3" in the
-// database would carry every pupil through every later rule.
-func planRollover(pupils []rolloverPupil, rules []rolloverRule) (movedUp map[int64]string, leavers []int64) {
+// database would carry every reader through every later rule.
+func planRollover(readers []rolloverReader, rules []rolloverRule) (movedUp map[int64]string, leavers []int64) {
 	bySrc := make(map[string]rolloverRule, len(rules))
 	for _, r := range rules {
 		bySrc[r.Src] = r
 	}
 	movedUp = make(map[int64]string)
-	for _, e := range pupils {
-		r, ok := bySrc[e.Class]
+	for _, e := range readers {
+		r, ok := bySrc[e.Group]
 		switch {
 		case !ok:
 		case r.Leaving:
-			// "Leaving" wins over any new class.
+			// "Leaving" wins over any new group.
 			leavers = append(leavers, e.ID)
-		case r.Dst != "" && r.Dst != e.Class:
+		case r.Dst != "" && r.Dst != e.Group:
 			movedUp[e.ID] = r.Dst
 		}
 	}
 	return movedUp, leavers
 }
 
-// rolloverMerge is a class that receives pupils while some of its own stay
+// rolloverMerge is a group that receives readers while some of its own stay
 // in it: once merged, nothing tells the two groups apart.
 type rolloverMerge struct {
 	Into    string
-	From    []string // the classes moving into it
-	Staying int      // its own pupils, neither moved on nor leaving
+	From    []string // the groups moving into it
+	Staying int      // its own readers, neither moved on nor leaving
 }
 
-// findMerges works on the same snapshot as planRollover. Two classes moving
+// findMerges works on the same snapshot as planRollover. Two groups moving
 // together into one that is empty or moving on is not a merge: both groups
 // were decided in the same breath.
-func findMerges(pupils []rolloverPupil, rules []rolloverRule) []rolloverMerge {
+func findMerges(readers []rolloverReader, rules []rolloverRule) []rolloverMerge {
 	bySrc := make(map[string]rolloverRule, len(rules))
 	for _, r := range rules {
 		bySrc[r.Src] = r
 	}
 	staying := make(map[string]int)
-	for _, p := range pupils {
-		r := bySrc[p.Class]
-		if !r.Leaving && (r.Dst == "" || r.Dst == p.Class) {
-			staying[p.Class]++
+	for _, p := range readers {
+		r := bySrc[p.Group]
+		if !r.Leaving && (r.Dst == "" || r.Dst == p.Group) {
+			staying[p.Group]++
 		}
 	}
 	var out []rolloverMerge
@@ -1006,14 +1004,14 @@ func findMerges(pupils []rolloverPupil, rules []rolloverRule) []rolloverMerge {
 		}
 		src := r.Src
 		if src == "" {
-			src = noClassLabel()
+			src = noGroupLabel()
 		}
 		out[i].From = append(out[i].From, src)
 	}
 	return out
 }
 
-// Sources lists the classes moving in, for the sentence that names them.
+// Sources lists the groups moving in, for the sentence that names them.
 func (m rolloverMerge) Sources() string { return strings.Join(m.From, ", ") }
 
 // mergeKey names a set of merges, so "apply anyway" confirms the merges the
@@ -1027,19 +1025,19 @@ func mergeKey(merges []rolloverMerge) string {
 	return strings.Join(names, ",")
 }
 
-// nextClasses suggests each class's next year: its one number plus one, P3 to
+// nextGroups suggests each group's next year: its one number plus one, P3 to
 // P4, P5B to P6B. The top of each series, the highest number between the same
 // letters, gets none: P6 leaves and M3 goes to P1, which no arithmetic knows,
 // and left empty the merge check asks about them. Nor does a name with no
 // number or with two ("P5-6").
-func nextClasses(classes []string) map[string]string {
+func nextGroups(groups []string) map[string]string {
 	type parts struct {
 		prefix, suffix string
 		n, width       int
 	}
 	split := make(map[string]parts)
 	top := make(map[[2]string]int)
-	for _, c := range classes {
+	for _, c := range groups {
 		loc := reDigits.FindAllStringIndex(c, -1)
 		if len(loc) != 1 {
 			continue
@@ -1065,22 +1063,22 @@ func nextClasses(classes []string) map[string]string {
 var reDigits = regexp.MustCompile(`[0-9]+`)
 
 // q is a.db or the open transaction, never a.db while one is open (openDB).
-func pupilsSnapshot(q interface {
+func readersSnapshot(q interface {
 	Query(string, ...any) (*sql.Rows, error)
-}) ([]rolloverPupil, error) {
+}) ([]rolloverReader, error) {
 	rows, err := q.Query(
-		`SELECT br.id, br.first_name, br.last_initial, COALESCE(br.class, ''),
+		`SELECT br.id, br.first_name, br.last_initial, COALESCE(br.group_name, ''),
 		        (SELECT COUNT(*) FROM loan l WHERE l.borrower_id = br.id AND l.returned_on IS NULL)
-		   FROM borrower br WHERE br.active = 1 AND br.kind = 'student'
-		  ORDER BY br.class, br.last_initial, br.first_name`)
+		   FROM borrower br WHERE br.active = 1
+		  ORDER BY br.group_name, br.last_initial, br.first_name`)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var out []rolloverPupil
+	var out []rolloverReader
 	for rows.Next() {
-		var e rolloverPupil
-		if err := rows.Scan(&e.ID, &e.FirstName, &e.LastInitial, &e.Class, &e.OutCount); err != nil {
+		var e rolloverReader
+		if err := rows.Scan(&e.ID, &e.FirstName, &e.LastInitial, &e.Group, &e.OutCount); err != nil {
 			return nil, err
 		}
 		out = append(out, e)
@@ -1088,14 +1086,14 @@ func pupilsSnapshot(q interface {
 	return out, rows.Err()
 }
 
-// Fingerprint of who is in which class. The form carries the one it was drawn
-// from, so a reloaded or resubmitted rollover cannot move the school up twice.
-func rolloverState(pupils []rolloverPupil) string {
-	sorted := slices.Clone(pupils)
-	slices.SortFunc(sorted, func(x, y rolloverPupil) int { return cmp.Compare(x.ID, y.ID) })
+// Fingerprint of who is in which group. The form carries the one it was drawn
+// from, so a reloaded or resubmitted rollover cannot move everyone up twice.
+func rolloverState(readers []rolloverReader) string {
+	sorted := slices.Clone(readers)
+	slices.SortFunc(sorted, func(x, y rolloverReader) int { return cmp.Compare(x.ID, y.ID) })
 	h := sha256.New()
 	for _, p := range sorted {
-		fmt.Fprintf(h, "%d\x00%s\n", p.ID, p.Class)
+		fmt.Fprintf(h, "%d\x00%s\n", p.ID, p.Group)
 	}
 	return hex.EncodeToString(h.Sum(nil)[:12])
 }
@@ -1104,30 +1102,30 @@ func (a *app) rolloverScreen(w http.ResponseWriter, r *http.Request) {
 	a.rolloverForm(w, r, "", nil, nil)
 }
 
-// Each active class gets a new class, or its pupils marked as leaving. typed
+// Each active group gets a new group, or its readers marked as leaving. typed
 // and merges are set when the form comes back refused for a merge: what the
 // librarian filled in is drawn again, beside what it would have mixed.
 func (a *app) rolloverForm(w http.ResponseWriter, r *http.Request, errMsg string, typed []rolloverRule, merges []rolloverMerge) {
-	pupils, err := pupilsSnapshot(a.db)
+	readers, err := readersSnapshot(a.db)
 	if err != nil {
 		log.Printf("rollover (snapshot): %v", err)
 		internalError(w, r)
 		return
 	}
-	// Top class first: the leavers are settled before anyone moves into
-	// their class, which is the order that cannot merge two years.
+	// Top group first: the leavers are settled before anyone moves into
+	// their group, which is the order that cannot merge two years.
 	rows, err := a.db.Query(
-		`SELECT COALESCE(class, ?), COUNT(*)
-		   FROM borrower WHERE active = 1 AND kind = 'student'
-		  GROUP BY class ORDER BY class DESC`, noClassLabel())
+		`SELECT COALESCE(group_name, ?), COUNT(*)
+		   FROM borrower WHERE active = 1
+		  GROUP BY group_name ORDER BY group_name DESC`, noGroupLabel())
 	if err != nil {
 		log.Printf("rollover: %v", err)
 		internalError(w, r)
 		return
 	}
 	defer rows.Close()
-	type classInfo struct {
-		Class   string
+	type groupInfo struct {
+		Group   string
 		Count   int
 		Dst     string
 		Leaving bool
@@ -1136,20 +1134,20 @@ func (a *app) rolloverForm(w http.ResponseWriter, r *http.Request, errMsg string
 	for _, t := range typed {
 		src := t.Src
 		if src == "" {
-			src = noClassLabel()
+			src = noGroupLabel()
 		}
 		bySrc[src] = t
 	}
-	var classes []classInfo
+	var groups []groupInfo
 	for rows.Next() {
-		var c classInfo
-		if err := rows.Scan(&c.Class, &c.Count); err != nil {
+		var c groupInfo
+		if err := rows.Scan(&c.Group, &c.Count); err != nil {
 			log.Printf("rollover (scan): %v", err)
 			internalError(w, r)
 			return
 		}
-		c.Dst, c.Leaving = bySrc[c.Class].Dst, bySrc[c.Class].Leaving
-		classes = append(classes, c)
+		c.Dst, c.Leaving = bySrc[c.Group].Dst, bySrc[c.Group].Leaving
+		groups = append(groups, c)
 	}
 	if err := rows.Err(); err != nil {
 		log.Printf("rollover (rows): %v", err)
@@ -1157,18 +1155,18 @@ func (a *app) rolloverForm(w http.ResponseWriter, r *http.Request, errMsg string
 		return
 	}
 	if typed == nil {
-		names := make([]string, len(classes))
-		for i, c := range classes {
-			names[i] = c.Class
+		names := make([]string, len(groups))
+		for i, c := range groups {
+			names[i] = c.Group
 		}
-		next := nextClasses(names)
-		for i := range classes {
-			classes[i].Dst = next[classes[i].Class]
+		next := nextGroups(names)
+		for i := range groups {
+			groups[i].Dst = next[groups[i].Group]
 		}
 	}
 	a.render(w, r, "rollover", map[string]any{
-		"Title": tr(r, "borrowers.rollover"), "Classes": classes,
-		"State": rolloverState(pupils), "Error": errMsg,
+		"Title": tr(r, "borrowers.rollover"), "Groups": groups,
+		"State": rolloverState(readers), "Error": errMsg,
 		"Merges": merges, "MergeKey": mergeKey(merges),
 	})
 }
@@ -1185,7 +1183,7 @@ func (a *app) rolloverConfirm(w http.ResponseWriter, r *http.Request) {
 	rules := make([]rolloverRule, 0, n)
 	for i := 0; i < n; i++ {
 		src := r.FormValue(fmt.Sprintf("src_%d", i))
-		if src == noClassLabel() {
+		if src == noGroupLabel() {
 			src = ""
 		}
 		rules = append(rules, rolloverRule{
@@ -1204,44 +1202,44 @@ func (a *app) rolloverConfirm(w http.ResponseWriter, r *http.Request) {
 	defer tx.Rollback()
 
 	// Read inside the transaction, so two submissions cannot both pass the check.
-	pupils, err := pupilsSnapshot(tx)
+	readers, err := readersSnapshot(tx)
 	if err != nil {
 		log.Printf("rollover/confirm (snapshot): %v", err)
 		internalError(w, r)
 		return
 	}
-	if r.FormValue("state") != rolloverState(pupils) {
+	if r.FormValue("state") != rolloverState(readers) {
 		tx.Rollback()
 		a.rolloverForm(w, r, tr(r, "rollover.err_changed"), nil, nil)
 		return
 	}
 	// A merge goes through only once confirmed, and only the one shown.
-	if merges := findMerges(pupils, rules); len(merges) > 0 && r.FormValue("merge_ok") != mergeKey(merges) {
+	if merges := findMerges(readers, rules); len(merges) > 0 && r.FormValue("merge_ok") != mergeKey(merges) {
 		tx.Rollback()
 		a.rolloverForm(w, r, "", rules, merges)
 		return
 	}
-	movedUp, leavers := planRollover(pupils, rules)
+	movedUp, leavers := planRollover(readers, rules)
 
 	// A leaver who still has books stays active, and is named: deactivating them
 	// would hide them while their loans stay open.
-	byID := make(map[int64]rolloverPupil, len(pupils))
-	for _, e := range pupils {
+	byID := make(map[int64]rolloverReader, len(readers))
+	for _, e := range readers {
 		byID[e.ID] = e
 	}
 	var toDeactivate []int64
 	var kept []string
 	for _, id := range leavers {
 		if e := byID[id]; e.OutCount > 0 {
-			kept = append(kept, trn(r, "rollover.kept_entry", e.OutCount, e.FirstName, e.LastInitial, e.Class))
+			kept = append(kept, trn(r, "rollover.kept_entry", e.OutCount, e.FirstName, e.LastInitial, e.Group))
 			continue
 		}
 		toDeactivate = append(toDeactivate, id)
 	}
 
-	// Pupil by pupil: each is touched once, whatever the order of the rules.
-	for id, class := range movedUp {
-		if _, err := tx.Exec(`UPDATE borrower SET class = ? WHERE id = ?`, class, id); err != nil {
+	// Reader by reader: each is touched once, whatever the order of the rules.
+	for id, group := range movedUp {
+		if _, err := tx.Exec(`UPDATE borrower SET group_name = ? WHERE id = ?`, group, id); err != nil {
 			log.Printf("rollover/confirm (move-up): %v", err)
 			internalError(w, r)
 			return
@@ -1263,9 +1261,9 @@ func (a *app) rolloverConfirm(w http.ResponseWriter, r *http.Request) {
 	}
 
 	a.render(w, r, "rollover", map[string]any{
-		"Title":   tr(r, "borrowers.rollover"),
-		"Classes": []any{},
-		"Done":    true,
+		"Title":  tr(r, "borrowers.rollover"),
+		"Groups": []any{},
+		"Done":   true,
 		"Summary": tr(r, "rollover.summary",
 			trn(r, "rollover.moved", len(movedUp)),
 			trn(r, "rollover.deactivated", len(toDeactivate))),

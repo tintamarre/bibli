@@ -1,0 +1,46 @@
+{{define "document"}}<!DOCTYPE html>
+<html lang="{{lang}}" data-theme="{{theme}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>{{T "tracking.title"}}{{with libraryName}} · {{.}}{{end}}</title>
+<link rel="icon" type="image/svg+xml" href="{{asset "/static/favicon.svg"}}">
+<link rel="stylesheet" href="{{asset "/static/app.css"}}">
+</head>
+<body class="page-centred">
+<main class="centre-card tracking-card">
+  <h1>{{with libraryName}}{{.}}{{else}}{{T "tracking.title"}}{{end}}</h1>
+  <p class="tracking-intro">{{T "tracking.intro_before"}} <b>{{.FirstName}}</b>{{T "tracking.intro_after"}}</p>
+
+  {{if .Overdue}}
+  <section class="overdue-block">
+    <h2>{{T "tracking.overdue_heading"}}</h2>
+    <ul class="tracking-list">
+      {{range .Overdue}}
+      <li><b>{{.Title}}</b><br>
+        <span class="detail">{{T "tracking.due_since" (shortDate .DueOn)}} — {{Tn "loans.days_overdue" .Days}}</span>
+      </li>
+      {{end}}
+    </ul>
+    <p class="thanks">{{Tn "tracking.please_return" (len .Overdue)}}</p>
+  </section>
+  {{end}}
+
+  {{if .Current}}
+  <section>
+    <h2>{{T "tracking.current_heading"}}</h2>
+    <ul class="tracking-list">
+      {{range .Current}}
+      <li>{{.Title}}<br><span class="detail">{{T "tracking.due" (relativeDate .DueOn) (shortDate .DueOn)}}</span></li>
+      {{end}}
+    </ul>
+  </section>
+  {{end}}
+
+  {{if and (not .Overdue) (not .Current)}}
+  <p class="tracking-intro">{{T "tracking.nothing_out"}}</p>
+  {{end}}
+</main>
+</body>
+</html>{{end}}

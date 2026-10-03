@@ -193,7 +193,7 @@ func TestTopTitlesGatherEveryCopyOfAWork(t *testing.T) {
 	  (1, 103, date('now','-8 days'),  date('now','+6 days'), NULL),
 	  (3, 104, date('now','-7 days'),  date('now','+7 days'), NULL)`)
 
-	start, _ := schoolYearBounds(todayISO())
+	start, _ := activityYearBounds(todayISO())
 	top := a.topTitles(start)
 	if len(top) != 2 {
 		t.Fatalf("titles: want 2, got %d (%+v)", len(top), top)
@@ -212,7 +212,7 @@ func TestTopTitlesCountAnAnonymisedLoan(t *testing.T) {
 	exec(t, a.db, `INSERT INTO loan (copy_id, borrower_id, loaned_on, due_on, returned_on) VALUES
 	  (1, 1, date('now','-30 days'), date('now','-16 days'), date('now','-20 days'))`)
 
-	start, _ := schoolYearBounds(todayISO())
+	start, _ := activityYearBounds(todayISO())
 	top := a.topTitles(start)
 	if len(top) != 1 || top[0].Count != 1 {
 		t.Fatalf("the sentinel's loan was dropped: %+v", top)
@@ -221,14 +221,14 @@ func TestTopTitlesCountAnAnonymisedLoan(t *testing.T) {
 
 // The list is this school year's, so what moved three years ago is not what the
 // screen calls most borrowed today.
-func TestTopTitlesReadOnlyThisSchoolYear(t *testing.T) {
+func TestTopTitlesReadOnlyThisActivityYear(t *testing.T) {
 	a := homeApp(t)
 	exec(t, a.db, `INSERT INTO loan (copy_id, borrower_id, loaned_on, due_on, returned_on) VALUES
 	  (1, 101, date('now','-3 years'), date('now','-3 years','+14 days'), date('now','-3 years','+7 days')),
 	  (2, 102, date('now','-3 years'), date('now','-3 years','+14 days'), date('now','-3 years','+7 days')),
 	  (3, 103, date('now','-2 days'),  date('now','+12 days'), NULL)`)
 
-	start, _ := schoolYearBounds(todayISO())
+	start, _ := activityYearBounds(todayISO())
 	top := a.topTitles(start)
 	if len(top) != 1 || top[0].Title != "Le loup est revenu" {
 		t.Fatalf("the window was not applied: %+v", top)
@@ -312,13 +312,13 @@ func TestIdleStockIsEmptyWhenEverythingHasGoneOut(t *testing.T) {
 }
 
 // The grid reads the school year, so a loan from before it is not drawn on it.
-func TestLoansByDayReadsTheSchoolYearOnly(t *testing.T) {
+func TestLoansByDayReadsTheActivityYearOnly(t *testing.T) {
 	a := homeApp(t)
 	exec(t, a.db, `INSERT INTO loan (copy_id, borrower_id, loaned_on, due_on, returned_on) VALUES
 	  (1, 101, date('now','-2 days'),  date('now','+12 days'), NULL),
 	  (2, 102, date('now','-3 years'), date('now','-3 years','+14 days'), NULL)`)
 
-	start, end := schoolYearBounds(todayISO())
+	start, end := activityYearBounds(todayISO())
 	days := a.loansByDay(todayISO())
 	total := 0
 	for day, n := range days {

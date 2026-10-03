@@ -38,7 +38,7 @@ func TestLoadTemplates(t *testing.T) {
 }
 
 // A tag bearing a positional hx-swap-oob ("beforeend:#basket") is a wrapper:
-// HTMX swaps in its children and drops the tag, so it must carry no id or class.
+// HTMX swaps in its children and drops the tag, so it must carry no id or group.
 func TestPositionalOOBSwapsAreOnWrappers(t *testing.T) {
 	files, err := filepath.Glob("templates/*.html")
 	if err != nil {
@@ -50,7 +50,7 @@ func TestPositionalOOBSwapsAreOnWrappers(t *testing.T) {
 	// The whole opening tag, so the other attributes on it can be inspected.
 	tag := regexp.MustCompile(`(?s)<[a-zA-Z][^>]*\bhx-swap-oob\s*=\s*"([^"]*)"[^>]*>`)
 	positional := regexp.MustCompile(`^(beforebegin|afterbegin|beforeend|afterend)\s*:`)
-	carries := regexp.MustCompile(`\b(id|class)\s*=`)
+	carries := regexp.MustCompile(`\b(id|group)\s*=`)
 
 	for _, path := range files {
 		content, err := os.ReadFile(path)
@@ -62,7 +62,7 @@ func TestPositionalOOBSwapsAreOnWrappers(t *testing.T) {
 				continue
 			}
 			if carries.MatchString(m[0]) {
-				t.Errorf("%s: %q swaps in this tag's children, so its own id/class are dropped — "+
+				t.Errorf("%s: %q swaps in this tag's children, so its own id/group are dropped — "+
 					"put the swap on a bare wrapper around the element to insert:\n\t%s",
 					filepath.Base(path), m[1], strings.TrimSpace(m[0]))
 			}
@@ -78,7 +78,7 @@ func TestTemplateFuncsAreBoundToTheirLanguage(t *testing.T) {
 	en := templateFuncs("en")
 
 	for _, name := range []string{"T", "Tn", "lang", "statusWording", "relativeDate",
-		"duration", "shortDate", "version", "school", "googleKeyMissing", "asset", "jsTexts"} {
+		"duration", "shortDate", "version", "libraryName", "googleKeyMissing", "asset", "jsTexts"} {
 		if _, ok := fr[name]; !ok {
 			t.Errorf("template function %q missing", name)
 		}
@@ -141,10 +141,10 @@ func TestAssetCarriesAFingerprint(t *testing.T) {
 // The views are the only place the overdue count is computed.
 func TestListLoans(t *testing.T) {
 	a := testApp(t)
-	const columns = `SELECT loan_id, borrower_id, book_id, first_name, last_initial, class,
+	const columns = `SELECT loan_id, borrower_id, book_id, first_name, last_initial, group_name,
 		code, title, loaned_on, due_on, days_overdue FROM `
 
-	open, err := a.listLoans(columns + `v_active_loan ORDER BY class, last_initial, first_name`)
+	open, err := a.listLoans(columns + `v_active_loan ORDER BY group_name, last_initial, first_name`)
 	if err != nil {
 		t.Fatalf("listLoans: %v", err)
 	}
@@ -173,17 +173,17 @@ func TestListLoans(t *testing.T) {
 		}
 	}
 
-	// The class filter.
-	p3, err := a.listLoans(columns+`v_active_loan WHERE COALESCE(class, '') = ?`, "P3")
+	// The group filter.
+	p3, err := a.listLoans(columns+`v_active_loan WHERE COALESCE(group_name, '') = ?`, "P3")
 	if err != nil {
-		t.Fatalf("listLoans (class): %v", err)
+		t.Fatalf("listLoans (group): %v", err)
 	}
 	if len(p3) != 1 || p3[0].FirstName != "Tom" {
 		t.Errorf("P3 loans: %+v", p3)
 	}
-	// A teacher has no class: a NULL that must not be scanned into a string.
-	if p3[0].Class == nil || *p3[0].Class != "P3" {
-		t.Errorf("class: %v", p3[0].Class)
+	// A staff member may have no group: a NULL that must not be scanned into a string.
+	if p3[0].Group == nil || *p3[0].Group != "P3" {
+		t.Errorf("group: %v", p3[0].Group)
 	}
 
 	// A query that does not match the columns is an error, not a panic.
@@ -192,12 +192,12 @@ func TestListLoans(t *testing.T) {
 	}
 }
 
-func loanRow(id, borrowerID int64, first, class, title string, overdue int) Loan {
+func loanRow(id, borrowerID int64, first, group, title string, overdue int) Loan {
 	l := Loan{ID: id, BorrowerID: borrowerID, FirstName: first, LastInitial: "X.",
 		Title: title, DaysOverdue: overdue}
-	if class != "" {
-		c := class
-		l.Class = &c
+	if group != "" {
+		c := group
+		l.Group = &c
 	}
 	return l
 }
@@ -212,12 +212,12 @@ func TestGroupLoans(t *testing.T) {
 	})
 
 	if len(groups) != 2 {
-		t.Fatalf("%d classes, want 2", len(groups))
+		t.Fatalf("%d groups, want 2", len(groups))
 	}
-	if groups[0].Class != "P3" || groups[1].Class != "P4" {
-		t.Errorf("classes: %q then %q", groups[0].Class, groups[1].Class)
+	if groups[0].Group != "P3" || groups[1].Group != "P4" {
+		t.Errorf("groups: %q then %q", groups[0].Group, groups[1].Group)
 	}
-	// The class counts books, not borrowers.
+	// The group counts books, not borrowers.
 	if groups[0].Count != 3 {
 		t.Errorf("P3 holds %d books, want 3", groups[0].Count)
 	}
@@ -237,29 +237,29 @@ func TestGroupLoans(t *testing.T) {
 	}
 }
 
-// Teachers have no class and group together.
-func TestGroupLoansKeepsTheClasslessTogether(t *testing.T) {
+// Staff may have no group and group together.
+func TestGroupLoansKeepsTheGrouplessTogether(t *testing.T) {
 	groups := groupLoans([]Loan{
 		loanRow(1, 105, "Claire", "", "Chien bleu", 0),
 		loanRow(2, 105, "Claire", "", "Album", 0),
 		loanRow(3, 106, "Marc", "", "Le loup", 0),
 	})
-	if len(groups) != 1 || groups[0].Class != "" {
-		t.Fatalf("groups: %+v, want one with no class", groups)
+	if len(groups) != 1 || groups[0].Group != "" {
+		t.Fatalf("groups: %+v, want one with no group", groups)
 	}
 	if len(groups[0].Borrowers) != 2 {
 		t.Errorf("%d borrowers, want 2", len(groups[0].Borrowers))
 	}
 }
 
-// Namesakes in one class are separated by borrower_id alone.
+// Namesakes in one group are separated by borrower_id alone.
 func TestGroupLoansSeparatesNamesakes(t *testing.T) {
 	groups := groupLoans([]Loan{
 		loanRow(1, 201, "Léa", "P4", "Album", 0),
 		loanRow(2, 202, "Léa", "P4", "Chien bleu", 0),
 	})
 	if len(groups) != 1 {
-		t.Fatalf("%d classes, want 1", len(groups))
+		t.Fatalf("%d groups, want 1", len(groups))
 	}
 	if len(groups[0].Borrowers) != 2 {
 		t.Fatalf("%d borrowers, want 2 — two namesakes folded into one", len(groups[0].Borrowers))
@@ -282,7 +282,7 @@ func TestLoansQueryOrdersForGrouping(t *testing.T) {
 	a := testApp(t)
 	lend(t, a, 2, 102, 1) // a second book for Tom, who already has copy 1
 
-	rows, err := a.listLoans(`SELECT loan_id, borrower_id, book_id, first_name, last_initial, class,
+	rows, err := a.listLoans(`SELECT loan_id, borrower_id, book_id, first_name, last_initial, group_name,
 	       code, title, loaned_on, due_on, days_overdue
 	  FROM v_active_loan` + loansOrderForGrouping)
 	if err != nil {
@@ -302,10 +302,10 @@ func TestLoansQueryOrdersForGrouping(t *testing.T) {
 			t.Errorf("borrower %d appears in %d blocks — the rows are not grouped", id, n)
 		}
 	}
-	// The teachers, who have no class, come last: the classes are the list.
+	// The ungrouped come last: the groups are the list.
 	for i, g := range groups {
-		if g.Class == "" && i != len(groups)-1 {
-			t.Errorf("the classless group is at %d of %d, want last", i, len(groups))
+		if g.Group == "" && i != len(groups)-1 {
+			t.Errorf("the groupless group is at %d of %d, want last", i, len(groups))
 		}
 	}
 
@@ -322,69 +322,69 @@ func TestLoansQueryOrdersForGrouping(t *testing.T) {
 }
 
 // The tabs are counted from the same view the list is built from.
-func TestLoanClasses(t *testing.T) {
+func TestLoanGroups(t *testing.T) {
 	a := testApp(t)
 	// The fixture: Tom (P3) overdue, Léa (P4) on time.
-	classes, err := a.loanClasses("v_active_loan")
+	groups, err := a.loanGroups("v_active_loan")
 	if err != nil {
-		t.Fatalf("loanClasses: %v", err)
+		t.Fatalf("loanGroups: %v", err)
 	}
 	got := map[string]int{}
-	for _, c := range classes {
-		got[c.Class] = c.Count
+	for _, c := range groups {
+		got[c.Group] = c.Count
 	}
 	if got["P3"] != 1 || got["P4"] != 1 {
-		t.Errorf("active classes = %+v, want one book each in P3 and P4", got)
+		t.Errorf("active groups = %+v, want one book each in P3 and P4", got)
 	}
 
 	// Only what is late: Léa's on-time loan drops out, and so does her tab.
-	classes, err = a.loanClasses("v_overdue")
+	groups, err = a.loanGroups("v_overdue")
 	if err != nil {
-		t.Fatalf("loanClasses (overdue): %v", err)
+		t.Fatalf("loanGroups (overdue): %v", err)
 	}
-	if len(classes) != 1 || classes[0].Class != "P3" || classes[0].Count != 1 {
-		t.Errorf("overdue classes = %+v, want P3 alone with 1", classes)
+	if len(groups) != 1 || groups[0].Group != "P3" || groups[0].Count != 1 {
+		t.Errorf("overdue groups = %+v, want P3 alone with 1", groups)
 	}
 }
 
-// Teachers get a tab of their own, last, under an empty class string: the
+// The ungrouped get a tab of their own, last, under an empty group string: the
 // handler must tell "?class=" from no parameter.
-func TestLoanClassesKeepsTheClasslessLast(t *testing.T) {
+func TestLoanGroupsKeepsTheGrouplessLast(t *testing.T) {
 	a := testApp(t)
-	lend(t, a, 5, 105, 3) // Claire, the teacher
+	lend(t, a, 5, 105, 3) // Claire, who has no group
 
-	classes, err := a.loanClasses("v_active_loan")
+	groups, err := a.loanGroups("v_active_loan")
 	if err != nil {
-		t.Fatalf("loanClasses: %v", err)
+		t.Fatalf("loanGroups: %v", err)
 	}
-	if len(classes) == 0 {
-		t.Fatal("no classes")
+	if len(groups) == 0 {
+		t.Fatal("no groups")
 	}
-	last := classes[len(classes)-1]
-	if last.Class != "" {
-		t.Errorf("last tab is %q, want the classless", last.Class)
+	last := groups[len(groups)-1]
+	if last.Group != "" {
+		t.Errorf("last tab is %q, want the groupless", last.Group)
 	}
-	for _, c := range classes[:len(classes)-1] {
-		if c.Class == "" {
-			t.Error("the classless appear twice")
+	for _, c := range groups[:len(groups)-1] {
+		if c.Group == "" {
+			t.Error("the groupless appear twice")
 		}
 	}
 }
 
-// A class with nothing out gets no tab.
-func TestLoanClassesSkipsClassesWithNothingOut(t *testing.T) {
+// A group with nothing out gets no tab.
+func TestLoanGroupsSkipsGroupsWithNothingOut(t *testing.T) {
 	a := testApp(t)
 	if _, err := a.db.Exec(
-		`INSERT INTO borrower (first_name, last_initial, class, kind, card_code, active)
-		 VALUES ('Enzo', 'R.', 'P6', 'student', 'LEC99992', 1)`); err != nil {
+		`INSERT INTO borrower (first_name, last_initial, group_name, card_code, active)
+		 VALUES ('Enzo', 'R.', 'P6', 'LEC99992', 1)`); err != nil {
 		t.Fatal(err)
 	}
-	classes, err := a.loanClasses("v_active_loan")
+	groups, err := a.loanGroups("v_active_loan")
 	if err != nil {
-		t.Fatalf("loanClasses: %v", err)
+		t.Fatalf("loanGroups: %v", err)
 	}
-	for _, c := range classes {
-		if c.Class == "P6" {
+	for _, c := range groups {
+		if c.Group == "P6" {
 			t.Error("P6 has nothing out and still got a tab")
 		}
 	}

@@ -154,7 +154,7 @@
       </td>
       {{/* One element per cell: on mobile they are flex boxes. */}}
       {{/* One statement on one line: .loan-cell centres the pill and the name. */}}
-      <td data-label="{{T "inventory.col_loan"}}" class="col-loan"><span class="loan-cell">{{if .Out}}<span class="status-pill status-out">{{template "icon-borrow" "status-icon"}}{{T "inventory.out"}}</span>{{if .BorrowerID}}<a class="link-person" href="/borrowers/{{.BorrowerID}}">{{.BorrowerFirstName}} {{.BorrowerLastInitial}}{{with .BorrowerClass}} ({{.}}){{end}}</a>{{end}}{{/* When it is due back, or the days late in red; the day is under the pointer. */}}{{if .DueOn}}<span class="copy-due{{if gt .DaysOverdue 0}} overdue{{end}}" title="{{shortDate .DueOn}}">{{if gt .DaysOverdue 0}}{{Tn "loans.days_overdue" .DaysOverdue}}{{else}}{{T "book.copy_back" (relativeDate .DueOn)}}{{end}}</span>{{end}}{{else if onShelf .Status}}<span class="status-pill status-shelf">{{template "icon-shelf" "status-icon"}}{{T "inventory.on_shelf"}}</span>{{else}}{{/* Lost or withdrawn: a dash, neither out nor on a shelf. Punctuation, so not in the catalogues. */}}<span class="loan-none">&mdash;</span>{{end}}</span></td>
+      <td data-label="{{T "inventory.col_loan"}}" class="col-loan"><span class="loan-cell">{{if .Out}}<span class="status-pill status-out">{{template "icon-borrow" "status-icon"}}{{T "inventory.out"}}</span>{{if .BorrowerID}}<a class="link-person" href="/borrowers/{{.BorrowerID}}">{{.BorrowerFirstName}} {{.BorrowerLastInitial}}{{with .BorrowerGroup}} ({{.}}){{end}}</a>{{end}}{{/* When it is due back, or the days late in red; the day is under the pointer. */}}{{if .DueOn}}<span class="copy-due{{if gt .DaysOverdue 0}} overdue{{end}}" title="{{shortDate .DueOn}}">{{if gt .DaysOverdue 0}}{{Tn "loans.days_overdue" .DaysOverdue}}{{else}}{{T "book.copy_back" (relativeDate .DueOn)}}{{end}}</span>{{end}}{{else if onShelf .Status}}<span class="status-pill status-shelf">{{template "icon-shelf" "status-icon"}}{{T "inventory.on_shelf"}}</span>{{else}}{{/* Lost or withdrawn: a dash, neither out nor on a shelf. Punctuation, so not in the catalogues. */}}<span class="loan-none">&mdash;</span>{{end}}</span></td>
       {{/* One label, for this copy. */}}
       <td class="col-actions">
         <a class="btn-icon-action" href="/print/labels?codes={{.Code}}" target="_blank" rel="noopener"
@@ -191,17 +191,17 @@
 
 <section class="scan-block">
   <h2 class="subtitle">{{template "icon-history" "subtitle-icon"}}{{T "book.stats_heading"}}</h2>
-  {{/* How many different children have had it, and its share of time out in
+  {{/* How many different readers have had it, and its share of time out in
        copy-days (explained in the tooltip). Dropped when nothing has been lent. */}}
   <p>{{Tn "book.loans_total" .F.LoansTotal}}{{if .F.LoansTotal}} · {{Tn "book.readers" .F.Stats.Readers}}{{if .F.Stats.HasShare}} · <span title="{{T "book.out_share_help"}}">{{T "book.out_share" .F.Stats.OutShare}}</span>{{end}}{{end}} · {{T "book.loans_current" .F.OutCount}}</p>
   {{if .F.History}}
   <table class="table">
-    <thead><tr><th>{{T "loans.col_borrower"}}</th><th>{{T "loans.class"}}</th><th>{{T "borrower.col_borrowed_on"}}</th><th>{{T "borrower.col_returned_on"}}</th><th class="col-num">{{T "borrower.col_duration"}}</th></tr></thead>
+    <thead><tr><th>{{T "loans.col_borrower"}}</th><th>{{T "loans.group"}}</th><th>{{T "borrower.col_borrowed_on"}}</th><th>{{T "borrower.col_returned_on"}}</th><th class="col-num">{{T "borrower.col_duration"}}</th></tr></thead>
     <tbody>
     {{range .F.History}}
     <tr>
       <td data-label="{{T "loans.col_borrower"}}"><a class="link-person" href="/borrowers/{{.BorrowerID}}">{{.FirstName}} {{.LastInitial}}</a></td>
-      <td data-label="{{T "loans.class"}}">{{.Class}}</td>
+      <td data-label="{{T "loans.group"}}">{{.Group}}</td>
       <td data-label="{{T "borrower.col_borrowed_on"}}"><span class="when">{{shortDate .LoanedOn}}
         <span class="relative">{{relativeDate .LoanedOn}}</span></span></td>
       <td data-label="{{T "borrower.col_returned_on"}}">{{if .Out}}<span class="status-pill status-out">{{template "icon-borrow" "status-icon"}}{{T "book.still_out"}}</span>{{else}}{{shortDate .ReturnedOn}}{{end}}</td>

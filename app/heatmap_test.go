@@ -7,24 +7,24 @@ import (
 
 // Every case here fixes a day rather than reading the clock.
 
-func TestSchoolYearRunsFromAugustToJuly(t *testing.T) {
+func TestActivityYearRunsFromAugustToJuly(t *testing.T) {
 	for _, c := range []struct{ day, start, end string }{
 		{"2026-09-22", "2026-08-01", "2027-07-31"}, // inside the autumn term
 		{"2026-08-01", "2026-08-01", "2027-07-31"}, // the first day of the year
 		{"2026-07-31", "2025-08-01", "2026-07-31"}, // the last day of the one before
 		{"2026-01-15", "2025-08-01", "2026-07-31"}, // after the turn of the calendar
 	} {
-		start, end := schoolYearBounds(c.day)
+		start, end := activityYearBounds(c.day)
 		if start != c.start || end != c.end {
 			t.Errorf("%s: want %s..%s, got %s..%s", c.day, c.start, c.end, start, end)
 		}
 	}
 }
 
-// The school-year boundary, where an off-by-one shifts a whole year.
-func TestSchoolYearTurnsOverOnTheFirstOfAugust(t *testing.T) {
-	_, julyEnd := schoolYearBounds("2026-07-31")
-	augStart, _ := schoolYearBounds("2026-08-01")
+// The activity-year boundary, where an off-by-one shifts a whole year.
+func TestActivityYearTurnsOverOnTheFirstOfAugust(t *testing.T) {
+	_, julyEnd := activityYearBounds("2026-07-31")
+	augStart, _ := activityYearBounds("2026-08-01")
 	if julyEnd != "2026-07-31" || augStart != "2026-08-01" {
 		t.Fatalf("the turn is not on 1 August: %s then %s", julyEnd, augStart)
 	}
