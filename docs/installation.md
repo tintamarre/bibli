@@ -59,7 +59,7 @@ Ni Apple ni Microsoft n'ont signé Bibli : c'est un logiciel libre, distribué s
 4. Bibli demande le mot de passe de la bibliothèque, puis ouvre sa fenêtre dans Edge.
 5. Un raccourci **Bibli** est posé sur le Bureau et dans le menu Démarrer : c'est lui qu'on utilisera ensuite. Le fichier téléchargé ne sert plus et peut être supprimé.
 
-Les deux autres choix servent à une école qui a un serveur : **Serveur pour plusieurs appareils** l'installe sur ce PC (voir [Windows (service)](deployment.md#windows-service)), **Autre poste** pose seulement un raccourci vers un serveur installé ailleurs.
+Les deux autres choix servent à une organisation qui a un serveur : **Serveur pour plusieurs appareils** l'installe sur ce PC (voir [Windows (service)](deployment.md#windows-service)), **Autre poste** pose seulement un raccourci vers un serveur installé ailleurs.
 
 ### Sur Linux
 
@@ -161,10 +161,10 @@ Pour retrouver l'accès ou changer le mot de passe :
 
 La version pour un ordinateur convient à une bibliothèque tenue à un seul poste. Il faut installer Bibli sur un serveur, avec l'aide de quelqu'un d'à l'aise avec l'informatique, quand :
 
-- **plusieurs postes** doivent prêter en même temps (deux comptoirs, une classe qui catalogue pendant qu'on prête) ;
+- **plusieurs postes** doivent prêter en même temps (deux comptoirs, une personne qui catalogue pendant qu'on prête) ;
 - on veut **scanner avec des tablettes ou des téléphones**, par exemple dans les rayons ;
 - l'ordinateur de la bibliothèque **rentre à la maison le soir**, ou sert à d'autres choses et n'est pas toujours là ;
-- on veut donner aux familles le **lien de suivi** des livres empruntés, qui n'existe pas dans la version pour un ordinateur.
+- on veut donner aux emprunteurs ou à leurs proches le **lien de suivi** des livres empruntés, qui n'existe pas dans la version pour un ordinateur.
 
 Il y a quatre façons d'installer Bibli. Ce guide couvre la première ; les trois autres demandent un petit ordinateur toujours allumé (mini PC) ou un serveur, et quelqu'un pour l'installer.
 
@@ -175,7 +175,7 @@ Il y a quatre façons d'installer Bibli. Ce guide couvre la première ; les troi
 | **Application pour un ordinateur** (ce guide) | une bibliothèque, un poste | tout, avec une douchette ou la webcam ; rien d'autre à installer | aucun autre appareil ; fermer la fenêtre arrête Bibli |
 | **Serveur sur le réseau local** (`http://`) | plusieurs postes | plusieurs ordinateurs en même temps, toujours allumé, douchettes USB et Bluetooth | pas de caméra des tablettes (elle exige `https://`) |
 | **Serveur sur le réseau local, en `https://`** | plusieurs postes et des tablettes | tout ce qui précède, plus la caméra des tablettes et des téléphones | rien depuis la maison |
-| **Serveur sur Internet** | la bibliothèque et les familles | partout, caméra comprise, et le lien de suivi pour les familles | demande un nom de domaine, un hébergement, un mot de passe solide et des mises à jour suivies |
+| **Serveur sur Internet** | la bibliothèque et ses lecteurs à la maison | partout, caméra comprise, et le lien de suivi | demande un nom de domaine, un hébergement, un mot de passe solide et des mises à jour suivies |
 
 Dans les quatre cas, Bibli fonctionne pareil : un seul fichier de données, des sauvegardes automatiques, un mot de passe pour la bibliothèque.
 

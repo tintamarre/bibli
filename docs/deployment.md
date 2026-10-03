@@ -1,6 +1,6 @@
 # Déployer un serveur Bibli
 
-Ce guide s'adresse à la personne qui installe Bibli **pour plusieurs appareils** : les postes de la bibliothèque, les tablettes, ou un accès depuis la maison pour les familles. Pour un seul ordinateur, l'[application de bureau](installation.md) suffit et ne demande rien de tout ceci.
+Ce guide s'adresse à la personne qui installe Bibli **pour plusieurs appareils** : les postes de la bibliothèque, les tablettes, ou un accès depuis la maison. Pour un seul ordinateur, l'[application de bureau](installation.md) suffit et ne demande rien de tout ceci.
 
 ## Sommaire
 
@@ -24,7 +24,7 @@ Ce guide s'adresse à la personne qui installe Bibli **pour plusieurs appareils*
 - **Un seul ordinateur** : l'application de bureau, avec le [guide d'installation](installation.md). Rien d'autre ne l'atteint.
 - **Plusieurs appareils, douchettes ou ISBN tapé** : un serveur sur le réseau local, en HTTP ([binaire + systemd](#binaire--systemd) sous Linux, [Windows (service)](#windows-service) sous Windows, ou [Docker](#docker)), avec `-secure-cookies=false`.
 - **Plusieurs appareils, caméra des tablettes** : le même serveur derrière un [reverse proxy](#reverse-proxy) HTTPS. Sur un réseau fermé, le plus simple est un vrai nom de domaine avec un certificat obtenu par défi DNS (DNS-01), qu'aucun appareil n'a besoin d'approuver.
-- **Accès depuis la maison** (liens de suivi pour les familles) : un serveur sur Internet, derrière un reverse proxy HTTPS.
+- **Accès depuis la maison** (liens de suivi) : un serveur sur Internet, derrière un reverse proxy HTTPS.
 
 Dans les quatre cas, Bibli reste un seul programme et un seul fichier de base de données SQLite, avec ses sauvegardes automatiques. Le schéma se modifie dans draw.io : `docs/img/which-setup.svg` contient le diagramme éditable.
 
@@ -58,7 +58,7 @@ Dans les quatre cas, Bibli reste un seul programme et un seul fichier de base de
 | `-cache-dir` | `cache` | Dossier des vignettes de couverture, un fichier par ISBN. Vide (`""`) pour le désactiver. |
 | `-secure-cookies` | `true` | Cookies de session en `Secure`. **À mettre à `false` pour un accès en HTTP** (réseau local, développement). |
 | `-trust-proxy` | `false` | Lire `X-Forwarded-For`. **À activer derrière un reverse proxy**, jamais sans. |
-| `-family-links` | `true` | Proposer les liens de suivi pour les familles. `false` sur une installation qu'aucune famille ne peut joindre (les applications de bureau le passent). |
+| `-tracking-links` | `true` | Proposer les liens de suivi. `false` sur une installation que personne d'autre que l'utilisateur ne peut joindre (les applications de bureau le passent). |
 | `-log-file` | vide | Écrire le journal dans ce fichier (à la suite, renouvelé à 5 Mo, l'ancien gardé en `.1`) plutôt que sur la sortie d'erreur. Le service Windows le passe. |
 | `-password-file` | vide | Lire le mot de passe bibliothécaire dans ce fichier plutôt que dans `BIBLI_ADMIN_PASSWORD` (tout le fichier, sans le saut de ligne final). Le service Windows le passe. |
 
@@ -158,7 +158,7 @@ L'installateur :
 
 Bibli répond alors sur `http://localhost:8080` depuis ce PC, et sur `http://NOM-DU-PC:8080` depuis les tablettes et les autres postes (l'entrée **« Adresse pour les tablettes »** donne l'adresse exacte, à recopier). Mettre le réseau local en **Privé** (et non *Public*), sinon le pare-feu bloque l'accès, et réserver une **IP fixe** dans le routeur pour que l'adresse ne change jamais. Le nom du PC suffit aux autres postes Windows, mais les tablettes Android et les iPad ne le reconnaissent souvent pas : leur donner l'adresse IP.
 
-Comme pour tout accès en HTTP, les cookies sont servis sans `Secure` (`-secure-cookies=false`) et la **caméra des tablettes n'est pas disponible** (voir [HTTPS ou réseau local](#https-ou-réseau-local--choisir-le-bon-mode)) ; les douchettes, elles, fonctionnent partout. Les liens de suivi pour les familles sont désactivés (`-family-links=false`), un serveur HTTP sur le réseau local n'étant pas joignable depuis la maison.
+Comme pour tout accès en HTTP, les cookies sont servis sans `Secure` (`-secure-cookies=false`) et la **caméra des tablettes n'est pas disponible** (voir [HTTPS ou réseau local](#https-ou-réseau-local--choisir-le-bon-mode)) ; les douchettes, elles, fonctionnent partout. Les liens de suivi sont désactivés (`-tracking-links=false`), un serveur HTTP sur le réseau local n'étant pas joignable depuis la maison.
 
 L'installateur, l'icône de la zone de notification et le menu suivent la **langue de Windows** (français, néerlandais ou anglais ; français par défaut), comme l'application elle-même.
 
@@ -178,7 +178,7 @@ Le `docker-compose.yml` fourni est prévu pour tourner **derrière un reverse pr
     cp .env.example .env
     docker compose -f docker-compose.lan.yml up -d
 
-Bibli répond alors sur `http://IP-de-la-machine:8080`, en clair sur le réseau local. L'écran **Réglages** affiche cette adresse (bloc « Accès local ») à donner aux enseignants. La caméra des tablettes n'est pas disponible en HTTP (voir [HTTPS ou réseau local](#https-ou-réseau-local--choisir-le-bon-mode)) ; la douchette du comptoir, si.
+Bibli répond alors sur `http://IP-de-la-machine:8080`, en clair sur le réseau local. L'écran **Réglages** affiche cette adresse (bloc « Accès local ») à donner aux utilisateurs. La caméra des tablettes n'est pas disponible en HTTP (voir [HTTPS ou réseau local](#https-ou-réseau-local--choisir-le-bon-mode)) ; la douchette du comptoir, si.
 
 La base vit dans `./data` sur l'hôte, avec les sauvegardes (`./data/backups`) et les couvertures (`./data/cache`). **Ne jamais** placer ce dossier sur un partage réseau (NFS/CIFS) : le verrouillage SQLite y est cassé et la base se corrompt.
 
@@ -255,7 +255,7 @@ Les seules limites fixes sont celles des codes imprimés sur les étiquettes et 
 - **Catalogues interrogés** : BnF, UniCat, Google Books et Open Library, à partir de l'ISBN seul. Rien d'autre ne quitte le serveur.
 - **Couvertures** : récupérées par le serveur (Open Library, puis BnF) et servies par lui, jamais par le navigateur. Elles sont conservées dans `-cache-dir`, un fichier par ISBN, absences comprises. Rien n'est écrit en base : le dossier peut être vidé à la main.
 - **Langue** : un réglage pour toute l'instance (français, anglais, néerlandais). `?lang=en` ou `?lang=nl` sur n'importe quelle adresse la change pour un seul navigateur pendant douze heures, `?lang=auto` revient au réglage.
-- **Liens de suivi** : activés par défaut ; `-family-links=false` les retire là où aucune famille ne peut joindre le serveur.
+- **Liens de suivi** : activés par défaut ; `-tracking-links=false` les retire là où personne ne peut joindre le serveur.
 - **Mise à jour** : démarrer une version récente sur une base ancienne applique les migrations manquantes, sans retour en arrière possible. Une sauvegarde récente suffit à revenir en arrière.
 
 ## Instance de démonstration

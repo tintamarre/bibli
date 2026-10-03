@@ -38,9 +38,9 @@ Sans `make` :
     make demo                           # recrée data/biblio.db avec le jeu de démonstration
     sqlite3 biblio.db < app/demo.sql    # ou le charger dans une autre base
 
-Une école entière, fictive : **100 ouvrages et 115 exemplaires**, **30 élèves répartis en quatre classes (P1 à P4)** et **3 enseignants**, et **un an de prêts** au rythme d'une vraie bibliothèque (une ou deux ouvertures par semaine), dont deux en retard. C'est le jeu de l'[instance de démonstration](deployment.md#instance-de-démonstration).
+Une école entière, fictive : **100 ouvrages et 115 exemplaires**, **30 lecteurs répartis en quatre groupes (P1 à P4)** et **3 enseignants** (le groupe « Enseignants »), et **un an de prêts** au rythme d'une vraie bibliothèque (une ou deux ouvertures par semaine), dont deux en retard. C'est le jeu de l'[instance de démonstration](deployment.md#instance-de-démonstration).
 
-Les dates y sont relatives au jour du chargement : le jeu ne se périme pas. Les ISBN sont réels : chacun est une édition connue de la BnF, avec son titre, son auteur, son éditeur et son année, donc l'enrichissement et les couvertures fonctionnent comme sur un vrai rayon. `scripts/gen-demo-loans.py` régénère les prêts et les classes.
+Les dates y sont relatives au jour du chargement : le jeu ne se périme pas. Les ISBN sont réels : chacun est une édition connue de la BnF, avec son titre, son auteur, son éditeur et son année, donc l'enrichissement et les couvertures fonctionnent comme sur un vrai rayon. `scripts/gen-demo-loans.py` régénère les prêts et les groupes.
 
 ## Vérifier avant un commit
 
@@ -111,7 +111,7 @@ Tout le code Go vit dans `app/`, en **un seul paquet plat** : les fichiers y son
     app/inventory.go     inventaire éditable
     app/labels.go        étiquettes : cote, filtres, planche à imprimer
     app/borrowers.go     emprunteurs : saisie, import CSV, cartes, passage d'année
-    app/family.go        espace parents (jeton secret)
+    app/tracking.go      page de suivi (jeton secret)
     app/reports.go       impressions et export CSV
     app/xlsx.go          export Excel, sans dépendance
     app/stats.go         lectures des prêts (fiches, /stats) ; heatmap.go et timeline.go les dessinent
@@ -135,7 +135,7 @@ Tout le code Go vit dans `app/`, en **un seul paquet plat** : les fichiers y son
     app/testdata/        fixture.sql, le petit jeu de données des tests
     scripts/dev.sh              serveur de développement qui se recompile tout seul
     scripts/screenshots.mjs     captures de tous les écrans, sur une base jetable
-    scripts/gen-demo-loans.py   prêts et classes du jeu de démonstration
+    scripts/gen-demo-loans.py   prêts et groupes du jeu de démonstration
     packaging/build-info.sh     écrit app/build-info.json, la version que le binaire annonce
     packaging/macos.sh          application de bureau Mac
     packaging/windows.sh        Windows : application, serveur ou raccourci, un seul .exe

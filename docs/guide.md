@@ -2,7 +2,7 @@
 
 Ce guide s'adresse aux bénévoles qui tiennent la bibliothèque : prêter, rendre, cataloguer, gérer les emprunteurs. Pour installer Bibli sur un ordinateur, voir le [guide d'installation](installation.md). L'installation d'un serveur est décrite dans [Déployer un serveur](deployment.md).
 
-Les captures d'écran viennent de l'instance de démonstration : l'école, les élèves et les prêts sont fictifs.
+Les captures d'écran viennent de l'instance de démonstration : l'école, les lecteurs et les prêts sont fictifs.
 
 ## Sommaire
 
@@ -22,7 +22,7 @@ Bibli tient le registre de la bibliothèque : quels livres la bibliothèque poss
 Le menu est en deux groupes :
 
 - **Au comptoir** : *Emprunter* et *Rendre*, les deux écrans de tous les jours.
-- **Gestion** : *Prêts* (ce qui est sorti, les retards), *Emprunteurs* (les lecteurs : élèves et enseignants, résidents, membres…), *Inventaire* (tous les exemplaires), *Cataloguer* (ajouter des livres), *Statistiques* et *Réglages*.
+- **Gestion** : *Prêts* (ce qui est sorti, les retards), *Emprunteurs* (les lecteurs : élèves, résidents, membres, personnel…), *Inventaire* (tous les exemplaires), *Cataloguer* (ajouter des livres), *Statistiques* et *Réglages*.
 
 ![L'écran d'accueil : Emprunter, Rendre, et le nombre de livres en rayon, en prêt et en retard](img/home.png)
 
@@ -50,7 +50,7 @@ Trois moyens de lire un code-barres, qui peuvent cohabiter : une douchette au co
 | Condition | aucune | aucune | Bibli ouvert en `https://` |
 | Idéal pour | le comptoir, les séances chargées | une tablette au comptoir, se déplacer dans les rayons | dépanner, cataloguer un carton, une petite bibliothèque |
 
-Pour une bibliothèque qui prête à toute une classe d'un coup, la douchette fait gagner beaucoup de temps. La caméra suffit pour démarrer.
+Pour une bibliothèque qui prête à tout un groupe d'un coup, la douchette fait gagner beaucoup de temps. La caméra suffit pour démarrer.
 
 ### La douchette USB
 
@@ -99,7 +99,7 @@ Sur un ordinateur portable, la webcam fait mal la mise au point de près : une d
 ### Prêter
 
 1. Ouvrir **Emprunter**.
-2. **Scanner la carte** de l'emprunteur. Sans carte, taper sa classe et le début de son prénom (« P1 ag ») et choisir dans la liste.
+2. **Scanner la carte** de l'emprunteur. Sans carte, taper son groupe et le début de son prénom (« P1 ag ») et choisir dans la liste.
 3. **Scanner les livres** un par un : l'ISBN au dos ou le code de l'étiquette, au choix. Ils s'ajoutent au panier. Un livre ajouté par erreur se retire avec « Retirer ».
 4. **Confirmer une seule fois** pour tout le panier. L'écran affiche la date de retour, puis se remet en attente de la carte suivante.
 
@@ -131,7 +131,7 @@ Dans **Prêts** (ou sur la fiche de l'emprunteur), le bouton *Prolonger* sur la 
 1. Ouvrir **Cataloguer** et scanner l'ISBN au dos du livre.
 2. Bibli interroge les catalogues (BnF, UniCat, Google Books, Open Library) et remplit la fiche : titre, auteurs, éditeur, année, couverture. **Seul l'ISBN sort de Bibli**, jamais une donnée d'emprunteur.
 3. **Vérifier la couverture** : c'est le moyen le plus rapide de voir qu'on a scanné le bon livre. Corriger ce qui est faux, tout est modifiable.
-4. Indiquer le **nombre d'exemplaires** (5 pour un lot de classe) et, si on veut, un **emplacement** (« Albums 3/5 », « classe P3 »).
+4. Indiquer le **nombre d'exemplaires** (5 pour un lot destiné à un groupe) et, si on veut, un **emplacement** (« Albums 3/5 », « classe P3 »).
 5. *Ajouter au catalogue*. Chaque exemplaire reçoit son code interne. Le bouton *Étiquettes (optionnel)* les imprime tout de suite.
 
 ![La fiche remplie depuis l'ISBN, avec la couverture, prête à être ajoutée au catalogue](img/catalogue.png)
@@ -142,13 +142,13 @@ Si le titre est déjà au catalogue, Bibli le signale : on ajoute alors des exem
 
 Environ un livre sur dix n'est trouvé dans aucun catalogue : albums jeunesse, petites maisons d'édition, livres anciens. La fiche reste à remplir à la main. Seul le titre est obligatoire.
 
-Pour un livre sans aucun ISBN (livre ancien, fabriqué en classe, don sans code-barres), choisir **Saisie manuelle (livre sans ISBN)**. Ce livre n'a pas de code-barres : il lui faut une étiquette pour passer à la douchette (voir [§5](#5-isbn-seul-ou-étiquettes-)).
+Pour un livre sans aucun ISBN (livre ancien, fabriqué sur place, don sans code-barres), choisir **Saisie manuelle (livre sans ISBN)**. Ce livre n'a pas de code-barres : il lui faut une étiquette pour passer à la douchette (voir [§5](#5-isbn-seul-ou-étiquettes-)).
 
 Quand les catalogues n'ont pas répondu (message « n'a pas répondu »), le livre existe peut-être : réessayer une minute plus tard avant de tout taper.
 
 ### Depuis le comptoir
 
-Scanner au comptoir un livre absent du catalogue propose de le créer tout de suite, prérempli, et de le prêter dans la foulée. Pratique pour un livre qu'un enseignant apporte. Si les achats doivent passer par une seule personne, cette option se coupe dans **Réglages** → *Cataloguer depuis le comptoir*.
+Scanner au comptoir un livre absent du catalogue propose de le créer tout de suite, prérempli, et de le prêter dans la foulée. Pratique pour un livre qu'un membre de l'équipe apporte. Si les achats doivent passer par une seule personne, cette option se coupe dans **Réglages** → *Cataloguer depuis le comptoir*.
 
 ### Corriger une fiche
 
@@ -167,8 +167,8 @@ Une étiquette porte le **code interne** de l'exemplaire en code-barres, la **co
 | Situation | ISBN seul | Étiquette |
 | --- | --- | --- |
 | Un seul exemplaire du titre, code-barres au dos | Suffit | Facultative |
-| Plusieurs exemplaires du même titre (lot de classe, série achetée en double) | Au retour, Bibli demande qui rend le sien | Recommandée : le retour est immédiat |
-| Livre sans ISBN (ancien, fait en classe, don) | Impossible à scanner : il faut taper le titre au prêt et rendre depuis *Prêts* | **Nécessaire** |
+| Plusieurs exemplaires du même titre (lot pour un groupe, série achetée en double) | Au retour, Bibli demande qui rend le sien | Recommandée : le retour est immédiat |
+| Livre sans ISBN (ancien, fait sur place, don) | Impossible à scanner : il faut taper le titre au prêt et rendre depuis *Prêts* | **Nécessaire** |
 | ISBN imprimé en chiffres mais sans code-barres | À taper à la main à chaque passage | Recommandée |
 | On veut ranger les rayons par cote | Rien n'indique où va le livre | La cote est imprimée en gros |
 | On veut qu'un livre égaré soit rapporté à la bibliothèque | Rien ne l'indique | Le nom de l'établissement est imprimé |
@@ -195,7 +195,7 @@ Les livres d'un même auteur se retrouvent ainsi côte à côte, rangés par ord
 
 La cote n'est pas saisie à la main : elle suit la fiche du livre. Si elle est fausse, c'est que le champ **Auteurs** l'est. Souvent, l'illustrateur a été placé en premier, ou le catalogue a écrit « Collectif ». Corrigez les auteurs sur la fiche (le premier nommé est celui qui compte, format « Nom, Prénom ; Nom, Prénom ») et la cote suit à la prochaine impression.
 
-Pour regrouper des livres autrement que par auteur (documentaires, premières lectures, livres d'une classe), utilisez l'**emplacement** de l'exemplaire (« bac documentaires », « classe P3 », « réserve »). Il se modifie directement dans le tableau de l'**Inventaire**, et l'inventaire se filtre par emplacement.
+Pour regrouper des livres autrement que par auteur (documentaires, premières lectures, livres d'un groupe), utilisez l'**emplacement** de l'exemplaire (« bac documentaires », « classe P3 », « réserve »). Il se modifie directement dans le tableau de l'**Inventaire**, et l'inventaire se filtre par emplacement.
 
 #### Exemple : ranger par âge, comme une bibliothèque communale
 
@@ -204,7 +204,7 @@ Beaucoup de bibliothèques jeunesse rangent d'abord par âge et par genre, avec 
 1. **Un emplacement par groupe**, écrit toujours de la même façon : « Albums 0/3 », « Albums 3/5 », « Albums 6/8 », « Albums 8/10 », « Albums 10/12 », « Documentaires 3/5 ». Au catalogage, le champ *Emplacement* le donne à tous les exemplaires d'un coup. Pour les livres déjà catalogués, il se change dans le tableau de l'**Inventaire**.
 2. **La cote range à l'intérieur du groupe** : dans le bac « Albums 3/5 », les livres se suivent par ordre alphabétique de cote, PEN (Pennart) avant PON (Ponti).
 3. **Les pastilles de couleur** s'achètent à part, en papeterie, et se collent sur le dos. Les étiquettes de Bibli sont imprimées en noir et blanc : elles vont sur la couverture arrière, avec le code-barres et la cote. La pastille dit dans quel bac va le livre, la cote où il va dans ce bac.
-4. **Affichez la légende** près des rayons, comme le font les bibliothèques : une feuille avec chaque pastille et son groupe, pour que les enfants puissent ranger eux-mêmes.
+4. **Affichez la légende** près des rayons, comme le font les bibliothèques : une feuille avec chaque pastille et son groupe, pour que chacun puisse ranger lui-même.
 
 Dans l'**Inventaire**, choisir l'emplacement (« Albums 3/5 ») puis cliquer l'en-tête **Cote** donne la liste du bac dans l'ordre où les livres y sont rangés : de quoi le vérifier en passant le long du rayon, ou l'imprimer (*Imprimer ou exporter* → *Imprimer la liste*) et cocher au crayon.
 
@@ -224,23 +224,23 @@ La planche est prévue pour les **planches A4 de 44 étiquettes autocollantes 48
 - **Avant d'acheter une boîte**, imprimez une page sur papier ordinaire et posez-la sur une planche devant une fenêtre : tout doit coïncider.
 - **Planche déjà entamée** : *Commencer à l'étiquette* saute les cases déjà utilisées (commencer à 5 laisse vides les 4 premières).
 - **Sans planche autocollante** : cochez *Traits de coupe* et imprimez sur papier ordinaire, à découper et coller.
-- Les options *Nom de l'école*, *Afficher l'ISBN* et *Titre sur une ligne* se cochent sur la planche avant d'imprimer.
+- Les options *Nom de la bibliothèque*, *Afficher l'ISBN* et *Titre sur une ligne* se cochent sur la planche avant d'imprimer.
 
 Collez l'étiquette sur la couverture arrière, **sans masquer le code-barres ISBN** : les deux restent utilisables.
 
 ## 6. Les emprunteurs
 
-**Protection des données** : un emprunteur, c'est un prénom, l'initiale du nom et une classe, rien d'autre. En tapant « Durant », Bibli ne garde que « D. ».
+**Protection des données** : un emprunteur, c'est un prénom, l'initiale du nom et un groupe, rien d'autre. En tapant « Durant », Bibli ne garde que « D. ».
 
 ### Importer la liste des emprunteurs
 
-**Emprunteurs** → *Gérer la liste* → *Importer des élèves (CSV)*.
+**Emprunteurs** → *Gérer la liste* → *Importer des lecteurs (CSV)*.
 
-- Coller la liste (colonnes **prénom, nom, classe**) copiée depuis un tableur, ou choisir un fichier CSV.
+- Coller la liste (colonnes **prénom, nom, groupe**) copiée depuis un tableur, ou choisir un fichier CSV.
 - *Télécharger une feuille Excel vide* fournit un modèle à remplir, puis à copier-coller dans la zone.
-- *Prévisualiser* montre ce qui sera créé. Les emprunteurs déjà enregistrés (même prénom, même initiale, même classe) sont reconnus et ignorés : on peut réimporter la liste à jour (à l'école, celle de la direction à chaque rentrée) sans créer de doublons.
+- *Prévisualiser* montre ce qui sera créé. Les emprunteurs déjà enregistrés (même prénom, même initiale, même groupe) sont reconnus et ignorés : on peut réimporter la liste à jour (celle de l'administration, par exemple, à chaque nouvelle année) sans créer de doublons.
 
-La *classe* sert à regrouper les emprunteurs : une classe à l'école, mais aussi un étage, une unité de soins, un atelier, ou rien du tout.
+Le *groupe* sert à regrouper les emprunteurs : une classe, un étage, une unité de soins, un atelier, ou rien du tout. Le personnel peut avoir son propre groupe (« Enseignants », « Équipe »).
 
 Une personne seule s'ajoute à la main avec *Ajouter*.
 
@@ -248,17 +248,17 @@ Une personne seule s'ajoute à la main avec *Ajouter*.
 
 *Imprimer les cartes de P3* (ou *Imprimer toutes les cartes*) produit des cartes à code-barres sur les mêmes planches de 44 autocollants que les étiquettes, à coller sur un carton ou dans un cahier.
 
-Astuce : imprimée sur papier ordinaire et non découpée, la page d'une classe devient une **feuille de classe** à garder au comptoir. On y scanne la carte d'un emprunteur qui a oublié la sienne.
+Astuce : imprimée sur papier ordinaire et non découpée, la page d'un groupe devient une **feuille de groupe** à garder au comptoir. On y scanne la carte d'un emprunteur qui a oublié la sienne.
 
-![Les cartes d'une classe : prénom, initiale et code-barres de chaque emprunteur](img/cards.png)
+![Les cartes d'un groupe : prénom, initiale et code-barres de chaque emprunteur](img/cards.png)
 
 ### Un emprunteur qui part
 
 *Désactiver* le retire de la liste sans effacer son historique. C'est réversible depuis *Voir les inactifs*. Un emprunteur qui a encore des livres ne peut pas être désactivé : les rendre d'abord, ou les déclarer perdus.
 
-### Le lien de suivi pour les familles
+### Le lien de suivi
 
-Dans la colonne *Lien de suivi* : *Créer le lien*, puis *Copier le lien*, et le transmettre à la famille comme on veut (un mot écrit, un message). La page montre les livres en cours et leur date de retour, avec le prénom de l'emprunteur et le nom de l'établissement, rien d'autre. Rien n'est envoyé par Bibli. *Révoquer* ou *Régénérer* coupe l'ancien lien.
+Dans la colonne *Lien de suivi* : *Créer le lien*, puis *Copier le lien*, et le transmettre à l'emprunteur ou à ses proches comme on veut (un mot écrit, un message). La page montre les livres en cours et leur date de retour, avec le prénom de l'emprunteur et le nom de l'établissement, rien d'autre. Rien n'est envoyé par Bibli. *Révoquer* ou *Régénérer* coupe l'ancien lien.
 
 Sur les applications Mac, Windows et Linux, cette colonne n'apparaît pas : Bibli n'y est joignable que depuis l'ordinateur de la bibliothèque.
 
@@ -266,9 +266,9 @@ Sur les applications Mac, Windows et Linux, cette colonne n'apparaît pas : Bibl
 
 ### Les retards
 
-**Prêts** → onglet *En retard*. *Imprimer les retards* donne une liste groupée par classe, à déposer dans chaque classe.
+**Prêts** → onglet *En retard*. *Imprimer les retards* donne une liste groupée par groupe, à déposer dans chaque groupe.
 
-![Les prêts en cours, groupés par classe puis par emprunteur, avec les boutons Rendre et Prolonger](img/loans.png)
+![Les prêts en cours, groupés par groupe puis par emprunteur, avec les boutons Rendre et Prolonger](img/loans.png)
 
 ### Les livres perdus, abîmés ou retirés
 
@@ -286,14 +286,14 @@ Dans l'**Inventaire**, la colonne *Condition* de chaque exemplaire : *disponible
 
 ### Le bilan de l'année
 
-**Statistiques** montre les prêts de l'année, les livres les plus empruntés et ceux qui ne sont jamais sortis. Le **Bilan du fonds** (*Télécharger le tableur*) donne une ligne par titre, dans l'ordre des cotes : de quoi décider ce qu'on déplace, rachète ou retire. Il ne nomme aucun enfant.
+**Statistiques** montre les prêts de l'année, les livres les plus empruntés et ceux qui ne sont jamais sortis. Le **Bilan du fonds** (*Télécharger le tableur*) donne une ligne par titre, dans l'ordre des cotes : de quoi décider ce qu'on déplace, rachète ou retire. Il ne nomme personne.
 
-### La rentrée : passage d'année
+### Passage d'année
 
-**Emprunteurs** → *Gérer la liste* → *Passer à l'année suivante*, une fois par an (surtout utile dans une école), avant d'importer les nouveaux emprunteurs.
+**Emprunteurs** → *Gérer la liste* → *Passer à l'année suivante*, une fois par an (surtout utile dans une école ou toute structure qui fonctionne par années), avant d'importer les nouveaux emprunteurs.
 
-1. Pour chaque classe, la nouvelle classe est préremplie (P3 → P4). Vérifier, corriger au besoin.
-2. Pour la dernière classe de chaque cycle (P6, M3…), cocher **sortants** : ces emprunteurs seront désactivés.
+1. Pour chaque groupe dont le nom contient un nombre, le nouveau groupe est prérempli (P3 → P4). Vérifier, corriger au besoin.
+2. Pour le dernier groupe de chaque cycle (P6, M3…), cocher **sortants** : ces emprunteurs seront désactivés.
 3. Relire le tableau, puis *Appliquer le passage d'année*. **Il n'y a pas de retour arrière en un clic.**
 
 Un sortant qui a encore des livres reste actif, et le bilan le signale. Ensuite, importer la liste des nouveaux emprunteurs (voir [§6](#6-les-emprunteurs)).
@@ -322,7 +322,7 @@ Bibli vérifie chaque code. Rescanner, ou retaper en vérifiant les chiffres.
 Le rendre tout de suite (écran **Rendre**), puis refaire le prêt.
 
 **Un emprunteur a oublié sa carte.**
-Au prêt, taper sa classe et le début de son prénom (« P3 lé »). Ou scanner sa carte sur la feuille de classe (voir [§6](#6-les-emprunteurs)).
+Au prêt, taper son groupe et le début de son prénom (« P3 lé »). Ou scanner sa carte sur la feuille de groupe (voir [§6](#6-les-emprunteurs)).
 
 **Au retour, Bibli me demande qui rend le livre.**
 Plusieurs exemplaires du même titre sont sortis et l'ISBN ne dit pas lequel revient. Choisir l'emprunteur qui le rapporte. Pour ne plus avoir la question, étiqueter ces exemplaires (voir [§5](#5-isbn-seul-ou-étiquettes-)).
@@ -345,11 +345,11 @@ Sur la fiche du livre, *Enrichir depuis l'ISBN* la redemande. Beaucoup d'albums 
 **Un livre déclaré perdu est retrouvé.**
 Le scanner à l'écran **Rendre** : *Remettre en service*.
 
-**Deux emprunteurs ont le même prénom et la même initiale dans la même classe.**
-L'import les prend pour un doublon. Cocher *Importer aussi le doublon* s'il s'agit vraiment de deux enfants, et vérifier leurs cartes.
+**Deux emprunteurs ont le même prénom et la même initiale dans le même groupe.**
+L'import les prend pour un doublon. Cocher *Importer aussi le doublon* s'il s'agit vraiment de deux personnes, et vérifier leurs cartes.
 
 **Que deviennent les données d'un emprunteur parti ?**
-Après la durée de conservation (3 ans par défaut, dans **Réglages**), ses prêts passés ne sont plus rattachés à lui, et il perd prénom, classe et carte. Les livres gardent leur nombre d'emprunts.
+Après la durée de conservation (3 ans par défaut, dans **Réglages**), ses prêts passés ne sont plus rattachés à lui, et il perd prénom, groupe et carte. Les livres gardent leur nombre d'emprunts.
 
 **On nous a donné un carton de livres.**
 **Cataloguer**, un livre après l'autre. Ceux qui sont déjà au catalogue s'ajoutent comme exemplaires supplémentaires. Puis, si on étiquette : **Inventaire** → *Ajoutés* → *Aujourd'hui* → *Imprimer N étiquettes*.

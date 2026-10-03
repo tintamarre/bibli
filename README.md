@@ -11,28 +11,28 @@
 
 [![L'accueil de Bibli : emprunter, rendre, et les livres en rayon, en prêt et en retard](docs/img/home.png)](https://www.youtube.com/watch?v=Yo_IYGwo8sM)
 
-*English: Bibli is a library app for schools (primary or secondary), run by volunteers. The interface speaks French, Dutch and English; this documentation is in French.*
+*English: Bibli is a library app for small organisations (schools, cultural centres, care homes), run by volunteers. The interface speaks French, Dutch and English; this documentation is in French.*
 
 ## Ce que fait Bibli
 
 - **Prêt et retour en quelques secondes.** On scanne la carte de l'emprunteur, puis ses livres ; au retour, un seul scan suffit. Une douchette USB à 30 € fait l'affaire, la caméra d'une tablette aussi.
 - **Catalogage par ISBN.** Le titre, l'auteur, l'éditeur et la couverture arrivent seuls, depuis la BnF, UniCat, Google Books et Open Library. Un livre sans ISBN se saisit à la main.
 - **Étiquettes et cartes.** Planches A4 autocollantes, avec code-barres et cote de rangement ; les étiquettes d'une séance sortent dans l'ordre du catalogage.
-- **Emprunteurs et groupes.** Import de la liste depuis un fichier CSV (exporté d'un tableur), cartes d'emprunteur, passage d'année en un écran. Bibli appelle les groupes « classes » : une classe à l'école, mais aussi un étage, une unité de soins, un atelier.
+- **Emprunteurs et groupes.** Import de la liste depuis un fichier CSV (exporté d'un tableur), cartes d'emprunteur, passage d'année en un écran. Les emprunteurs sont rangés par groupe : une classe, un étage, une unité de soins, un atelier.
 - **Retards, inventaire, statistiques.** Liste des retards à imprimer, inventaire modifiable ligne par ligne, lectures de l'année, exports CSV et Excel.
-- **Liens de suivi pour les familles**, si on le souhaite : chaque famille voit les livres de son enfant ou de son proche, rien d'autre.
+- **Liens de suivi**, si on le souhaite : chaque emprunteur, ou ses proches, voit ses livres en cours, rien d'autre.
 - **En français, en néerlandais et en anglais.**
 
 | | |
 |---|---|
 | ![L'écran de prêt : l'emprunteur, puis les livres scannés](docs/img/borrow.png) | ![Le catalogage : la notice trouvée depuis l'ISBN, avec sa couverture](docs/img/catalogue.png) |
 | **Prêter** : la carte, puis les livres | **Cataloguer** : l'ISBN suffit |
-| ![Une planche d'étiquettes : titre, code-barres et cote](docs/img/labels.png) | ![La liste des prêts en cours, par classe et par emprunteur, avec la date de retour](docs/img/loans.png) |
-| **Étiqueter** : planches A4 autocollantes | **Suivre** : les prêts, classe par classe |
+| ![Une planche d'étiquettes : titre, code-barres et cote](docs/img/labels.png) | ![La liste des prêts en cours, par groupe et par emprunteur, avec la date de retour](docs/img/loans.png) |
+| **Étiqueter** : planches A4 autocollantes | **Suivre** : les prêts, groupe par groupe |
 
 ## Pensé pour les petites structures
 
-- **La vie privée d'abord.** Conçu au départ pour des enfants : un emprunteur, c'est un prénom, l'initiale du nom et une classe (un groupe), rien de plus. Seul l'ISBN d'un livre quitte le serveur. Les lectures sont anonymisées après la durée de conservation choisie, trois ans par défaut.
+- **La vie privée d'abord.** Conçu au départ pour des enfants : un emprunteur, c'est un prénom, l'initiale du nom et un groupe, rien de plus. Seul l'ISBN d'un livre quitte le serveur. Les lectures sont anonymisées après la durée de conservation choisie, trois ans par défaut.
 - **Rien à administrer.** Un seul programme et un seul fichier de base de données. Les sauvegardes se font seules, chaque jour, et se téléchargent depuis les réglages.
 - **Aucun service extérieur.** Pas de compte à créer, pas de cloud, pas de CDN : tout est servi par Bibli. Prêter et rendre fonctionnent sans Internet.
 - **Sobre.** Tourne sur un vieux PC, un mini-PC ou un Raspberry Pi, et s'utilise sans formation : grands boutons, écrans lisibles sur une tablette.
