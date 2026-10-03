@@ -258,7 +258,7 @@ Astuce : imprimée sur papier ordinaire et non découpée, la page d'un groupe d
 
 ### Le lien de suivi
 
-Dans la colonne *Lien de suivi* : *Créer le lien*, puis *Copier le lien*, et le transmettre à l'emprunteur ou à ses proches comme on veut (un mot écrit, un message). La page montre les livres en cours et leur date de retour, avec le prénom de l'emprunteur et le nom de l'établissement, rien d'autre. Rien n'est envoyé par Bibli. *Révoquer* ou *Régénérer* coupe l'ancien lien.
+Dans la colonne *Lien de suivi* : *Créer le lien*, puis *Copier le lien*, et le transmettre à l'emprunteur ou à ses proches comme on veut (un mot écrit, un message). La page montre les livres en cours et leur date de retour, avec le prénom de l'emprunteur et le nom de la bibliothèque, rien d'autre. Rien n'est envoyé par Bibli. *Révoquer* ou *Régénérer* coupe l'ancien lien.
 
 Sur les applications Mac, Windows et Linux, cette colonne n'apparaît pas : Bibli n'y est joignable que depuis l'ordinateur de la bibliothèque.
 
