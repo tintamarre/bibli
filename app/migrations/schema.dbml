@@ -120,6 +120,8 @@ Table setting {
     loan_days (14), retention_years (3), library_name, language (fr),
     theme (ink), express_catalogue (1), anonymous_borrower_id (1), and
     session_secret — drawn at first start by auth.go, never seeded.
+    Written on first save in /settings, absent until then (the default
+    applies): tracking_links (on), year_start_month (8), google_books_key.
   '''
 }
 
