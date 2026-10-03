@@ -70,7 +70,7 @@ Les deux autres choix servent à une organisation qui a un serveur : **Serveur p
 
 ### Ensuite
 
-Se connecter avec le mot de passe choisi, puis suivre le [premier jour](guide.md#1-premier-jour) du guide d'utilisation : nom de l'établissement, liste des emprunteurs, premiers livres.
+Se connecter avec le mot de passe choisi, puis suivre le [premier jour](guide.md#1-premier-jour) du guide d'utilisation : nom de la bibliothèque, liste des emprunteurs, premiers livres.
 
 ## 3. Tous les jours : ouvrir et quitter
 

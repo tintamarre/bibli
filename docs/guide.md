@@ -28,7 +28,7 @@ Le menu est en deux groupes :
 
 Pour commencer une bibliothèque de zéro, dans l'ordre :
 
-1. **Réglages** : le nom de l'établissement (il est imprimé sur les cartes et les étiquettes) et la durée de prêt (14 jours par défaut).
+1. **Réglages** : le nom de la bibliothèque (il est imprimé sur les cartes et les étiquettes) et la durée de prêt (14 jours par défaut).
 2. **Emprunteurs** : importer la liste des emprunteurs (voir [§6](#6-les-emprunteurs)), puis imprimer les cartes.
 3. **Cataloguer** : scanner les livres. Pas besoin de tout cataloguer avant d'ouvrir : un livre inconnu scanné au comptoir peut être ajouté sur-le-champ.
 4. Décider si l'on colle des étiquettes (voir [§5](#5-isbn-seul-ou-étiquettes-)). On peut commencer sans et s'y mettre plus tard.
@@ -160,7 +160,7 @@ Bibli fonctionne **sans aucune étiquette** : on prête et on rend en scannant l
 
 ### Ce que l'étiquette ajoute
 
-Une étiquette porte le **code interne** de l'exemplaire en code-barres, la **cote** en gros (pour ranger), le titre et, si on le souhaite, le nom de l'établissement et l'ISBN. Là où l'ISBN désigne un *titre*, le code interne désigne *un exemplaire précis*.
+Une étiquette porte le **code interne** de l'exemplaire en code-barres, la **cote** en gros (pour ranger), le titre et, si on le souhaite, le nom de la bibliothèque et l'ISBN. Là où l'ISBN désigne un *titre*, le code interne désigne *un exemplaire précis*.
 
 ### Choisir
 
@@ -171,14 +171,14 @@ Une étiquette porte le **code interne** de l'exemplaire en code-barres, la **co
 | Livre sans ISBN (ancien, fait sur place, don) | Impossible à scanner : il faut taper le titre au prêt et rendre depuis *Prêts* | **Nécessaire** |
 | ISBN imprimé en chiffres mais sans code-barres | À taper à la main à chaque passage | Recommandée |
 | On veut ranger les rayons par cote | Rien n'indique où va le livre | La cote est imprimée en gros |
-| On veut qu'un livre égaré soit rapporté à la bibliothèque | Rien ne l'indique | Le nom de l'établissement est imprimé |
+| On veut qu'un livre égaré soit rapporté à la bibliothèque | Rien ne l'indique | Le nom de la bibliothèque est imprimé |
 | On veut suivre l'état d'un exemplaire précis (abîmé, perdu) | On ne sait pas lequel des exemplaires identiques est lequel | Chaque exemplaire est reconnaissable |
 
 ### Notre conseil : commencer sans, étiqueter peu à peu
 
 1. **Au démarrage**, cataloguez et prêtez à l'ISBN. La bibliothèque tourne dès le premier jour.
 2. **Étiquetez d'abord** les livres sans code-barres et les titres en plusieurs exemplaires : ce sont eux qui posent problème au comptoir.
-3. **Le reste**, au fil des séances de rangement, si l'équipe veut ranger par cote ou marquer les livres au nom de l'établissement.
+3. **Le reste**, au fil des séances de rangement, si l'équipe veut ranger par cote ou marquer les livres au nom de la bibliothèque.
 
 Rien n'est à refaire le jour où l'on commence : chaque exemplaire a déjà son code interne depuis son catalogage, l'étiquette ne fait que l'imprimer. Un livre étiqueté se scanne ensuite indifféremment par son ISBN ou par son étiquette.
 
@@ -216,7 +216,7 @@ Trois chemins, selon le moment :
 - **Depuis la fiche d'un livre** : *Imprimer cette étiquette*, ou *Imprimer les N étiquettes ajoutées aujourd'hui*.
 - **Plusieurs à la fois, plus tard** : **Inventaire**, filtrer (par exemple *Ajoutés* → *7 derniers jours*, ou chercher un titre, un code, un ISBN), puis *Imprimer ou exporter* → *Imprimer N étiquettes*. Le nombre affiché permet de vérifier la sélection avant d'imprimer. Triée par date d'ajout (l'ordre par défaut), la planche sort **dans l'ordre de catalogage**, le premier livre catalogué en premier : les étiquettes se collent en reprenant la pile dans le même ordre. Triée par cote ou par titre, elle suit le tri de l'écran.
 
-![La planche d'étiquettes : nom de l'établissement, titre, code-barres, code interne et cote en gros](img/labels.png)
+![La planche d'étiquettes : nom de la bibliothèque, titre, code-barres, code interne et cote en gros](img/labels.png)
 
 La planche est prévue pour les **planches A4 de 44 étiquettes autocollantes 48,5 × 25,4 mm** (4 colonnes × 11 lignes, type Avery Zweckform 3657 et compatibles).
 

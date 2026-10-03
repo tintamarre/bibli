@@ -124,7 +124,7 @@ Tout le code Go vit dans `app/`, en **un seul paquet plat** : les fichiers y son
     app/themes.go        thèmes de couleurs (le détail est dans app.css)
     app/dates.go         dates « pour humains », formats par langue
     app/isbn.go          conversion et validation ISBN-10/13
-    app/params.go        réglages globaux gardés en mémoire (nom de l'établissement, langue…)
+    app/params.go        réglages globaux gardés en mémoire (nom de la bibliothèque, langue, début de l'année des statistiques…)
     app/version.go       métadonnées de build, lien vers le code source
     app/demo.go          mode démonstration : remise à zéro périodique
     app/demo.sql         jeu de démonstration, embarqué dans le binaire
