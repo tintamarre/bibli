@@ -413,6 +413,7 @@
   "loan.step1_prompt": "Scanner la carte de l'emprunteur, ou taper nom / groupe",
   "loan.step1_question": "Qui emprunte ?",
   "loan.step2_question": "Quels livres ?",
+  "loan.basket_empty": "Aucun livre pour l'instant : scannez le premier.",
   "loan.too_many_books": "Trop de livres correspondent à « {0} » — précisez le titre.",
   "loan.too_many_borrowers": "Trop de résultats — précisez (groupe et/ou prénom).",
   "loan.which_book": "Quel livre ?",

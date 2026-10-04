@@ -413,6 +413,7 @@
   "loan.step1_prompt": "Scan de kaart van de ontlener, of typ naam / groep",
   "loan.step1_question": "Wie ontleent?",
   "loan.step2_question": "Welke boeken?",
+  "loan.basket_empty": "Nog geen boeken: scan het eerste.",
   "loan.too_many_books": "Te veel boeken passen bij “{0}” — geef de titel preciezer op.",
   "loan.too_many_borrowers": "Te veel resultaten — geef het preciezer op (groep en/of voornaam).",
   "loan.which_book": "Welk boek?",

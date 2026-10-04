@@ -413,6 +413,7 @@
   "loan.step1_prompt": "Scan the borrower's card, or type a name / group",
   "loan.step1_question": "Who is borrowing?",
   "loan.step2_question": "Which books?",
+  "loan.basket_empty": "No books yet: scan the first one.",
   "loan.too_many_books": "Too many books match “{0}” — narrow the title down.",
   "loan.too_many_borrowers": "Too many results — narrow it down (group and/or first name).",
   "loan.which_book": "Which book?",

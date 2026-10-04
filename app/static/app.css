@@ -985,7 +985,7 @@ button, input, select, textarea { font-family: inherit; }
   border: 1px solid var(--border); border-radius: var(--radius-s); overflow: hidden;
 }
 .basket-empty::before {
-  content: "Aucun livre pour l'instant : scannez le premier.";
+  content: attr(data-empty);
   display: block; padding: .6rem .8rem; color: var(--muted); font-size: .95rem;
 }
 .basket-row {

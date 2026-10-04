@@ -77,7 +77,7 @@
 
     <form id="form-confirm" hx-post="/borrow/confirm" hx-target="#loan" hx-swap="outerHTML">
       <input type="hidden" name="borrower_id" value="{{.Borrower.ID}}">
-      <ul id="basket" class="basket basket-empty"></ul>
+      <ul id="basket" class="basket basket-empty" data-empty="{{T "loan.basket_empty"}}"></ul>
     </form>
 
     {{/* hx-include sends the basket, which lives only in this page, so the
