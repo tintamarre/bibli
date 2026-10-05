@@ -339,9 +339,10 @@ function catalogueSearch(e) {
 }
 
 // Batch cataloguing. Scans queue up and are asked one after the other, so the
-// scanner never waits for a catalogue. A book no catalogue could place comes back
-// "aside" and is filled in by hand, one after the other, once the scanning is done.
-var batchQueue = [], batchBusy = false, batchSeen = {}, batchCurrent = null;
+// scanner never waits for a catalogue. Nothing is written until "Add": a found
+// book is staged with its copies, to be checked; a book no catalogue could place
+// is set aside, then filled in by hand (and staged) once the scanning is done.
+var batchQueue = [], batchBusy = false, batchSaving = false, batchCurrent = null;
 
 function batchEl(id) { return document.getElementById(id); }
 
@@ -358,8 +359,8 @@ function batchScan(e) {
   code.className = "code";
   code.textContent = isbn;
   li.appendChild(code);
-  var log = batchEl("batch-log");
-  log.insertBefore(li, log.firstChild);
+  var list = batchEl("batch-list");
+  list.insertBefore(li, list.firstChild);
   batchQueue.push({ isbn: isbn, li: li });
   batchRefresh();
   batchPump();
@@ -370,11 +371,9 @@ function batchPump() {
   if (batchBusy || !batchQueue.length) { return; }
   batchBusy = true;
   var job = batchQueue.shift();
-  var key = job.isbn.replace(/[^0-9Xx]/g, "").toUpperCase();
   var body = new URLSearchParams();
   body.set("isbn", job.isbn);
   body.set("location", batchEl("batch-location").value.trim());
-  if (batchSeen[key]) { body.set("again", "1"); }
   fetch("/catalogue/batch/add", { method: "POST", body: body, credentials: "same-origin" })
     .then(function (r) { if (!r.ok) { throw new Error(r.status); } return r.text(); })
     .then(function (html) {
@@ -383,7 +382,6 @@ function batchPump() {
       var row = t.content.firstElementChild;
       // An expired session answers with the sign-in page: no row, same as a fault.
       if (!row || !row.dataset.kind) { throw new Error("no row"); }
-      if (row.dataset.kind === "ok") { batchSeen[key] = true; }
       batchPlace(job.li, row);
     })
     .catch(function () {
@@ -399,52 +397,125 @@ function batchPump() {
     });
 }
 
-// A saved book takes the place of its line in the log; an aside one leaves it.
+// A found book is staged; an aside one leaves the list for its own.
 function batchPlace(pending, row) {
-  if (row.dataset.kind === "aside") {
-    // The same book twice is one line, to be filled in with two copies.
-    var same = Array.prototype.find.call(batchEl("batch-aside-list").children, function (li) {
-      return li !== row && li.dataset.isbn === row.dataset.isbn;
-    });
-    if (same) {
-      same.dataset.copies = (parseInt(same.dataset.copies, 10) || 1) + 1;
-      var times = same.querySelector(".batch-times");
-      if (!times) {
-        times = document.createElement("span");
-        times.className = "batch-times";
-        same.appendChild(times);
-      }
-      times.textContent = "×" + same.dataset.copies;
-      pending.remove();
-      return;
-    }
-    batchEl("batch-aside-list").appendChild(row);
-    if (row !== pending) { pending.remove(); }
-  } else {
-    pending.replaceWith(row);
+  if (row.dataset.kind === "found") {
+    batchStage(pending, row);
+    return;
   }
+  // The same book twice is one line, to be filled in with two copies.
+  var same = Array.prototype.find.call(batchEl("batch-aside-list").children, function (li) {
+    return li !== row && li.dataset.isbn === row.dataset.isbn;
+  });
+  if (same) {
+    same.dataset.copies = (parseInt(same.dataset.copies, 10) || 1) + 1;
+    var times = same.querySelector(".batch-times");
+    if (!times) {
+      times = document.createElement("span");
+      times.className = "batch-times";
+      same.appendChild(times);
+    }
+    times.textContent = "×" + same.dataset.copies;
+    pending.remove();
+    return;
+  }
+  batchEl("batch-aside-list").appendChild(row);
+  if (row !== pending) { pending.remove(); }
+}
+
+function batchItem(li) { return JSON.parse(li.dataset.item); }
+
+function batchSetCopies(li, n) {
+  var it = batchItem(li);
+  it.copies = Math.max(1, Math.min(100, n));
+  li.dataset.item = JSON.stringify(it);
+  li.querySelector(".batch-n").textContent = it.copies;
+  li.querySelector(".batch-qty .btn-qty").disabled = it.copies <= 1;
+}
+
+// The same book from the same shelf is one line with one more copy, moved to the
+// top where the eye is.
+function batchStage(pending, row) {
+  var list = batchEl("batch-list");
+  var it = batchItem(row);
+  var same = it.isbn13 && Array.prototype.find.call(list.children, function (li) {
+    return li !== pending && li.dataset.kind === "found" && li.dataset.isbn === row.dataset.isbn &&
+      batchItem(li).location === it.location;
+  });
+  if (same) {
+    batchSetCopies(same, batchItem(same).copies + it.copies);
+    list.insertBefore(same, list.firstChild);
+    if (pending) { pending.remove(); }
+    return;
+  }
+  batchSetCopies(row, it.copies);
+  if (pending && pending.parentNode === list) { pending.replaceWith(row); }
+  else { list.insertBefore(row, list.firstChild); }
+}
+
+function batchQty(btn, delta) {
+  var li = btn.closest("li");
+  batchSetCopies(li, batchItem(li).copies + delta);
+  batchRefresh();
+}
+
+function batchRemove(btn) {
+  btn.closest("li").remove();
+  batchRefresh();
+  refocusScan();
 }
 
 function batchRefresh() {
-  var codes = [];
-  document.querySelectorAll("#batch-log [data-codes]").forEach(function (li) {
-    codes = codes.concat(li.dataset.codes.split(","));
+  var books = 0, copies = 0;
+  document.querySelectorAll('#batch-list li[data-kind="found"]').forEach(function (li) {
+    books++;
+    copies += batchItem(li).copies;
   });
-  batchEl("batch-count").textContent = codes.length;
-  var labels = batchEl("batch-labels");
-  labels.hidden = codes.length === 0;
-  labels.href = "/print/labels?codes=" + codes.join(",");
-  batchEl("batch-done").hidden = batchEl("batch-log").children.length === 0;
+  batchEl("batch-summary").textContent = books ? Tn("js.books", books) + " · " + Tn("js.batch_copies", copies) : "";
+  batchEl("batch-save").disabled = books === 0 || batchSaving;
   var aside = batchEl("batch-aside-list").children.length;
   batchEl("batch-aside").hidden = aside === 0;
   batchEl("batch-aside-count").textContent = aside;
   var working = batchBusy || batchQueue.length > 0;
   // The set-aside books wait for the others to be done.
   batchEl("batch-complete").disabled = working;
-  // Leaving now would lose the ISBNs set aside, or the scans still in flight.
-  window.onbeforeunload = (aside > 0 || working)
+  // Leaving now would lose what is staged, the ISBNs set aside, or scans in flight.
+  window.onbeforeunload = (books > 0 || aside > 0 || working)
     ? function (e) { e.preventDefault(); e.returnValue = ""; }
     : null;
+}
+
+// One transaction on the server: every staged book is added, or none.
+function batchSave() {
+  var rows = document.querySelectorAll('#batch-list li[data-kind="found"]');
+  if (!rows.length || batchSaving) { return; }
+  batchSaving = true;
+  batchRefresh();
+  var body = new URLSearchParams();
+  rows.forEach(function (li) { body.append("item", li.dataset.item); });
+  var result = batchEl("batch-result");
+  fetch("/catalogue/batch/save", { method: "POST", body: body, credentials: "same-origin" })
+    .then(function (r) { if (!r.ok) { throw new Error(r.status); } return r.text(); })
+    .then(function (html) {
+      var t = document.createElement("template");
+      t.innerHTML = html.trim();
+      if (!t.content.querySelector(".batch-result")) { throw new Error("no result"); }
+      // Only what was sent: a scan may have landed meanwhile.
+      rows.forEach(function (li) { li.remove(); });
+      result.innerHTML = html;
+    })
+    .catch(function () {
+      result.innerHTML = "";
+      var p = document.createElement("p");
+      p.className = "err";
+      p.textContent = T("js.batch_save_failed");
+      result.appendChild(p);
+    })
+    .then(function () {
+      batchSaving = false;
+      batchRefresh();
+      refocusScan();
+    });
 }
 
 function batchComplete() {
@@ -470,15 +541,14 @@ function batchClosePanel() {
 document.addEventListener("htmx:afterSwap", function (e) {
   var panel = batchEl("batch-panel");
   if (!panel || e.detail.target !== panel) { return; }
-  var saved = panel.querySelector("[data-batch-saved]");
-  if (!saved) {
+  var staged = panel.querySelector('li[data-kind="found"]');
+  if (!staged) {
     panel.scrollIntoView({ block: "nearest" });
     var title = panel.querySelector('[name="title"]');
     if (title) { title.focus(); }
     return;
   }
-  var log = batchEl("batch-log");
-  log.insertBefore(saved.querySelector("li"), log.firstChild);
+  batchStage(null, staged);
   if (batchCurrent) { batchCurrent.remove(); }
   batchCurrent = null;
   panel.innerHTML = "";

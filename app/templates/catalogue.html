@@ -34,7 +34,7 @@
 
 {{define "catalogue_form"}}
 <form class="scan-block form-catalogue"
-      hx-post="{{if .Batch}}/catalogue/batch/save{{else}}/catalogue/save{{end}}"
+      hx-post="{{if .Batch}}/catalogue/batch/stage{{else}}/catalogue/save{{end}}"
       hx-target="{{if .Batch}}#batch-panel{{else}}#catalogue{{end}}" hx-swap="innerHTML">
   {{if .Exists}}
   <p class="warning">{{Tn "catalogue.already_known" .Current}} {{T "catalogue.already_known_more"}}</p>

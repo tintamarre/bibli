@@ -1595,11 +1595,40 @@ button, input, select, textarea { font-family: inherit; }
 /* The form (and its Save button) belongs to the editable tabs only. */
 .settings-tabs-wrap[data-tab="installation"] > form { display: none; }
 
-/* Batch cataloguing: the lists the scans fill (app.js). */
+/* Batch cataloguing (app.js): scanning on the left, the books to check on the
+   right, so nothing needs scrolling to. One column below 56rem. */
 #batch [hidden] { display: none; } /* otherwise the display of .scan-block / .btn wins */
+.batch-layout { display: grid; gap: 1rem; align-items: start; }
+@media (min-width: 56rem) {
+  .batch-layout { grid-template-columns: minmax(18rem, 24rem) 1fr; }
+  .batch-left { position: sticky; top: 1rem; }
+  /* The list scrolls inside itself; the page does not. */
+  .batch-scroll { max-height: calc(100vh - 16rem); overflow-y: auto; }
+}
+.batch-left, .batch-side { display: flex; flex-direction: column; gap: 1rem; min-width: 0; }
+.batch-left .scan-block, .batch-side .scan-block { margin-bottom: 0; }
+#batch-aside-list { max-height: 12rem; overflow-y: auto; }
+/* An empty container would still take a gap of the column. */
+#batch-panel:empty, #batch-result:empty { display: none; }
+.batch-left .scan { font-size: 1.15rem; }
+.batch-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem 1rem; }
+.batch-head .step { margin: 0; }
+.batch-summary { color: var(--muted); font-weight: 400; }
 .batch-list { list-style: none; padding: 0; margin: .75rem 0 0; }
+.batch-list:not(:empty) ~ .batch-hint { display: none; }
 .batch-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: .25rem .6rem; padding: .45rem .1rem; border-bottom: 1px dashed var(--border); }
-.batch-mark { color: var(--ok); font-weight: 700; }
 .batch-pending { color: var(--muted); }
 .batch-why { color: var(--alert); } /* not red: red means overdue only */
 .batch-times { color: var(--muted); font-weight: 700; }
+.batch-found { flex-wrap: nowrap; align-items: center; gap: .75rem; padding: .6rem .1rem; }
+.batch-cover { width: 40px; height: 58px; object-fit: contain; flex: none; }
+.batch-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: .1rem; }
+.batch-title { overflow-wrap: anywhere; }
+.batch-meta { color: var(--muted); font-size: .9rem; overflow-wrap: anywhere; }
+.batch-badge { font-size: .85rem; font-weight: 600; color: var(--ok); }
+.batch-badge-known { color: var(--alert); }
+.batch-qty { display: flex; align-items: center; gap: .35rem; flex: none; }
+.batch-n { min-width: 1.6rem; text-align: center; font-weight: 700; font-size: 1.1rem; }
+.btn-qty { min-width: 44px; padding: 0; }
+.batch-result { padding: 1rem 1.25rem; }
+.batch-result .big-ok { margin-bottom: .5rem; }

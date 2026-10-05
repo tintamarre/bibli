@@ -246,6 +246,7 @@ func (a *app) handler() http.Handler {
 	mux.HandleFunc("POST /catalogue/save", a.catalogueSave)
 	mux.HandleFunc("GET /catalogue/batch", a.batchScreen)
 	mux.HandleFunc("POST /catalogue/batch/add", a.batchAdd)
+	mux.HandleFunc("POST /catalogue/batch/stage", a.batchStage)
 	mux.HandleFunc("POST /catalogue/batch/save", a.batchSave)
 
 	// Borrowers

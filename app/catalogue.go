@@ -274,8 +274,8 @@ func (a *app) catalogueSave(w http.ResponseWriter, r *http.Request) {
 	a.saveCatalogued(w, r, false)
 }
 
-// saveCatalogued is the confirm form's save; batch answers with a row for the
-// batch screen's list instead of the success screen.
+// saveCatalogued is the confirm form's save; batch stages the book on the batch
+// screen (batchStage) instead of writing it.
 func (a *app) saveCatalogued(w http.ResponseWriter, r *http.Request, batch bool) {
 	if err := r.ParseForm(); err != nil {
 		badRequest(w, r)
@@ -308,6 +308,12 @@ func (a *app) saveCatalogued(w http.ResponseWriter, r *http.Request, batch bool)
 		return
 	}
 
+	if batch {
+		// Nothing is written yet: the book joins the staged ones.
+		a.fragment(w, r, "batch", "batch_staged", a.stagedRow(r, n, count, strings.TrimSpace(r.FormValue("location"))))
+		return
+	}
+
 	tx, err := a.db.Begin()
 	if err != nil {
 		log.Printf("catalogue/save (tx): %v", err)
@@ -328,10 +334,6 @@ func (a *app) saveCatalogued(w http.ResponseWriter, r *http.Request, batch bool)
 		return
 	}
 
-	if batch {
-		a.fragment(w, r, "batch", "batch_saved", batchRow{Kind: "ok", Title: title, ISBN: i13, Codes: codes})
-		return
-	}
 	a.fragment(w, r, "catalogue", "catalogue_success", map[string]any{
 		"Title":   title,
 		"Codes":   codes,
