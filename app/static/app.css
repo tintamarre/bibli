@@ -1594,3 +1594,12 @@ button, input, select, textarea { font-family: inherit; }
 .settings-tabs-wrap[data-tab="installation"] .tab-panel[data-panel="installation"] { display: block; }
 /* The form (and its Save button) belongs to the editable tabs only. */
 .settings-tabs-wrap[data-tab="installation"] > form { display: none; }
+
+/* Batch cataloguing: the lists the scans fill (app.js). */
+#batch [hidden] { display: none; } /* otherwise the display of .scan-block / .btn wins */
+.batch-list { list-style: none; padding: 0; margin: .75rem 0 0; }
+.batch-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: .25rem .6rem; padding: .45rem .1rem; border-bottom: 1px dashed var(--border); }
+.batch-mark { color: var(--ok); font-weight: 700; }
+.batch-pending { color: var(--muted); }
+.batch-why { color: var(--alert); } /* not red: red means overdue only */
+.batch-times { color: var(--muted); font-weight: 700; }

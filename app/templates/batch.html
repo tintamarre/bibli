@@ -1,0 +1,44 @@
+{{define "title_icon"}}{{template "icon-catalogue" "title-icon"}}{{end}}
+{{define "width"}} page-narrow{{end}}
+{{define "content"}}
+<section id="batch">
+  <div class="scan-block">
+    {{/* The scans queue up in app.js: the field is free again at once. */}}
+    <form onsubmit="return batchScan(event)">
+      <p class="step">{{T "catalogue.scan_prompt"}}</p>
+      <input class="scan" name="isbn" type="text" autocomplete="off" autocapitalize="off"
+             spellcheck="false" enterkeyhint="send" autofocus placeholder="{{T "catalogue.scan_placeholder"}}">
+    </form>
+    {{/* Outside the form: a form with two text fields and no submit button is
+         not submitted by Enter. */}}
+    <label class="field"><span>{{T "inventory.col_location"}}</span>
+      <input id="batch-location" placeholder="{{T "catalogue.f_location_placeholder"}}"></label>
+    <p class="note">{{T "catalogue.batch_help"}}</p>
+    <p class="link-manual"><a class="link-quiet" href="/catalogue">{{T "catalogue.batch_single"}}</a></p>
+  </div>
+
+  <div id="batch-panel"></div>
+
+  <div id="batch-aside" class="scan-block" hidden>
+    <p class="step">{{T "catalogue.batch_aside_title"}}</p>
+    <p class="note">{{T "catalogue.batch_aside_help"}}</p>
+    <ul id="batch-aside-list" class="batch-list"></ul>
+    <button type="button" id="batch-complete" class="btn-primary" onclick="batchComplete()">{{T "catalogue.batch_complete"}} (<span id="batch-aside-count">0</span>)</button>
+  </div>
+
+  <div id="batch-done" class="scan-block" hidden>
+    <p class="step">{{T "catalogue.batch_added"}} <span id="batch-count">0</span></p>
+    <a id="batch-labels" class="btn-secondary" href="/print/labels" target="_blank" rel="noopener" hidden>{{template "icon-print" "btn-icon"}}{{T "catalogue.labels_print"}}</a>
+    <ul id="batch-log" class="batch-list"></ul>
+  </div>
+</section>
+{{end}}
+
+{{/* A line of the lists; app.js reads its data-* and moves it between them. */}}
+{{define "batch_row"}}<li class="batch-row batch-{{.Kind}}" data-kind="{{.Kind}}" data-isbn="{{.ISBN}}"{{if .Codes}} data-codes="{{range $i, $c := .Codes}}{{if $i}},{{end}}{{$c}}{{end}}"{{end}}>
+  {{if eq .Kind "ok"}}<span class="batch-mark" aria-hidden="true">✓</span> <b>{{.Title}}</b> {{range .Codes}}<span class="code">{{.}}</span> {{end}}
+  {{else}}<span class="code">{{.ISBN}}</span> <span class="batch-why">{{.Reason}}</span>{{end}}
+</li>{{end}}
+
+{{/* The panel's answer once a set-aside book is saved. */}}
+{{define "batch_saved"}}<div data-batch-saved><ul>{{template "batch_row" .}}</ul></div>{{end}}

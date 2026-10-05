@@ -18,6 +18,9 @@
   </form>
   <div id="cat-log" class="log" aria-live="polite"></div>
   <p class="link-manual">
+    <a class="link-quiet" href="/catalogue/batch">{{T "catalogue.batch_link"}}</a>
+  </p>
+  <p class="link-manual">
     <a class="link-quiet" href="/catalogue/manual"
        hx-get="/catalogue/manual" hx-target="#catalogue" hx-swap="innerHTML">
       {{T "catalogue.manual_entry"}}
@@ -30,8 +33,9 @@
 {{end}}
 
 {{define "catalogue_form"}}
-<form class="scan-block form-catalogue" hx-post="/catalogue/save"
-      hx-target="#catalogue" hx-swap="innerHTML">
+<form class="scan-block form-catalogue"
+      hx-post="{{if .Batch}}/catalogue/batch/save{{else}}/catalogue/save{{end}}"
+      hx-target="{{if .Batch}}#batch-panel{{else}}#catalogue{{end}}" hx-swap="innerHTML">
   {{if .Exists}}
   <p class="warning">{{Tn "catalogue.already_known" .Current}} {{T "catalogue.already_known_more"}}</p>
   {{else if and .N.ISBN13 (not .Found)}}
@@ -65,7 +69,7 @@
   </div>
   <div class="field-grid">
     <label class="field"><span>{{T "inventory.col_location"}}</span>
-      <input name="location" placeholder="{{T "catalogue.f_location_placeholder"}}"></label>
+      <input name="location" value="{{.Location}}" placeholder="{{T "catalogue.f_location_placeholder"}}"></label>
     <label class="field"><span>{{T "catalogue.f_copies"}}</span>
       <input name="copies" type="number" inputmode="numeric" min="1" max="100" value="{{.Copies}}" required></label>
   </div>
@@ -75,7 +79,11 @@
   {{end}}
 
   <button type="submit" class="btn-primary">{{T "catalogue.add"}}</button>
+  {{if .Batch}}
+  <p class="link-manual"><button type="button" class="link-quiet" onclick="batchClosePanel()">{{T "catalogue.batch_skip"}}</button></p>
+  {{else}}
   <p class="link-manual"><a class="link-quiet" href="/catalogue">{{T "common.cancel"}}</a></p>
+  {{end}}
 </form>
 {{end}}
 

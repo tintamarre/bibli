@@ -338,6 +338,154 @@ function catalogueSearch(e) {
   return false;
 }
 
+// Batch cataloguing. Scans queue up and are asked one after the other, so the
+// scanner never waits for a catalogue. A book no catalogue could place comes back
+// "aside" and is filled in by hand, one after the other, once the scanning is done.
+var batchQueue = [], batchBusy = false, batchSeen = {}, batchCurrent = null;
+
+function batchEl(id) { return document.getElementById(id); }
+
+function batchScan(e) {
+  e.preventDefault();
+  var field = (e.currentTarget || e.target).elements.isbn;
+  var isbn = field.value.trim();
+  field.value = "";
+  field.focus();
+  if (!isbn) { return false; }
+  var li = document.createElement("li");
+  li.className = "batch-row batch-pending";
+  var code = document.createElement("span");
+  code.className = "code";
+  code.textContent = isbn;
+  li.appendChild(code);
+  var log = batchEl("batch-log");
+  log.insertBefore(li, log.firstChild);
+  batchQueue.push({ isbn: isbn, li: li });
+  batchRefresh();
+  batchPump();
+  return false;
+}
+
+function batchPump() {
+  if (batchBusy || !batchQueue.length) { return; }
+  batchBusy = true;
+  var job = batchQueue.shift();
+  var key = job.isbn.replace(/[^0-9Xx]/g, "").toUpperCase();
+  var body = new URLSearchParams();
+  body.set("isbn", job.isbn);
+  body.set("location", batchEl("batch-location").value.trim());
+  if (batchSeen[key]) { body.set("again", "1"); }
+  fetch("/catalogue/batch/add", { method: "POST", body: body, credentials: "same-origin" })
+    .then(function (r) { if (!r.ok) { throw new Error(r.status); } return r.text(); })
+    .then(function (html) {
+      var t = document.createElement("template");
+      t.innerHTML = html.trim();
+      var row = t.content.firstElementChild;
+      // An expired session answers with the sign-in page: no row, same as a fault.
+      if (!row || !row.dataset.kind) { throw new Error("no row"); }
+      if (row.dataset.kind === "ok") { batchSeen[key] = true; }
+      batchPlace(job.li, row);
+    })
+    .catch(function () {
+      job.li.className = "batch-row batch-aside";
+      job.li.dataset.kind = "aside";
+      job.li.dataset.isbn = job.isbn;
+      batchPlace(job.li, job.li);
+    })
+    .then(function () {
+      batchBusy = false;
+      batchRefresh();
+      batchPump();
+    });
+}
+
+// A saved book takes the place of its line in the log; an aside one leaves it.
+function batchPlace(pending, row) {
+  if (row.dataset.kind === "aside") {
+    // The same book twice is one line, to be filled in with two copies.
+    var same = Array.prototype.find.call(batchEl("batch-aside-list").children, function (li) {
+      return li !== row && li.dataset.isbn === row.dataset.isbn;
+    });
+    if (same) {
+      same.dataset.copies = (parseInt(same.dataset.copies, 10) || 1) + 1;
+      var times = same.querySelector(".batch-times");
+      if (!times) {
+        times = document.createElement("span");
+        times.className = "batch-times";
+        same.appendChild(times);
+      }
+      times.textContent = "×" + same.dataset.copies;
+      pending.remove();
+      return;
+    }
+    batchEl("batch-aside-list").appendChild(row);
+    if (row !== pending) { pending.remove(); }
+  } else {
+    pending.replaceWith(row);
+  }
+}
+
+function batchRefresh() {
+  var codes = [];
+  document.querySelectorAll("#batch-log [data-codes]").forEach(function (li) {
+    codes = codes.concat(li.dataset.codes.split(","));
+  });
+  batchEl("batch-count").textContent = codes.length;
+  var labels = batchEl("batch-labels");
+  labels.hidden = codes.length === 0;
+  labels.href = "/print/labels?codes=" + codes.join(",");
+  batchEl("batch-done").hidden = batchEl("batch-log").children.length === 0;
+  var aside = batchEl("batch-aside-list").children.length;
+  batchEl("batch-aside").hidden = aside === 0;
+  batchEl("batch-aside-count").textContent = aside;
+  var working = batchBusy || batchQueue.length > 0;
+  // The set-aside books wait for the others to be done.
+  batchEl("batch-complete").disabled = working;
+  // Leaving now would lose the ISBNs set aside, or the scans still in flight.
+  window.onbeforeunload = (aside > 0 || working)
+    ? function (e) { e.preventDefault(); e.returnValue = ""; }
+    : null;
+}
+
+function batchComplete() {
+  var li = batchEl("batch-aside-list").firstElementChild;
+  if (!li || !window.htmx) { return; }
+  batchCurrent = li;
+  window.htmx.ajax("GET", "/catalogue/manual?batch=1&isbn=" + encodeURIComponent(li.dataset.isbn) +
+    "&copies=" + (li.dataset.copies || 1) +
+    "&location=" + encodeURIComponent(batchEl("batch-location").value.trim()),
+    { target: "#batch-panel", swap: "innerHTML" });
+}
+
+// "Later": the book goes to the back of the line and the panel closes.
+function batchClosePanel() {
+  if (batchCurrent && batchCurrent.parentNode) {
+    batchCurrent.parentNode.appendChild(batchCurrent);
+  }
+  batchCurrent = null;
+  batchEl("batch-panel").innerHTML = "";
+  refocusScan();
+}
+
+document.addEventListener("htmx:afterSwap", function (e) {
+  var panel = batchEl("batch-panel");
+  if (!panel || e.detail.target !== panel) { return; }
+  var saved = panel.querySelector("[data-batch-saved]");
+  if (!saved) {
+    panel.scrollIntoView({ block: "nearest" });
+    var title = panel.querySelector('[name="title"]');
+    if (title) { title.focus(); }
+    return;
+  }
+  var log = batchEl("batch-log");
+  log.insertBefore(saved.querySelector("li"), log.firstChild);
+  if (batchCurrent) { batchCurrent.remove(); }
+  batchCurrent = null;
+  panel.innerHTML = "";
+  batchRefresh();
+  if (batchEl("batch-aside-list").firstElementChild) { batchComplete(); } else { refocusScan(); }
+});
+
 // Sorting by a column heading. The order lives in two hidden fields of the
 // filter form, so it always posts with the filter; clicking again reverses.
 // "first" is a column's initial direction (sortColDesc, handlers.go).

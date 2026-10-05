@@ -27,19 +27,39 @@ type catalogueForm struct {
 	Current int  // copies already present for this title
 	Copies  int  // number of copies to create (default 1)
 	Error   string
+
+	// Batch is the form shown in the batch screen's panel: it saves through
+	// /catalogue/batch/save and Location carries that screen's shelf.
+	Batch    bool
+	Location string
 }
 
 func (a *app) catalogueScreen(w http.ResponseWriter, r *http.Request) {
 	a.render(w, r, "catalogue", map[string]any{"Title": tr(r, "nav.catalogue")})
 }
 
-// A blank form, for a book without an ISBN.
+// A blank form, for a book without an ISBN. With ?isbn= it starts from that
+// ISBN (or from the work, when it is already catalogued): the batch screen
+// fills in its set-aside books this way.
 
 func (a *app) catalogueManual(w http.ResponseWriter, r *http.Request) {
-	a.fragment(w, r, "catalogue", "catalogue_form", catalogueForm{
-		N:      Record{Source: sourceManual, Language: "fr"},
-		Copies: 1,
-	})
+	q := r.URL.Query()
+	f := catalogueForm{N: Record{Source: sourceManual, Language: "fr"}, Copies: 1}
+	if isbn := strings.TrimSpace(q.Get("isbn")); isbn != "" {
+		if i13, i10, err := ISBNForms(isbn); err != nil {
+			f.Error = tr(r, "catalogue.err_bad_isbn")
+		} else if known, ok := a.existingBook(i13, i10); ok {
+			f = known
+		} else {
+			f.N.ISBN13, f.N.ISBN10 = i13, i10
+		}
+	}
+	if n, _ := strconv.Atoi(q.Get("copies")); n > 1 && n <= 100 {
+		f.Copies = n
+	}
+	f.Batch = q.Get("batch") == "1"
+	f.Location = q.Get("location")
+	a.fragment(w, r, "catalogue", "catalogue_form", f)
 }
 
 // Prefills the confirmation screen from an already catalogued work, to which
@@ -251,6 +271,12 @@ func recordFromForm(r *http.Request, i13, i10, title string, year int) Record {
 }
 
 func (a *app) catalogueSave(w http.ResponseWriter, r *http.Request) {
+	a.saveCatalogued(w, r, false)
+}
+
+// saveCatalogued is the confirm form's save; batch answers with a row for the
+// batch screen's list instead of the success screen.
+func (a *app) saveCatalogued(w http.ResponseWriter, r *http.Request, batch bool) {
 	if err := r.ParseForm(); err != nil {
 		badRequest(w, r)
 		return
@@ -269,7 +295,9 @@ func (a *app) catalogueSave(w http.ResponseWriter, r *http.Request) {
 
 	n := recordFromForm(r, i13, i10, title, year)
 	redisplay := func(msg string) {
-		a.fragment(w, r, "catalogue", "catalogue_form", catalogueForm{N: n, Copies: count, Error: msg})
+		a.fragment(w, r, "catalogue", "catalogue_form", catalogueForm{
+			N: n, Copies: count, Error: msg, Batch: batch, Location: r.FormValue("location"),
+		})
 	}
 	if isbnErr != nil {
 		redisplay(tr(r, "catalogue.err_bad_isbn"))
@@ -300,6 +328,10 @@ func (a *app) catalogueSave(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if batch {
+		a.fragment(w, r, "batch", "batch_saved", batchRow{Kind: "ok", Title: title, ISBN: i13, Codes: codes})
+		return
+	}
 	a.fragment(w, r, "catalogue", "catalogue_success", map[string]any{
 		"Title":   title,
 		"Codes":   codes,
