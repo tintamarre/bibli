@@ -95,7 +95,7 @@ func parseUnimarc(data []byte) ([]Datafield, error) {
 	var val strings.Builder
 	inSub := false
 	root := ""
-	diagnostic := false
+	diagnostic, noMatch, inURI := false, false, false
 	for {
 		tok, err := dec.Token()
 		if errors.Is(err, io.EOF) {
@@ -112,6 +112,8 @@ func parseUnimarc(data []byte) ([]Datafield, error) {
 			switch e.Name.Local {
 			case "diagnostics":
 				diagnostic = true
+			case "uri":
+				inURI = true
 			case "datafield":
 				cur = &Datafield{Tag: attribute(e, "tag")}
 			case "subfield":
@@ -123,8 +125,15 @@ func parseUnimarc(data []byte) ([]Datafield, error) {
 			if inSub {
 				val.Write([]byte(e))
 			}
+			// UniCat answers "no match" with diagnostic 61 (first record
+			// position out of range) instead of an empty result.
+			if inURI && strings.HasSuffix(strings.TrimSpace(string(e)), "/diagnostic/1/61") {
+				noMatch = true
+			}
 		case xml.EndElement:
 			switch e.Name.Local {
+			case "uri":
+				inURI = false
 			case "subfield":
 				if cur != nil {
 					cur.Subs = append(cur.Subs, [2]string{code, strings.TrimSpace(val.String())})
@@ -145,7 +154,7 @@ func parseUnimarc(data []byte) ([]Datafield, error) {
 	default:
 		return nil, fmt.Errorf("unreadable reply: <%s> is not an SRU response", root)
 	}
-	if diagnostic && len(fields) == 0 {
+	if diagnostic && len(fields) == 0 && !noMatch {
 		return nil, errors.New("the catalogue answered with an SRU diagnostic")
 	}
 	return fields, nil

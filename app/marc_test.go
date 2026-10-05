@@ -254,3 +254,13 @@ func TestCoverFromUnimarc(t *testing.T) {
 		t.Errorf("a non-cover 856 was wrongly kept: %q", n.CoverURL)
 	}
 }
+
+// UniCat reports a book it does not hold as diagnostic 61, not as an empty
+// result: that is an absence, not a fault.
+func TestUniCatNoMatchDiagnosticIsAbsence(t *testing.T) {
+	body := `<?xml version='1.0'?><searchRetrieveResponse xmlns="http://www.loc.gov/zing/srw/"><version>1.1</version><numberOfRecords>0</numberOfRecords><diagnostics><uri>info:srw/diagnostic/1/61</uri><message>First record position out of range</message></diagnostics></searchRetrieveResponse>`
+	n, err := recordFromMarc21([]byte(body), "9791090757189", "")
+	if err != nil || n != nil {
+		t.Errorf("got record %v, error %v; want nil, nil", n, err)
+	}
+}
