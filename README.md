@@ -18,7 +18,7 @@
 - **Prêt et retour en quelques secondes.** On scanne la carte de l'emprunteur, puis ses livres ; au retour, un seul scan suffit. Une douchette USB à 30 € fait l'affaire, la caméra d'une tablette aussi.
 - **Catalogage par ISBN.** Le titre, l'auteur, l'éditeur et la couverture arrivent seuls, depuis la BnF, UniCat, Google Books et Open Library. Un livre sans ISBN se saisit à la main.
 - **Étiquettes et cartes.** Planches A4 autocollantes, avec code-barres et cote de rangement ; les étiquettes d'une séance sortent dans l'ordre du catalogage.
-- **Emprunteurs et groupes.** Import de la liste depuis un fichier CSV (exporté d'un tableur), cartes d'emprunteur, passage d'année en un écran. Les emprunteurs sont rangés par groupe : une classe, un étage, une unité de soins, un atelier.
+- **Emprunteurs et groupes.** Import de la liste depuis un fichier CSV (exporté d'un tableur), cartes d'emprunteur, changement de groupe en un écran. Les emprunteurs sont rangés par groupe : une classe, un étage, une unité de soins, un atelier.
 - **Retards, inventaire, statistiques.** Liste des retards à imprimer, inventaire modifiable ligne par ligne, lectures de l'année, exports CSV et Excel.
 - **Liens de suivi**, si on le souhaite : chaque emprunteur, ou ses proches, voit ses livres en cours, rien d'autre.
 - **En français, en néerlandais et en anglais.**
@@ -48,7 +48,7 @@ Bibli ne cherche pas à remplacer un système intégré de bibliothèque (SIGB).
 | **Un poste ou tout l'établissement** | Les deux, avec le même programme | Serveur | Serveur | Un poste | Un appareil, partage entre proches | Navigateur ou appli |
 | **Prêter et rendre sans Internet** | Oui | Oui, sur un serveur local | Oui, sur un serveur local | Oui | Oui | Non |
 | **Données des emprunteurs** | Prénom, initiale, groupe | Fiche complète | Fiche complète | Fiche complète | Prêt entre proches, sans fiches d'emprunteurs | Hébergées chez l'éditeur |
-| **Groupes, retards, passage d'année** | Oui | Oui | Oui | Non | Non | En partie |
+| **Groupes, retards, changement de groupe** | Oui | Oui | Oui | Non | Non | En partie |
 | **Catalogue public, réservations, acquisitions** | Non | Oui | Oui | En partie | Partage du catalogue entre proches | En partie |
 | **Échange avec un réseau de bibliothèques** (MARC, Z39.50) | Non | Oui | Oui | Oui | Non précisé | Non |
 | **Licence** | AGPL-3.0, libre | Libre | Libre | Libre | AGPL-3.0, libre | Propriétaire, gratuit jusqu'à 5 000 exemplaires |

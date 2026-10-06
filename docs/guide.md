@@ -290,13 +290,13 @@ Dans l'**Inventaire**, la colonne *Condition* de chaque exemplaire : *disponible
 
 L'année des statistiques (la grille de l'accueil, les livres les plus empruntés) commence le 1er août par défaut. **Réglages** → *Début de l'année dans les statistiques* choisit un autre mois : septembre, janvier pour une année civile…
 
-### Passage d'année
+### Changement de groupe
 
-**Emprunteurs** → *Gérer la liste* → *Passer à l'année suivante*, une fois par an (surtout utile dans une école ou toute structure qui fonctionne par années), avant d'importer les nouveaux emprunteurs.
+**Emprunteurs** → *Gérer la liste* → *Changer les groupes* reclasse tout le monde en un écran : une école le fait au passage d'année (P3 → P4), une maison de repos ou un centre culturel quand les unités ou les ateliers changent. À faire avant d'importer les nouveaux emprunteurs.
 
-1. Pour chaque groupe dont le nom contient un nombre, le nouveau groupe est prérempli (P3 → P4). Vérifier, corriger au besoin.
-2. Pour le dernier groupe de chaque cycle (P6, M3…), cocher **sortants** : ces emprunteurs seront désactivés.
-3. Relire le tableau, puis *Appliquer le passage d'année*. **Il n'y a pas de retour arrière en un clic.**
+1. Pour chaque groupe dont le nom contient un nombre, le nouveau groupe est prérempli avec le nombre suivant (P3 → P4). Vérifier, corriger au besoin.
+2. Pour les groupes dont les membres s'en vont (la dernière année d'un cycle, une unité qui ferme), cocher **sortants** : ces emprunteurs seront désactivés.
+3. Relire le tableau, puis *Appliquer le changement*. **Il n'y a pas de retour arrière en un clic.**
 
 Un sortant qui a encore des livres reste actif, et le bilan le signale. Ensuite, importer la liste des nouveaux emprunteurs (voir [§6](#6-les-emprunteurs)).
 

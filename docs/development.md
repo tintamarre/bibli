@@ -110,7 +110,7 @@ Tout le code Go vit dans `app/`, en **un seul paquet plat** : les fichiers y son
     app/book.go          fiche d'un ouvrage
     app/inventory.go     inventaire éditable
     app/labels.go        étiquettes : cote, filtres, planche à imprimer
-    app/borrowers.go     emprunteurs : saisie, import CSV, cartes, passage d'année
+    app/borrowers.go     emprunteurs : saisie, import CSV, cartes, changement de groupe
     app/tracking.go      page de suivi (jeton secret)
     app/reports.go       impressions et export CSV
     app/xlsx.go          export Excel, sans dépendance
