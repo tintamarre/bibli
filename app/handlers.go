@@ -123,6 +123,7 @@ var jsKeys = []string{
 	"js.confirm_loan",
 	"js.books.one", "js.books.other",
 	"js.batch_copies.one", "js.batch_copies.other",
+	"js.batch_add_failed",
 	"js.batch_save_failed",
 	"js.confirm_lost",
 	"js.confirm_withdrawn",

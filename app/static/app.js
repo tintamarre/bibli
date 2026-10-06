@@ -340,9 +340,10 @@ function catalogueSearch(e) {
 
 // Batch cataloguing. Scans queue up and are asked one after the other, so the
 // scanner never waits for a catalogue. Nothing is written until "Add": a found
-// book is staged with its copies, to be checked; a book no catalogue could place
-// is set aside, then filled in by hand (and staged) once the scanning is done.
-var batchQueue = [], batchBusy = false, batchSaving = false, batchCurrent = null;
+// book is staged with its copies, to be checked, and added under the shelf
+// typed beside the button. A book no catalogue could place is refused and
+// listed, to be catalogued book by book in another tab.
+var batchQueue = [], batchBusy = false, batchSaving = false;
 
 function batchEl(id) { return document.getElementById(id); }
 
@@ -373,7 +374,6 @@ function batchPump() {
   var job = batchQueue.shift();
   var body = new URLSearchParams();
   body.set("isbn", job.isbn);
-  body.set("location", batchEl("batch-location").value.trim());
   fetch("/catalogue/batch/add", { method: "POST", body: body, credentials: "same-origin" })
     .then(function (r) { if (!r.ok) { throw new Error(r.status); } return r.text(); })
     .then(function (html) {
@@ -385,9 +385,13 @@ function batchPump() {
       batchPlace(job.li, row);
     })
     .catch(function () {
-      job.li.className = "batch-row batch-aside";
-      job.li.dataset.kind = "aside";
+      job.li.className = "batch-row batch-refused";
+      job.li.dataset.kind = "refused";
       job.li.dataset.isbn = job.isbn;
+      var why = document.createElement("span");
+      why.className = "batch-why";
+      why.textContent = T("js.batch_add_failed");
+      job.li.appendChild(why);
       batchPlace(job.li, job.li);
     })
     .then(function () {
@@ -397,29 +401,33 @@ function batchPump() {
     });
 }
 
-// A found book is staged; an aside one leaves the list for its own.
+// A found book is staged; a refused one leaves the list for its own.
 function batchPlace(pending, row) {
   if (row.dataset.kind === "found") {
     batchStage(pending, row);
     return;
   }
-  // The same book twice is one line, to be filled in with two copies.
-  var same = Array.prototype.find.call(batchEl("batch-aside-list").children, function (li) {
+  // The same book twice is one line, said to be scanned twice.
+  var same = Array.prototype.find.call(batchEl("batch-refused-list").children, function (li) {
     return li !== row && li.dataset.isbn === row.dataset.isbn;
   });
   if (same) {
-    same.dataset.copies = (parseInt(same.dataset.copies, 10) || 1) + 1;
+    var n = (parseInt(same.dataset.copies, 10) || 1) + 1;
+    same.dataset.copies = n;
     var times = same.querySelector(".batch-times");
     if (!times) {
       times = document.createElement("span");
       times.className = "batch-times";
       same.appendChild(times);
     }
-    times.textContent = "×" + same.dataset.copies;
+    times.textContent = "×" + n;
+    // So the form the link opens asks for as many copies as were scanned.
+    var fix = same.querySelector(".batch-fix");
+    if (fix) { fix.href = fix.href.split("&copies=")[0] + "&copies=" + n; }
     pending.remove();
     return;
   }
-  batchEl("batch-aside-list").appendChild(row);
+  batchEl("batch-refused-list").appendChild(row);
   if (row !== pending) { pending.remove(); }
 }
 
@@ -433,23 +441,22 @@ function batchSetCopies(li, n) {
   li.querySelector(".batch-qty .btn-qty").disabled = it.copies <= 1;
 }
 
-// The same book from the same shelf is one line with one more copy, moved to the
-// top where the eye is.
+// The same book scanned again is one line with one more copy, moved to the top
+// where the eye is.
 function batchStage(pending, row) {
   var list = batchEl("batch-list");
   var it = batchItem(row);
   var same = it.isbn13 && Array.prototype.find.call(list.children, function (li) {
-    return li !== pending && li.dataset.kind === "found" && li.dataset.isbn === row.dataset.isbn &&
-      batchItem(li).location === it.location;
+    return li !== pending && li.dataset.kind === "found" && li.dataset.isbn === row.dataset.isbn;
   });
   if (same) {
     batchSetCopies(same, batchItem(same).copies + it.copies);
     list.insertBefore(same, list.firstChild);
-    if (pending) { pending.remove(); }
+    pending.remove();
     return;
   }
   batchSetCopies(row, it.copies);
-  if (pending && pending.parentNode === list) { pending.replaceWith(row); }
+  if (pending.parentNode === list) { pending.replaceWith(row); }
   else { list.insertBefore(row, list.firstChild); }
 }
 
@@ -473,25 +480,24 @@ function batchRefresh() {
   });
   batchEl("batch-summary").textContent = books ? Tn("js.books", books) + " · " + Tn("js.batch_copies", copies) : "";
   batchEl("batch-save").disabled = books === 0 || batchSaving;
-  var aside = batchEl("batch-aside-list").children.length;
-  batchEl("batch-aside").hidden = aside === 0;
-  batchEl("batch-aside-count").textContent = aside;
+  var refused = batchEl("batch-refused-list").children.length;
+  batchEl("batch-refused").hidden = refused === 0;
   var working = batchBusy || batchQueue.length > 0;
-  // The set-aside books wait for the others to be done.
-  batchEl("batch-complete").disabled = working;
-  // Leaving now would lose what is staged, the ISBNs set aside, or scans in flight.
-  window.onbeforeunload = (books > 0 || aside > 0 || working)
+  // Leaving now would lose what is staged, the refused ISBNs, or scans in flight.
+  window.onbeforeunload = (books > 0 || refused > 0 || working)
     ? function (e) { e.preventDefault(); e.returnValue = ""; }
     : null;
 }
 
-// One transaction on the server: every staged book is added, or none.
+// One transaction on the server: every staged book is added, under the shelf
+// the field holds at that moment, or none is.
 function batchSave() {
   var rows = document.querySelectorAll('#batch-list li[data-kind="found"]');
   if (!rows.length || batchSaving) { return; }
   batchSaving = true;
   batchRefresh();
   var body = new URLSearchParams();
+  body.set("location", batchEl("batch-location").value.trim());
   rows.forEach(function (li) { body.append("item", li.dataset.item); });
   var result = batchEl("batch-result");
   fetch("/catalogue/batch/save", { method: "POST", body: body, credentials: "same-origin" })
@@ -517,44 +523,6 @@ function batchSave() {
       refocusScan();
     });
 }
-
-function batchComplete() {
-  var li = batchEl("batch-aside-list").firstElementChild;
-  if (!li || !window.htmx) { return; }
-  batchCurrent = li;
-  window.htmx.ajax("GET", "/catalogue/manual?batch=1&isbn=" + encodeURIComponent(li.dataset.isbn) +
-    "&copies=" + (li.dataset.copies || 1) +
-    "&location=" + encodeURIComponent(batchEl("batch-location").value.trim()),
-    { target: "#batch-panel", swap: "innerHTML" });
-}
-
-// "Later": the book goes to the back of the line and the panel closes.
-function batchClosePanel() {
-  if (batchCurrent && batchCurrent.parentNode) {
-    batchCurrent.parentNode.appendChild(batchCurrent);
-  }
-  batchCurrent = null;
-  batchEl("batch-panel").innerHTML = "";
-  refocusScan();
-}
-
-document.addEventListener("htmx:afterSwap", function (e) {
-  var panel = batchEl("batch-panel");
-  if (!panel || e.detail.target !== panel) { return; }
-  var staged = panel.querySelector('li[data-kind="found"]');
-  if (!staged) {
-    panel.scrollIntoView({ block: "nearest" });
-    var title = panel.querySelector('[name="title"]');
-    if (title) { title.focus(); }
-    return;
-  }
-  batchStage(null, staged);
-  if (batchCurrent) { batchCurrent.remove(); }
-  batchCurrent = null;
-  panel.innerHTML = "";
-  batchRefresh();
-  if (batchEl("batch-aside-list").firstElementChild) { batchComplete(); } else { refocusScan(); }
-});
 
 // Sorting by a column heading. The order lives in two hidden fields of the
 // filter form, so it always posts with the filter; clicking again reverses.

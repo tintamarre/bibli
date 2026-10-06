@@ -12,12 +12,14 @@ import (
 // Batch cataloguing: the screen queues the scans and asks for them one after
 // the other, but writes nothing. A book a catalogue knows is staged on the
 // right with its copies, to be checked (copies changed, a book removed) and
-// added all at once. The others come back "aside" and are filled in by hand
-// once the scanning is done, through the confirm form, which stages them too.
+// added all at once, under the location chosen beside the add button. A book no
+// catalogue can place is refused: it is catalogued book by book, on the screen
+// that has room to type a notice.
 
 // batchItem is a staged book as the screen carries it between lookup and save
-// (the data-item of its row). The raw catalogue answer stays out of it: at save
-// it is read back from the lookup memory.
+// (the data-item of its row). The location is not part of it: it belongs to the
+// batch, read once at save. The raw catalogue answer stays out of it too: at
+// save it is read back from the lookup memory.
 type batchItem struct {
 	ISBN13    string `json:"isbn13"`
 	ISBN10    string `json:"isbn10"`
@@ -29,7 +31,6 @@ type batchItem struct {
 	Language  string `json:"language"`
 	Source    string `json:"source"`
 	URL       string `json:"url"`
-	Location  string `json:"location"`
 	Copies    int    `json:"copies"`
 }
 
@@ -42,31 +43,40 @@ func (it batchItem) record() Record {
 }
 
 // batchRow is one line of the screen's lists. Kind is "found" (staged) or
-// "aside"; Done is the result block's recap line.
+// "refused"; Codes carries the result block's recap line.
 type batchRow struct {
 	Kind   string
 	Title  string
 	ISBN   string
-	Meta   string // authors · publisher · year · shelf
+	Meta   string // authors · publisher · year
 	Badge  string // what adding it changes: a new title, or more copies of a known one
 	Known  bool
 	Copies int
 	Item   string // batchItem as JSON
 	Reason string
+	Manual bool // a valid ISBN, so the refusal can link to cataloguing it by hand
 	Codes  []string
 }
 
 func (a *app) batchScreen(w http.ResponseWriter, r *http.Request) {
-	a.render(w, r, "batch", map[string]any{"Title": tr(r, "catalogue.batch_title")})
+	locations, err := a.copyLocations()
+	if err != nil {
+		log.Printf("catalogue/batch (locations): %v", err)
+		internalError(w, r)
+		return
+	}
+	a.render(w, r, "batch", map[string]any{
+		"Title": tr(r, "catalogue.batch_title"), "Locations": locations,
+	})
 }
 
 // stagedRow describes a book about to be added, for a person to check: what it
 // is, and whether it is a new title or more copies of one already catalogued.
-func (a *app) stagedRow(r *http.Request, n Record, copies int, location string) batchRow {
+func (a *app) stagedRow(r *http.Request, n Record, copies int) batchRow {
 	it := batchItem{
 		ISBN13: n.ISBN13, ISBN10: n.ISBN10, Title: n.Title, Subtitle: n.Subtitle,
 		Authors: n.Authors, Publisher: n.Publisher, Year: n.Year, Language: n.Language,
-		Source: n.Source, URL: n.URL, Location: location, Copies: copies,
+		Source: n.Source, URL: n.URL, Copies: copies,
 	}
 	js, _ := json.Marshal(it)
 
@@ -79,9 +89,6 @@ func (a *app) stagedRow(r *http.Request, n Record, copies int, location string) 
 	if n.Year > 0 {
 		meta = append(meta, strconv.Itoa(n.Year))
 	}
-	if location != "" {
-		meta = append(meta, tr(r, "inventory.col_location")+": "+location)
-	}
 
 	row := batchRow{Kind: "found", Title: n.Title, ISBN: n.ISBN13, Meta: strings.Join(meta, " · "),
 		Copies: copies, Item: string(js), Badge: tr(r, "catalogue.batch_new")}
@@ -92,8 +99,8 @@ func (a *app) stagedRow(r *http.Request, n Record, copies int, location string) 
 	return row
 }
 
-// batchAdd looks a scan up and answers with the row to stage or to set aside.
-// Nothing is written.
+// batchAdd looks a scan up and answers with the row to stage, or the refusal to
+// list. Nothing is written.
 func (a *app) batchAdd(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
 		badRequest(w, r)
@@ -103,15 +110,16 @@ func (a *app) batchAdd(w http.ResponseWriter, r *http.Request) {
 	extendWriteDeadline(w, 2*time.Minute)
 
 	raw := strings.TrimSpace(r.FormValue("isbn"))
-	location := strings.TrimSpace(r.FormValue("location"))
 
-	aside := func(reason string) {
-		a.fragment(w, r, "batch", "batch_row", batchRow{Kind: "aside", ISBN: raw, Reason: reason})
+	refuse := func(reason string, manual bool) {
+		a.fragment(w, r, "batch", "batch_row", batchRow{Kind: "refused", ISBN: raw, Reason: reason, Manual: manual})
 	}
 
 	i13, i10, err := ISBNForms(raw)
 	if err != nil {
-		aside(tr(r, "catalogue.batch_bad_isbn"))
+		// A wrong check digit is a misread far more often than a wrong book:
+		// scanning it again is the fix, not typing a notice.
+		refuse(tr(r, "catalogue.batch_bad_isbn"), false)
 		return
 	}
 	raw = i13
@@ -126,30 +134,26 @@ func (a *app) batchAdd(w http.ResponseWriter, r *http.Request) {
 		}
 		if rec == nil || rec.Title == "" {
 			if err != nil {
-				aside(tr(r, "catalogue.batch_silent"))
+				refuse(tr(r, "catalogue.batch_silent"), true)
 			} else {
-				aside(tr(r, "catalogue.batch_notfound"))
+				refuse(tr(r, "catalogue.batch_notfound"), true)
 			}
 			return
 		}
 		n = *rec
 	}
-	a.fragment(w, r, "batch", "batch_row", a.stagedRow(r, n, 1, location))
-}
-
-// batchStage is the panel's form: a set-aside book, filled in by hand, joins
-// the staged ones like the others.
-func (a *app) batchStage(w http.ResponseWriter, r *http.Request) {
-	a.saveCatalogued(w, r, true)
+	a.fragment(w, r, "batch", "batch_row", a.stagedRow(r, n, 1))
 }
 
 // batchSave writes every staged book in one transaction, from the screen's
-// "item" fields, and answers with what was created.
+// "item" fields, into the location the screen carries, and answers with what
+// was created.
 func (a *app) batchSave(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
 		badRequest(w, r)
 		return
 	}
+	location := strings.TrimSpace(r.FormValue("location"))
 	raw := r.Form["item"]
 	if len(raw) == 0 || len(raw) > 5000 {
 		badRequest(w, r)
@@ -192,7 +196,7 @@ func (a *app) batchSave(w http.ResponseWriter, r *http.Request) {
 				n.Payload = m.Payload
 			}
 		}
-		codes, err := a.createCopies(tx, n, it.Copies, it.Location)
+		codes, err := a.createCopies(tx, n, it.Copies, location)
 		if err != nil {
 			log.Printf("catalogue/batch/save: %v", err)
 			internalError(w, r)

@@ -28,10 +28,12 @@ type catalogueForm struct {
 	Copies  int  // number of copies to create (default 1)
 	Error   string
 
-	// Batch is the form shown in the batch screen's panel: it saves through
-	// /catalogue/batch/save and Location carries that screen's shelf.
-	Batch    bool
+	// Location is what the shelf box holds: empty on a new form, filled again
+	// when a refused save redraws the form.
 	Location string
+
+	// Locations are the shelves already in use, suggested under the box.
+	Locations []LocationCount
 }
 
 func (a *app) catalogueScreen(w http.ResponseWriter, r *http.Request) {
@@ -40,7 +42,8 @@ func (a *app) catalogueScreen(w http.ResponseWriter, r *http.Request) {
 
 // A blank form, for a book without an ISBN. With ?isbn= it starts from that
 // ISBN (or from the work, when it is already catalogued): the batch screen
-// fills in its set-aside books this way.
+// links to it this way for the books it refused. Opened as a link rather than
+// through HTMX, it answers with the whole screen.
 
 func (a *app) catalogueManual(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
@@ -57,8 +60,12 @@ func (a *app) catalogueManual(w http.ResponseWriter, r *http.Request) {
 	if n, _ := strconv.Atoi(q.Get("copies")); n > 1 && n <= 100 {
 		f.Copies = n
 	}
-	f.Batch = q.Get("batch") == "1"
 	f.Location = q.Get("location")
+	f.Locations = a.locationSuggestions()
+	if r.Header.Get("HX-Request") != "true" {
+		a.render(w, r, "catalogue", map[string]any{"Title": tr(r, "nav.catalogue"), "Form": f})
+		return
+	}
 	a.fragment(w, r, "catalogue", "catalogue_form", f)
 }
 
@@ -121,6 +128,7 @@ func (a *app) catalogueSearchStream(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	sendResult := func(f catalogueForm) {
+		f.Locations = a.locationSuggestions()
 		html, err := a.fragmentString(r, "catalogue", "catalogue_form", f)
 		if err != nil {
 			log.Printf("stream (render): %v", err)
@@ -271,12 +279,20 @@ func recordFromForm(r *http.Request, i13, i10, title string, year int) Record {
 }
 
 func (a *app) catalogueSave(w http.ResponseWriter, r *http.Request) {
-	a.saveCatalogued(w, r, false)
+	a.saveCatalogued(w, r)
 }
 
-// saveCatalogued is the confirm form's save; batch stages the book on the batch
-// screen (batchStage) instead of writing it.
-func (a *app) saveCatalogued(w http.ResponseWriter, r *http.Request, batch bool) {
+// locationSuggestions lists the shelves already in use, for the box under the
+// form. A form is worth showing without them.
+func (a *app) locationSuggestions() []LocationCount {
+	locations, err := a.copyLocations()
+	if err != nil {
+		log.Printf("catalogue (locations): %v", err)
+	}
+	return locations
+}
+
+func (a *app) saveCatalogued(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
 		badRequest(w, r)
 		return
@@ -296,7 +312,8 @@ func (a *app) saveCatalogued(w http.ResponseWriter, r *http.Request, batch bool)
 	n := recordFromForm(r, i13, i10, title, year)
 	redisplay := func(msg string) {
 		a.fragment(w, r, "catalogue", "catalogue_form", catalogueForm{
-			N: n, Copies: count, Error: msg, Batch: batch, Location: r.FormValue("location"),
+			N: n, Copies: count, Error: msg,
+			Location: r.FormValue("location"), Locations: a.locationSuggestions(),
 		})
 	}
 	if isbnErr != nil {
@@ -305,12 +322,6 @@ func (a *app) saveCatalogued(w http.ResponseWriter, r *http.Request, batch bool)
 	}
 	if title == "" {
 		redisplay(tr(r, "common.err_title_required"))
-		return
-	}
-
-	if batch {
-		// Nothing is written yet: the book joins the staged ones.
-		a.fragment(w, r, "batch", "batch_staged", a.stagedRow(r, n, count, strings.TrimSpace(r.FormValue("location"))))
 		return
 	}
 

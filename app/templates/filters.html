@@ -45,6 +45,12 @@
 <datalist id="groups">{{range .}}{{if .Group}}<option value="{{.Group}}">{{end}}{{end}}</datalist>
 {{end}}
 
+{{/* The same for the shelves, handed the screen's Locations: the unfiled copies
+     come back as an empty name, which is no suggestion. */}}
+{{define "location_datalist"}}
+<datalist id="locations">{{range .}}{{if .Location}}<option value="{{.Location}}">{{end}}{{end}}</datalist>
+{{end}}
+
 {{/* A sortable column heading: a button, since the list redraws in place. The
      single arrow marks the sorting column; every other carries the pair, and an
      unsorted list shows no single arrow. The slot is always filled so the

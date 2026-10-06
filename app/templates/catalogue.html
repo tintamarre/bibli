@@ -3,7 +3,9 @@
 {{define "width"}} page-narrow{{end}}
 {{define "content"}}
 <section id="catalogue">
-  {{template "catalogue_scan" .}}
+  {{/* With a form, the screen opens on it: the link the batch screen gives for
+       a book it refused lands here, ISBN already filled in. */}}
+  {{with .Form}}{{template "catalogue_form" .}}{{else}}{{template "catalogue_scan" $}}{{end}}
 </section>
 {{end}}
 
@@ -34,8 +36,7 @@
 
 {{define "catalogue_form"}}
 <form class="scan-block form-catalogue"
-      hx-post="{{if .Batch}}/catalogue/batch/stage{{else}}/catalogue/save{{end}}"
-      hx-target="{{if .Batch}}#batch-panel{{else}}#catalogue{{end}}" hx-swap="innerHTML">
+      hx-post="/catalogue/save" hx-target="#catalogue" hx-swap="innerHTML">
   {{if .Exists}}
   <p class="warning">{{Tn "catalogue.already_known" .Current}} {{T "catalogue.already_known_more"}}</p>
   {{else if and .N.ISBN13 (not .Found)}}
@@ -69,7 +70,9 @@
   </div>
   <div class="field-grid">
     <label class="field"><span>{{T "inventory.col_location"}}</span>
-      <input name="location" value="{{.Location}}" placeholder="{{T "catalogue.f_location_placeholder"}}"></label>
+      <input name="location" value="{{.Location}}" list="locations"
+             placeholder="{{T "catalogue.f_location_placeholder"}}">
+      {{template "location_datalist" .Locations}}</label>
     <label class="field"><span>{{T "catalogue.f_copies"}}</span>
       <input name="copies" type="number" inputmode="numeric" min="1" max="100" value="{{.Copies}}" required></label>
   </div>
@@ -79,11 +82,7 @@
   {{end}}
 
   <button type="submit" class="btn-primary">{{T "catalogue.add"}}</button>
-  {{if .Batch}}
-  <p class="link-manual"><button type="button" class="link-quiet" onclick="batchClosePanel()">{{T "catalogue.batch_skip"}}</button></p>
-  {{else}}
   <p class="link-manual"><a class="link-quiet" href="/catalogue">{{T "common.cancel"}}</a></p>
-  {{end}}
 </form>
 {{end}}
 

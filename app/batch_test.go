@@ -49,33 +49,37 @@ func itemJSON(t *testing.T, it batchItem) string {
 }
 
 // A scan writes nothing: a book a catalogue knows comes back staged, to be
-// checked, and the one nobody knows is set aside.
-func TestBatchAddStagesWhatIsFoundAndSetsTheRestAside(t *testing.T) {
+// checked, and the one nobody knows is refused, with the link to catalogue it
+// by hand.
+func TestBatchAddStagesWhatIsFoundAndRefusesTheRest(t *testing.T) {
 	a, h := testHandler(t)
 	const found, missing = "9782211201896", "9782070612758"
 	catalogueMemo.rememberRecord(found, &Record{ISBN13: found, Title: "Chien bleu", Authors: "Nadja", Source: "bnf"})
 	catalogueMemo.rememberRecord(missing, nil)
 	t.Cleanup(func() { catalogueMemo.forgetRecord(found); catalogueMemo.forgetRecord(missing) })
 
-	body := batchPost(t, a, h, "/catalogue/batch/add", url.Values{"isbn": {found}, "location": {"bac 3"}})
+	body := batchPost(t, a, h, "/catalogue/batch/add", url.Values{"isbn": {found}})
 	if !strings.Contains(body, `data-kind="found"`) || !strings.Contains(body, "Chien bleu") || !strings.Contains(body, "Nadja") {
 		t.Errorf("a found book should come back staged: %s", body)
 	}
 	if n := copiesOf(t, a, found); n != 0 {
 		t.Errorf("%d copies written by a scan, want none before the save", n)
 	}
-	if !strings.Contains(body, "bac 3") {
-		t.Errorf("the shelf should show on the staged line: %s", body)
-	}
 
 	body = batchPost(t, a, h, "/catalogue/batch/add", url.Values{"isbn": {missing}})
-	if !strings.Contains(body, `data-kind="aside"`) || !strings.Contains(body, missing) {
-		t.Errorf("an unknown book should be set aside: %s", body)
+	if !strings.Contains(body, `data-kind="refused"`) || !strings.Contains(body, missing) {
+		t.Errorf("an unknown book should be refused: %s", body)
+	}
+	if !strings.Contains(body, "/catalogue/manual?isbn="+missing) {
+		t.Errorf("a refused book should link to cataloguing it by hand: %s", body)
 	}
 
 	body = batchPost(t, a, h, "/catalogue/batch/add", url.Values{"isbn": {"9782211201897"}})
-	if !strings.Contains(body, `data-kind="aside"`) {
-		t.Errorf("a bad check digit should be set aside: %s", body)
+	if !strings.Contains(body, `data-kind="refused"`) {
+		t.Errorf("a bad check digit should be refused: %s", body)
+	}
+	if strings.Contains(body, "/catalogue/manual?isbn=") {
+		t.Errorf("a bad check digit is a misread: no link to catalogue it: %s", body)
 	}
 }
 
@@ -98,31 +102,39 @@ func TestBatchAddShowsWhatIsAlreadyCatalogued(t *testing.T) {
 	}
 }
 
-// The panel's form stages the set-aside book it is filled in for; a refused one
-// redraws the form.
-func TestBatchStageAnswersWithARowAndWritesNothing(t *testing.T) {
+// A book the batch refused is catalogued by hand on its own screen, which the
+// link opens whole, ISBN filled in, rather than as a fragment.
+func TestManualFormOpensAsAScreenOutsideHTMX(t *testing.T) {
 	a, h := testHandler(t)
-	body := batchPost(t, a, h, "/catalogue/batch/stage", url.Values{
-		"title": {"Un livre"}, "isbn13": {"9782070612758"}, "copies": {"2"}, "location": {"bac 3"},
-	})
-	if !strings.Contains(body, `data-kind="found"`) || !strings.Contains(body, `class="batch-n">2<`) {
-		t.Errorf("want a staged row with 2 copies: %s", body)
+	r := httptest.NewRequest("GET", "/catalogue/manual?isbn=9782070612758&copies=2", nil)
+	r.AddCookie(signedIn(t, a))
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, r)
+	body := w.Body.String()
+	if w.Code != http.StatusOK {
+		t.Fatalf("code = %d, want 200", w.Code)
 	}
-	if copiesOf(t, a, "9782070612758") != 0 {
-		t.Error("staging wrote a copy")
+	if !strings.Contains(body, "<html") || !strings.Contains(body, `value="9782070612758"`) ||
+		!strings.Contains(body, `value="2"`) {
+		t.Errorf("want the whole screen, with the ISBN and the copies filled in: %s", body)
 	}
-	body = batchPost(t, a, h, "/catalogue/batch/stage", url.Values{"isbn13": {"9782070612758"}, "copies": {"1"}})
-	if strings.Contains(body, `data-kind="found"`) || !strings.Contains(body, "/catalogue/batch/stage") {
-		t.Errorf("a refused stage should redraw the batch form: %s", body)
+
+	r = httptest.NewRequest("GET", "/catalogue/manual", nil)
+	r.Header.Set("HX-Request", "true")
+	r.AddCookie(signedIn(t, a))
+	w = httptest.NewRecorder()
+	h.ServeHTTP(w, r)
+	if strings.Contains(w.Body.String(), "<html") {
+		t.Error("asked through HTMX, the form should come back alone")
 	}
 }
 
-// The save writes every staged book at once, with the copies and shelf the
-// person left on it.
+// The save writes every staged book at once, with the copies left on each and
+// the one shelf the screen carries.
 func TestBatchSaveWritesTheStagedBooks(t *testing.T) {
 	a, h := testHandler(t)
-	body := batchPost(t, a, h, "/catalogue/batch/save", url.Values{"item": {
-		itemJSON(t, batchItem{ISBN13: "9782211201896", Title: "Chien bleu", Copies: 3, Location: "bac 3"}),
+	body := batchPost(t, a, h, "/catalogue/batch/save", url.Values{"location": {"bac 3"}, "item": {
+		itemJSON(t, batchItem{ISBN13: "9782211201896", Title: "Chien bleu", Copies: 3}),
 		itemJSON(t, batchItem{ISBN13: "9782070612758", Title: "Un livre", Copies: 1}),
 		itemJSON(t, batchItem{Title: "Sans ISBN", Copies: 500}),
 	}})
@@ -134,10 +146,10 @@ func TestBatchSaveWritesTheStagedBooks(t *testing.T) {
 	if n != 100 {
 		t.Errorf("%d copies for 500 asked, want the cap of 100", n)
 	}
-	var loc string
-	a.db.QueryRow(`SELECT c.location FROM copy c JOIN book b ON b.id = c.book_id WHERE b.isbn13 = '9782211201896' LIMIT 1`).Scan(&loc)
-	if loc != "bac 3" {
-		t.Errorf("location = %q", loc)
+	var filed int
+	a.db.QueryRow(`SELECT COUNT(*) FROM copy WHERE location = 'bac 3'`).Scan(&filed)
+	if filed != 104 {
+		t.Errorf("%d copies on the shelf, want all 104: the shelf is the batch's", filed)
 	}
 	if !strings.Contains(body, "batch-result") || !strings.Contains(body, "/print/labels?codes=") {
 		t.Errorf("want the result block with the labels link: %s", body)

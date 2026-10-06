@@ -10,41 +10,47 @@
         <input class="scan" name="isbn" type="text" autocomplete="off" autocapitalize="off"
                spellcheck="false" enterkeyhint="send" autofocus placeholder="{{T "catalogue.scan_placeholder"}}">
       </form>
-      {{/* Outside the form: a form with two text fields and no submit button is
-           not submitted by Enter. */}}
-      <label class="field"><span>{{T "inventory.col_location"}}</span>
-        <input id="batch-location" placeholder="{{T "catalogue.f_location_placeholder"}}"></label>
       <p class="note">{{T "catalogue.batch_help"}}</p>
       <p class="link-manual"><a class="link-quiet" href="/catalogue">{{T "catalogue.batch_single"}}</a></p>
     </div>
 
-    <div id="batch-aside" class="scan-block" hidden>
-      <p class="step">{{T "catalogue.batch_aside_title"}}</p>
-      <p class="note">{{T "catalogue.batch_aside_help"}}</p>
-      <ul id="batch-aside-list" class="batch-list"></ul>
-      <button type="button" id="batch-complete" class="btn-primary" onclick="batchComplete()">{{T "catalogue.batch_complete"}} (<span id="batch-aside-count">0</span>)</button>
+    <div id="batch-refused" class="scan-block" hidden>
+      <p class="step">{{T "catalogue.batch_refused_title"}}</p>
+      <p class="note">{{T "catalogue.batch_refused_help"}}</p>
+      <ul id="batch-refused-list" class="batch-list"></ul>
     </div>
   </div>
 
   <div class="batch-side">
-    <div id="batch-panel"></div>
     <div id="batch-result"></div>
 
     <div id="batch-staged" class="scan-block">
       <div class="batch-head">
         <p class="step">{{T "catalogue.batch_staged_title"}} <span id="batch-summary" class="batch-summary"></span></p>
-        <button type="button" id="batch-save" class="btn-primary" onclick="batchSave()" disabled>{{T "catalogue.add"}}</button>
       </div>
       <ul id="batch-list" class="batch-list batch-scroll"></ul>
       <p class="note batch-hint">{{T "catalogue.batch_empty"}}</p>
+      {{/* The shelf sits with the button that applies it, not with the scans:
+           it is read once, at the save, so the order of the two does not matter. */}}
+      <div class="batch-add">
+        <label class="field"><span>{{T "inventory.col_location"}}</span>
+          <input id="batch-location" list="locations"
+                 placeholder="{{T "catalogue.f_location_placeholder"}}"></label>
+        {{template "location_datalist" .Locations}}
+        <button type="button" id="batch-save" class="btn-primary" onclick="batchSave()" disabled>{{T "catalogue.add"}}</button>
+      </div>
+      <p class="note batch-add-note">{{T "catalogue.batch_location_help"}}</p>
     </div>
   </div>
 </section>
 {{end}}
 
-{{/* A line of the lists; app.js reads its data-* and moves it between them. */}}
-{{define "batch_row"}}{{if eq .Kind "found"}}{{template "batch_staged" .}}{{else}}<li class="batch-row batch-aside" data-kind="aside" data-isbn="{{.ISBN}}">
+{{/* A line of the lists; app.js reads its data-* and moves it between them. A
+     refused scan links to cataloguing that book by hand, in another tab: the
+     batch under way is only staged and would be lost by leaving. */}}
+{{define "batch_row"}}{{if eq .Kind "found"}}{{template "batch_staged" .}}{{else}}<li class="batch-row batch-refused" data-kind="refused" data-isbn="{{.ISBN}}">
   <span class="code">{{.ISBN}}</span> <span class="batch-why">{{.Reason}}</span>
+  {{if .Manual}}<a class="link-quiet batch-fix" href="/catalogue/manual?isbn={{.ISBN}}" target="_blank" rel="noopener">{{T "catalogue.batch_refused_add"}}</a>{{end}}
 </li>{{end}}{{end}}
 
 {{/* A book about to be added, to check: what it is, new or known, its copies. */}}
