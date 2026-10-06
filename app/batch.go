@@ -59,14 +59,8 @@ type batchRow struct {
 }
 
 func (a *app) batchScreen(w http.ResponseWriter, r *http.Request) {
-	locations, err := a.copyLocations()
-	if err != nil {
-		log.Printf("catalogue/batch (locations): %v", err)
-		internalError(w, r)
-		return
-	}
 	a.render(w, r, "batch", map[string]any{
-		"Title": tr(r, "catalogue.batch_title"), "Locations": locations,
+		"Title": tr(r, "catalogue.batch_title"), "Locations": a.locationSuggestions(),
 	})
 }
 
