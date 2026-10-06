@@ -344,3 +344,84 @@ func TestCatalogueSaveRedisplayKeepsTheSourceURL(t *testing.T) {
 		t.Error("the redisplayed form dropped the source URL")
 	}
 }
+
+// The shelf boxes suggest the shelves already in use, on every screen that
+// renders the cataloguing form and on the batch screen. Each fills Locations
+// on its own, so a lost one would only show as a box that stopped suggesting.
+func TestShelvesInUseAreSuggested(t *testing.T) {
+	a, h := testHandler(t)
+	c := signedIn(t, a)
+
+	get := func(path string, htmx bool) string {
+		t.Helper()
+		r := httptest.NewRequest("GET", path, nil)
+		if htmx {
+			r.Header.Set("HX-Request", "true")
+		}
+		r.AddCookie(c)
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, r)
+		if w.Code != http.StatusOK {
+			t.Fatalf("GET %s = %d, want 200", path, w.Code)
+		}
+		return w.Body.String()
+	}
+
+	for _, path := range []string{"/catalogue/batch", "/catalogue/manual"} {
+		body := get(path, true)
+		if !strings.Contains(body, `<datalist id="locations">`) {
+			t.Errorf("%s: no shelf suggestions at all: %s", path, body)
+		}
+		for _, shelf := range []string{"bac albums", "classe P3", "coin lecture"} {
+			if !strings.Contains(body, `<option value="`+shelf+`">`) {
+				t.Errorf("%s: %q is in use but not suggested", path, shelf)
+			}
+		}
+	}
+
+	// The stream ends on the same form; an already catalogued ISBN answers
+	// without asking a catalogue.
+	if body := get("/catalogue/stream?isbn=9782070408504", false); !strings.Contains(body, `<option value="bac albums">`) {
+		t.Errorf("the form the stream sends back suggests nothing: %s", body)
+	}
+
+	// Unfiled copies have no name, which is no suggestion.
+	if _, err := a.db.Exec(`UPDATE copy SET location = NULL WHERE location = 'coin lecture'`); err != nil {
+		t.Fatal(err)
+	}
+	body := get("/catalogue/manual", true)
+	if strings.Contains(body, `<option value="">`) {
+		t.Errorf("the unfiled copies were offered as a shelf: %s", body)
+	}
+	if strings.Contains(body, "coin lecture") {
+		t.Errorf("an emptied shelf is still suggested: %s", body)
+	}
+}
+
+// A refused save redraws the form with the shelf that was typed, and still
+// suggests the others.
+func TestCatalogueSaveRedisplayKeepsTheShelf(t *testing.T) {
+	a, h := testHandler(t)
+	form := url.Values{
+		"title":    {""}, // empty: forces the redisplay
+		"isbn13":   {"9782070408504"},
+		"location": {"réserve du grenier"},
+		"copies":   {"3"},
+	}
+	r := httptest.NewRequest("POST", "/catalogue/save", strings.NewReader(form.Encode()))
+	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	r.Header.Set("Sec-Fetch-Site", "same-origin")
+	r.AddCookie(signedIn(t, a))
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, r)
+	if w.Code != http.StatusOK {
+		t.Fatalf("POST = %d, want 200", w.Code)
+	}
+	body := w.Body.String()
+	if !strings.Contains(body, `value="réserve du grenier"`) {
+		t.Errorf("the redisplayed form dropped the shelf that was typed: %s", body)
+	}
+	if !strings.Contains(body, `<option value="bac albums">`) {
+		t.Errorf("the redisplayed form stopped suggesting the shelves in use: %s", body)
+	}
+}
