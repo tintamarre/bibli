@@ -19,7 +19,7 @@ import (
 	"unicode/utf8"
 )
 
-// Borrowers: entry, CSV import with preview, barcode cards, year rollover.
+// Borrowers: entry, CSV import with preview, barcode cards, group changes.
 // Staff borrow in their own name, like readers: a group of their own tells them apart.
 
 type BorrowerRow struct {
@@ -512,7 +512,7 @@ func (a *app) borrowersDeactivate(w http.ResponseWriter, r *http.Request) {
 	a.borrowersFragment(w, r, "", false)
 }
 
-// A rollover mistake, or a reader who comes back. Not the sentinel, which is
+// A mistake in a group change, or a reader who comes back. Not the sentinel, which is
 // not a person, nor an anonymised borrower, who has nothing left to bring back.
 func (a *app) borrowerReactivate(w http.ResponseWriter, r *http.Request) {
 	id := pathID(r)
@@ -922,7 +922,7 @@ func (a *app) borrowersCards(w http.ResponseWriter, r *http.Request) {
 	a.renderDoc(w, r, "cards", map[string]any{"Cards": cards, "Group": group})
 }
 
-// Year rollover.
+// Changing the groups: a school year, a ward reshuffle, a new set of workshops.
 
 // noGroupLabel is the on-screen label for readers whose group is NULL, and the
 // value the form posts back; localised, since it is shown.
@@ -930,7 +930,7 @@ func noGroupLabel() string {
 	return T(instanceLang(), "borrower.no_group")
 }
 
-type rolloverReader struct {
+type regroupReader struct {
 	ID          int64
 	FirstName   string
 	LastInitial string
@@ -938,8 +938,8 @@ type rolloverReader struct {
 	OutCount    int    // books still in hand
 }
 
-// What happens to a group at rollover.
-type rolloverRule struct {
+// What happens to one group when the groups change.
+type regroupRule struct {
 	Src     string // current group ("" = no group)
 	Dst     string // new group ("" = unchanged)
 	Leaving bool   // the readers of this group are leaving
@@ -947,12 +947,12 @@ type rolloverRule struct {
 
 // Works on a SNAPSHOT, and must: applying "P1 -> P2" then "P2 -> P3" in the
 // database would carry every reader through every later rule.
-func planRollover(readers []rolloverReader, rules []rolloverRule) (movedUp map[int64]string, leavers []int64) {
-	bySrc := make(map[string]rolloverRule, len(rules))
+func planRegroup(readers []regroupReader, rules []regroupRule) (moved map[int64]string, leavers []int64) {
+	bySrc := make(map[string]regroupRule, len(rules))
 	for _, r := range rules {
 		bySrc[r.Src] = r
 	}
-	movedUp = make(map[int64]string)
+	moved = make(map[int64]string)
 	for _, e := range readers {
 		r, ok := bySrc[e.Group]
 		switch {
@@ -961,25 +961,25 @@ func planRollover(readers []rolloverReader, rules []rolloverRule) (movedUp map[i
 			// "Leaving" wins over any new group.
 			leavers = append(leavers, e.ID)
 		case r.Dst != "" && r.Dst != e.Group:
-			movedUp[e.ID] = r.Dst
+			moved[e.ID] = r.Dst
 		}
 	}
-	return movedUp, leavers
+	return moved, leavers
 }
 
-// rolloverMerge is a group that receives readers while some of its own stay
+// regroupMerge is a group that receives readers while some of its own stay
 // in it: once merged, nothing tells the two groups apart.
-type rolloverMerge struct {
+type regroupMerge struct {
 	Into    string
 	From    []string // the groups moving into it
 	Staying int      // its own readers, neither moved on nor leaving
 }
 
-// findMerges works on the same snapshot as planRollover. Two groups moving
+// findMerges works on the same snapshot as planRegroup. Two groups moving
 // together into one that is empty or moving on is not a merge: both groups
 // were decided in the same breath.
-func findMerges(readers []rolloverReader, rules []rolloverRule) []rolloverMerge {
-	bySrc := make(map[string]rolloverRule, len(rules))
+func findMerges(readers []regroupReader, rules []regroupRule) []regroupMerge {
+	bySrc := make(map[string]regroupRule, len(rules))
 	for _, r := range rules {
 		bySrc[r.Src] = r
 	}
@@ -990,7 +990,7 @@ func findMerges(readers []rolloverReader, rules []rolloverRule) []rolloverMerge 
 			staying[p.Group]++
 		}
 	}
-	var out []rolloverMerge
+	var out []regroupMerge
 	index := make(map[string]int)
 	for _, r := range rules {
 		if r.Leaving || r.Dst == "" || r.Dst == r.Src || staying[r.Dst] == 0 {
@@ -1000,7 +1000,7 @@ func findMerges(readers []rolloverReader, rules []rolloverRule) []rolloverMerge 
 		if !seen {
 			i = len(out)
 			index[r.Dst] = i
-			out = append(out, rolloverMerge{Into: r.Dst, Staying: staying[r.Dst]})
+			out = append(out, regroupMerge{Into: r.Dst, Staying: staying[r.Dst]})
 		}
 		src := r.Src
 		if src == "" {
@@ -1012,11 +1012,11 @@ func findMerges(readers []rolloverReader, rules []rolloverRule) []rolloverMerge 
 }
 
 // Sources lists the groups moving in, for the sentence that names them.
-func (m rolloverMerge) Sources() string { return strings.Join(m.From, ", ") }
+func (m regroupMerge) Sources() string { return strings.Join(m.From, ", ") }
 
 // mergeKey names a set of merges, so "apply anyway" confirms the merges the
 // librarian was shown and not whatever the form holds by then.
-func mergeKey(merges []rolloverMerge) string {
+func mergeKey(merges []regroupMerge) string {
 	names := make([]string, len(merges))
 	for i, m := range merges {
 		names[i] = m.Into + "<" + strings.Join(m.From, "+")
@@ -1065,7 +1065,7 @@ var reDigits = regexp.MustCompile(`[0-9]+`)
 // q is a.db or the open transaction, never a.db while one is open (openDB).
 func readersSnapshot(q interface {
 	Query(string, ...any) (*sql.Rows, error)
-}) ([]rolloverReader, error) {
+}) ([]regroupReader, error) {
 	rows, err := q.Query(
 		`SELECT br.id, br.first_name, br.last_initial, COALESCE(br.group_name, ''),
 		        (SELECT COUNT(*) FROM loan l WHERE l.borrower_id = br.id AND l.returned_on IS NULL)
@@ -1075,9 +1075,9 @@ func readersSnapshot(q interface {
 		return nil, err
 	}
 	defer rows.Close()
-	var out []rolloverReader
+	var out []regroupReader
 	for rows.Next() {
-		var e rolloverReader
+		var e regroupReader
 		if err := rows.Scan(&e.ID, &e.FirstName, &e.LastInitial, &e.Group, &e.OutCount); err != nil {
 			return nil, err
 		}
@@ -1087,10 +1087,10 @@ func readersSnapshot(q interface {
 }
 
 // Fingerprint of who is in which group. The form carries the one it was drawn
-// from, so a reloaded or resubmitted rollover cannot move everyone up twice.
-func rolloverState(readers []rolloverReader) string {
+// from, so a reloaded or resubmitted form cannot move everyone up twice.
+func regroupState(readers []regroupReader) string {
 	sorted := slices.Clone(readers)
-	slices.SortFunc(sorted, func(x, y rolloverReader) int { return cmp.Compare(x.ID, y.ID) })
+	slices.SortFunc(sorted, func(x, y regroupReader) int { return cmp.Compare(x.ID, y.ID) })
 	h := sha256.New()
 	for _, p := range sorted {
 		fmt.Fprintf(h, "%d\x00%s\n", p.ID, p.Group)
@@ -1098,17 +1098,17 @@ func rolloverState(readers []rolloverReader) string {
 	return hex.EncodeToString(h.Sum(nil)[:12])
 }
 
-func (a *app) rolloverScreen(w http.ResponseWriter, r *http.Request) {
-	a.rolloverForm(w, r, "", nil, nil)
+func (a *app) regroupScreen(w http.ResponseWriter, r *http.Request) {
+	a.regroupForm(w, r, "", nil, nil)
 }
 
 // Each active group gets a new group, or its readers marked as leaving. typed
 // and merges are set when the form comes back refused for a merge: what the
 // librarian filled in is drawn again, beside what it would have mixed.
-func (a *app) rolloverForm(w http.ResponseWriter, r *http.Request, errMsg string, typed []rolloverRule, merges []rolloverMerge) {
+func (a *app) regroupForm(w http.ResponseWriter, r *http.Request, errMsg string, typed []regroupRule, merges []regroupMerge) {
 	readers, err := readersSnapshot(a.db)
 	if err != nil {
-		log.Printf("rollover (snapshot): %v", err)
+		log.Printf("regroup (snapshot): %v", err)
 		internalError(w, r)
 		return
 	}
@@ -1119,7 +1119,7 @@ func (a *app) rolloverForm(w http.ResponseWriter, r *http.Request, errMsg string
 		   FROM borrower WHERE active = 1
 		  GROUP BY group_name ORDER BY group_name DESC`, noGroupLabel())
 	if err != nil {
-		log.Printf("rollover: %v", err)
+		log.Printf("regroup: %v", err)
 		internalError(w, r)
 		return
 	}
@@ -1130,7 +1130,7 @@ func (a *app) rolloverForm(w http.ResponseWriter, r *http.Request, errMsg string
 		Dst     string
 		Leaving bool
 	}
-	bySrc := make(map[string]rolloverRule, len(typed))
+	bySrc := make(map[string]regroupRule, len(typed))
 	for _, t := range typed {
 		src := t.Src
 		if src == "" {
@@ -1142,7 +1142,7 @@ func (a *app) rolloverForm(w http.ResponseWriter, r *http.Request, errMsg string
 	for rows.Next() {
 		var c groupInfo
 		if err := rows.Scan(&c.Group, &c.Count); err != nil {
-			log.Printf("rollover (scan): %v", err)
+			log.Printf("regroup (scan): %v", err)
 			internalError(w, r)
 			return
 		}
@@ -1150,7 +1150,7 @@ func (a *app) rolloverForm(w http.ResponseWriter, r *http.Request, errMsg string
 		groups = append(groups, c)
 	}
 	if err := rows.Err(); err != nil {
-		log.Printf("rollover (rows): %v", err)
+		log.Printf("regroup (rows): %v", err)
 		internalError(w, r)
 		return
 	}
@@ -1164,14 +1164,14 @@ func (a *app) rolloverForm(w http.ResponseWriter, r *http.Request, errMsg string
 			groups[i].Dst = next[groups[i].Group]
 		}
 	}
-	a.render(w, r, "rollover", map[string]any{
-		"Title": tr(r, "borrowers.rollover"), "Groups": groups,
-		"State": rolloverState(readers), "Error": errMsg,
+	a.render(w, r, "regroup", map[string]any{
+		"Title": tr(r, "borrowers.regroup"), "Groups": groups,
+		"State": regroupState(readers), "Error": errMsg,
 		"Merges": merges, "MergeKey": mergeKey(merges),
 	})
 }
 
-func (a *app) rolloverConfirm(w http.ResponseWriter, r *http.Request) {
+func (a *app) regroupConfirm(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
 		badRequest(w, r)
 		return
@@ -1180,13 +1180,13 @@ func (a *app) rolloverConfirm(w http.ResponseWriter, r *http.Request) {
 	if n < 0 || n > 200 {
 		n = 0
 	}
-	rules := make([]rolloverRule, 0, n)
+	rules := make([]regroupRule, 0, n)
 	for i := 0; i < n; i++ {
 		src := r.FormValue(fmt.Sprintf("src_%d", i))
 		if src == noGroupLabel() {
 			src = ""
 		}
-		rules = append(rules, rolloverRule{
+		rules = append(rules, regroupRule{
 			Src:     src,
 			Dst:     strings.TrimSpace(r.FormValue(fmt.Sprintf("dst_%d", i))),
 			Leaving: r.FormValue(fmt.Sprintf("out_%d", i)) != "",
@@ -1195,7 +1195,7 @@ func (a *app) rolloverConfirm(w http.ResponseWriter, r *http.Request) {
 
 	tx, err := a.db.Begin()
 	if err != nil {
-		log.Printf("rollover/confirm (tx): %v", err)
+		log.Printf("regroup/confirm (tx): %v", err)
 		internalError(w, r)
 		return
 	}
@@ -1204,26 +1204,26 @@ func (a *app) rolloverConfirm(w http.ResponseWriter, r *http.Request) {
 	// Read inside the transaction, so two submissions cannot both pass the check.
 	readers, err := readersSnapshot(tx)
 	if err != nil {
-		log.Printf("rollover/confirm (snapshot): %v", err)
+		log.Printf("regroup/confirm (snapshot): %v", err)
 		internalError(w, r)
 		return
 	}
-	if r.FormValue("state") != rolloverState(readers) {
+	if r.FormValue("state") != regroupState(readers) {
 		tx.Rollback()
-		a.rolloverForm(w, r, tr(r, "rollover.err_changed"), nil, nil)
+		a.regroupForm(w, r, tr(r, "regroup.err_changed"), nil, nil)
 		return
 	}
 	// A merge goes through only once confirmed, and only the one shown.
 	if merges := findMerges(readers, rules); len(merges) > 0 && r.FormValue("merge_ok") != mergeKey(merges) {
 		tx.Rollback()
-		a.rolloverForm(w, r, "", rules, merges)
+		a.regroupForm(w, r, "", rules, merges)
 		return
 	}
-	movedUp, leavers := planRollover(readers, rules)
+	moved, leavers := planRegroup(readers, rules)
 
 	// A leaver who still has books stays active, and is named: deactivating them
 	// would hide them while their loans stay open.
-	byID := make(map[int64]rolloverReader, len(readers))
+	byID := make(map[int64]regroupReader, len(readers))
 	for _, e := range readers {
 		byID[e.ID] = e
 	}
@@ -1231,16 +1231,16 @@ func (a *app) rolloverConfirm(w http.ResponseWriter, r *http.Request) {
 	var kept []string
 	for _, id := range leavers {
 		if e := byID[id]; e.OutCount > 0 {
-			kept = append(kept, trn(r, "rollover.kept_entry", e.OutCount, e.FirstName, e.LastInitial, e.Group))
+			kept = append(kept, trn(r, "regroup.kept_entry", e.OutCount, e.FirstName, e.LastInitial, e.Group))
 			continue
 		}
 		toDeactivate = append(toDeactivate, id)
 	}
 
 	// Reader by reader: each is touched once, whatever the order of the rules.
-	for id, group := range movedUp {
+	for id, group := range moved {
 		if _, err := tx.Exec(`UPDATE borrower SET group_name = ? WHERE id = ?`, group, id); err != nil {
-			log.Printf("rollover/confirm (move-up): %v", err)
+			log.Printf("regroup/confirm (move-up): %v", err)
 			internalError(w, r)
 			return
 		}
@@ -1249,24 +1249,24 @@ func (a *app) rolloverConfirm(w http.ResponseWriter, r *http.Request) {
 		// Deactivate, never delete: anonymity and rotation statistics are handled
 		// separately (GDPR).
 		if _, err := tx.Exec(`UPDATE borrower SET active = 0, deactivated_on = date('now') WHERE id = ?`, id); err != nil {
-			log.Printf("rollover/confirm (leaver): %v", err)
+			log.Printf("regroup/confirm (leaver): %v", err)
 			internalError(w, r)
 			return
 		}
 	}
 	if err := tx.Commit(); err != nil {
-		log.Printf("rollover/confirm (commit): %v", err)
+		log.Printf("regroup/confirm (commit): %v", err)
 		internalError(w, r)
 		return
 	}
 
-	a.render(w, r, "rollover", map[string]any{
-		"Title":  tr(r, "borrowers.rollover"),
+	a.render(w, r, "regroup", map[string]any{
+		"Title":  tr(r, "borrowers.regroup"),
 		"Groups": []any{},
 		"Done":   true,
-		"Summary": tr(r, "rollover.summary",
-			trn(r, "rollover.moved", len(movedUp)),
-			trn(r, "rollover.deactivated", len(toDeactivate))),
+		"Summary": tr(r, "regroup.summary",
+			trn(r, "regroup.moved", len(moved)),
+			trn(r, "regroup.deactivated", len(toDeactivate))),
 		"Kept": kept,
 	})
 }

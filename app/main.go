@@ -263,8 +263,8 @@ func (a *app) handler() http.Handler {
 	mux.HandleFunc("POST /borrowers/import/confirm", a.borrowersImportConfirm)
 	mux.HandleFunc("GET /borrowers/import/template.xlsx", a.borrowersImportTemplate)
 	mux.HandleFunc("GET /borrowers/cards", a.borrowersCards)
-	mux.HandleFunc("GET /borrowers/rollover", a.rolloverScreen)
-	mux.HandleFunc("POST /borrowers/rollover", a.rolloverConfirm)
+	mux.HandleFunc("GET /borrowers/regroup", a.regroupScreen)
+	mux.HandleFunc("POST /borrowers/regroup", a.regroupConfirm)
 
 	// Book page
 	mux.HandleFunc("GET /cover/{isbn}", a.cover)

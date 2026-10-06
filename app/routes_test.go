@@ -440,7 +440,7 @@ func TestEveryScreenOpensOverTheDemonstrationData(t *testing.T) {
 
 	paths := []string{
 		"/", "/loans", "/loans?overdue=1", "/borrow", "/return", "/catalogue", "/catalogue/manual",
-		"/borrowers", "/borrowers?inactive=1", "/borrowers/import", "/borrowers/cards", "/borrowers/rollover",
+		"/borrowers", "/borrowers?inactive=1", "/borrowers/import", "/borrowers/cards", "/borrowers/regroup",
 		"/inventory?q=loup", "/inventory?status=lost", "/inventory?loan=out", "/inventory?loan=shelf", "/inventory?added=7d",
 		"/print/labels", "/print/loans", "/print/overdue", "/print/inventory", "/export.csv", "/export.xlsx",
 		"/stats", "/stats/collection.xlsx", "/stats/collection.csv", "/settings", "/about",

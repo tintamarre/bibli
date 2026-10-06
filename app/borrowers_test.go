@@ -16,21 +16,21 @@ import (
 	"testing"
 )
 
-// The nominal year rollover: everyone moves up one, P6 leaves. Only a
+// The nominal group change: everyone moves up one, P6 leaves. Only a
 // snapshot gets this right.
-func TestPlanRolloverFullChain(t *testing.T) {
+func TestPlanRegroupFullChain(t *testing.T) {
 	groups := []string{"M1", "M2", "M3", "P1", "P2", "P3", "P4", "P5", "P6"}
-	var readers []rolloverReader
+	var readers []regroupReader
 	for i, c := range groups {
-		readers = append(readers, rolloverReader{ID: int64(i + 1), FirstName: "e", LastInitial: "E.", Group: c})
+		readers = append(readers, regroupReader{ID: int64(i + 1), FirstName: "e", LastInitial: "E.", Group: c})
 	}
-	rules := []rolloverRule{
+	rules := []regroupRule{
 		{Src: "M1", Dst: "M2"}, {Src: "M2", Dst: "M3"}, {Src: "M3", Dst: "P1"},
 		{Src: "P1", Dst: "P2"}, {Src: "P2", Dst: "P3"}, {Src: "P3", Dst: "P4"},
 		{Src: "P4", Dst: "P5"}, {Src: "P5", Dst: "P6"}, {Src: "P6", Leaving: true},
 	}
 
-	moved, leavers := planRollover(readers, rules)
+	moved, leavers := planRegroup(readers, rules)
 
 	// Each moves up exactly one.
 	want := map[int64]string{1: "M2", 2: "M3", 3: "P1", 4: "P2", 5: "P3", 6: "P4", 7: "P5", 8: "P6"}
@@ -48,20 +48,20 @@ func TestPlanRolloverFullChain(t *testing.T) {
 	}
 }
 
-func TestPlanRolloverEdgeCases(t *testing.T) {
-	readers := []rolloverReader{
+func TestPlanRegroupEdgeCases(t *testing.T) {
+	readers := []regroupReader{
 		{ID: 1, Group: "P1"},
 		{ID: 2, Group: "P2"},
 		{ID: 3, Group: ""},   // no group
 		{ID: 4, Group: "P5"}, // no rule
 	}
-	rules := []rolloverRule{
+	rules := []regroupRule{
 		{Src: "P1", Dst: ""},                  // empty = unchanged
 		{Src: "P2", Dst: "P3", Leaving: true}, // leaving wins
 		{Src: "", Dst: "P1"},                  // the group-less enter P1
 	}
 
-	moved, leavers := planRollover(readers, rules)
+	moved, leavers := planRegroup(readers, rules)
 
 	if _, ok := moved[1]; ok {
 		t.Error("empty destination: the group must stay unchanged")
@@ -81,22 +81,22 @@ func TestPlanRolloverEdgeCases(t *testing.T) {
 }
 
 // A destination equal to the current group produces no update.
-func TestPlanRolloverNoChange(t *testing.T) {
-	readers := []rolloverReader{{ID: 1, Group: "P3"}, {ID: 2, Group: "P3"}}
-	moved, leavers := planRollover(readers, []rolloverRule{{Src: "P3", Dst: "P3"}})
+func TestPlanRegroupNoChange(t *testing.T) {
+	readers := []regroupReader{{ID: 1, Group: "P3"}, {ID: 2, Group: "P3"}}
+	moved, leavers := planRegroup(readers, []regroupRule{{Src: "P3", Dst: "P3"}})
 	if len(moved) != 0 || len(leavers) != 0 {
 		t.Errorf("want no change, got %v / %v", moved, leavers)
 	}
 }
 
 // The order of the rules does not change the result.
-func TestPlanRolloverOrderIndependent(t *testing.T) {
-	readers := []rolloverReader{{ID: 1, Group: "P1"}, {ID: 2, Group: "P2"}, {ID: 3, Group: "P3"}}
-	forward := []rolloverRule{{Src: "P1", Dst: "P2"}, {Src: "P2", Dst: "P3"}, {Src: "P3", Leaving: true}}
-	backward := []rolloverRule{{Src: "P3", Leaving: true}, {Src: "P2", Dst: "P3"}, {Src: "P1", Dst: "P2"}}
+func TestPlanRegroupOrderIndependent(t *testing.T) {
+	readers := []regroupReader{{ID: 1, Group: "P1"}, {ID: 2, Group: "P2"}, {ID: 3, Group: "P3"}}
+	forward := []regroupRule{{Src: "P1", Dst: "P2"}, {Src: "P2", Dst: "P3"}, {Src: "P3", Leaving: true}}
+	backward := []regroupRule{{Src: "P3", Leaving: true}, {Src: "P2", Dst: "P3"}, {Src: "P1", Dst: "P2"}}
 
-	ra, sa := planRollover(readers, forward)
-	rb, sb := planRollover(readers, backward)
+	ra, sa := planRegroup(readers, forward)
+	rb, sb := planRegroup(readers, backward)
 
 	sort.Slice(sa, func(i, j int) bool { return sa[i] < sa[j] })
 	sort.Slice(sb, func(i, j int) bool { return sb[i] < sb[j] })
@@ -113,25 +113,25 @@ func TestPlanRolloverOrderIndependent(t *testing.T) {
 // A group that receives readers while some of its own stay is a merge; one
 // emptied or moving on in the same submission is not.
 func TestFindMerges(t *testing.T) {
-	readers := []rolloverReader{
+	readers := []regroupReader{
 		{ID: 1, Group: "P5"}, {ID: 2, Group: "P5"},
 		{ID: 3, Group: "P6"}, {ID: 4, Group: "P6"}, {ID: 5, Group: "P6"},
 		{ID: 6, Group: "P5B"},
 	}
 	cases := []struct {
 		name  string
-		rules []rolloverRule
+		rules []regroupRule
 		want  string // mergeKey, "" for none
 		stay  int
 	}{
-		{"P6 left untouched", []rolloverRule{{Src: "P5", Dst: "P6"}}, "P6<P5", 3},
-		{"P6 kept by name", []rolloverRule{{Src: "P5", Dst: "P6"}, {Src: "P6", Dst: "P6"}}, "P6<P5", 3},
-		{"two groups into it", []rolloverRule{{Src: "P5", Dst: "P6"}, {Src: "P5B", Dst: "P6"}}, "P6<P5+P5B", 3},
-		{"P6 leaving", []rolloverRule{{Src: "P5", Dst: "P6"}, {Src: "P6", Leaving: true}}, "", 0},
-		{"P6 moving on", []rolloverRule{{Src: "P5", Dst: "P6"}, {Src: "P6", Dst: "S1"}}, "", 0},
-		{"two groups into an empty one", []rolloverRule{{Src: "P5", Dst: "P7"}, {Src: "P5B", Dst: "P7"}}, "", 0},
-		{"a leaving group going nowhere", []rolloverRule{{Src: "P5", Dst: "P6", Leaving: true}}, "", 0},
-		{"nothing moves", []rolloverRule{{Src: "P5"}, {Src: "P6"}}, "", 0},
+		{"P6 left untouched", []regroupRule{{Src: "P5", Dst: "P6"}}, "P6<P5", 3},
+		{"P6 kept by name", []regroupRule{{Src: "P5", Dst: "P6"}, {Src: "P6", Dst: "P6"}}, "P6<P5", 3},
+		{"two groups into it", []regroupRule{{Src: "P5", Dst: "P6"}, {Src: "P5B", Dst: "P6"}}, "P6<P5+P5B", 3},
+		{"P6 leaving", []regroupRule{{Src: "P5", Dst: "P6"}, {Src: "P6", Leaving: true}}, "", 0},
+		{"P6 moving on", []regroupRule{{Src: "P5", Dst: "P6"}, {Src: "P6", Dst: "S1"}}, "", 0},
+		{"two groups into an empty one", []regroupRule{{Src: "P5", Dst: "P7"}, {Src: "P5B", Dst: "P7"}}, "", 0},
+		{"a leaving group going nowhere", []regroupRule{{Src: "P5", Dst: "P6", Leaving: true}}, "", 0},
+		{"nothing moves", []regroupRule{{Src: "P5"}, {Src: "P6"}}, "", 0},
 	}
 	for _, c := range cases {
 		merges := findMerges(readers, c.rules)
@@ -145,9 +145,9 @@ func TestFindMerges(t *testing.T) {
 	}
 }
 
-// A rollover done in two steps, the wrong way round, must not mix two years:
+// A group change done in two steps, the wrong way round, must not mix two years:
 // the merge is refused until it is confirmed, and confirmed as it was shown.
-func TestRolloverRefusesAnUnconfirmedMerge(t *testing.T) {
+func TestRegroupRefusesAnUnconfirmedMerge(t *testing.T) {
 	loadForTest(t)
 	a := testApp(t)
 	sets, err := loadTemplates()
@@ -174,14 +174,14 @@ func TestRolloverRefusesAnUnconfirmedMerge(t *testing.T) {
 		}
 		// P3 into P4, and the P4 row left empty: P4's own readers stay.
 		form := url.Values{"n": {"2"}, "src_0": {"P4"}, "dst_0": {""},
-			"src_1": {"P3"}, "dst_1": {"P4"}, "state": {rolloverState(readers)}}
+			"src_1": {"P3"}, "dst_1": {"P4"}, "state": {regroupState(readers)}}
 		if mergeOK != "" {
 			form.Set("merge_ok", mergeOK)
 		}
-		r := httptest.NewRequest("POST", "/borrowers/rollover", strings.NewReader(form.Encode()))
+		r := httptest.NewRequest("POST", "/borrowers/regroup", strings.NewReader(form.Encode()))
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
-		a.rolloverConfirm(w, r)
+		a.regroupConfirm(w, r)
 		if w.Code != 200 {
 			t.Fatalf("status %d: %s", w.Code, w.Body)
 		}
@@ -756,7 +756,7 @@ func TestCardCodesAvoidWhatIsAlreadyTaken(t *testing.T) {
 	}
 }
 
-// The rollover reasons on a snapshot, and the snapshot must carry what stops a
+// The group change reasons on a snapshot, and the snapshot must carry what stops a
 // leaver being deactivated: the books still in their hands.
 func TestReadersSnapshot(t *testing.T) {
 	a := testApp(t)
@@ -770,7 +770,7 @@ func TestReadersSnapshot(t *testing.T) {
 	if len(readers) != 5 {
 		t.Fatalf("%d readers, want 5 (every active borrower, the ungrouped included)", len(readers))
 	}
-	byName := make(map[string]rolloverReader, len(readers))
+	byName := make(map[string]regroupReader, len(readers))
 	for _, p := range readers {
 		byName[p.FirstName] = p
 	}
@@ -892,7 +892,7 @@ func TestReadIncomingCSV(t *testing.T) {
 }
 
 // Readers with no group are grouped under a label, which is shown on screen and
-// posted back by the rollover form — so it follows the instance language.
+// posted back by the group form — so it follows the instance language.
 func TestNoGroupLabel(t *testing.T) {
 	loadForTest(t)
 	restoreSettings(t)
@@ -996,9 +996,9 @@ func TestBorrowerPageEditPostsTheFieldTheHandlerReads(t *testing.T) {
 	}
 }
 
-// Posting the same rollover form twice (a reload, a second tab) must not move
+// Posting the same form twice (a reload, a second tab) must not move
 // everyone up twice: the second post finds the groups changed and refuses.
-func TestRolloverRefusesAStaleForm(t *testing.T) {
+func TestRegroupRefusesAStaleForm(t *testing.T) {
 	loadForTest(t)
 	a := testApp(t)
 	sets, err := loadTemplates()
@@ -1024,12 +1024,12 @@ func TestRolloverRefusesAStaleForm(t *testing.T) {
 	}
 	// The same form posted twice, as a reload resends it.
 	form := url.Values{"n": {"2"}, "src_0": {"P3"}, "dst_0": {"P4"},
-		"src_1": {"P4"}, "dst_1": {"P5"}, "state": {rolloverState(readers)}}
+		"src_1": {"P4"}, "dst_1": {"P5"}, "state": {regroupState(readers)}}
 	post := func() {
-		r := httptest.NewRequest("POST", "/borrowers/rollover", strings.NewReader(form.Encode()))
+		r := httptest.NewRequest("POST", "/borrowers/regroup", strings.NewReader(form.Encode()))
 		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
-		a.rolloverConfirm(w, r)
+		a.regroupConfirm(w, r)
 		if w.Code != 200 {
 			t.Fatalf("status %d: %s", w.Code, w.Body)
 		}

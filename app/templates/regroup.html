@@ -1,0 +1,59 @@
+{{define "title_icon"}}{{template "icon-regroup" "title-icon"}}{{end}}
+{{define "back_link"}}<p class="back-link"><a class="link-quiet" href="/borrowers">{{template "icon-back" "icon-inline"}}{{T "borrowers.back"}}</a></p>{{end}}
+{{define "content"}}
+{{if .Done}}
+  <div class="success-block">
+    <p class="big-ok">✓ {{T "regroup.done"}}</p>
+    <p>{{.Summary}}</p>
+    {{if .Kept}}
+    <div class="warning">
+      <p>{{T "regroup.kept_active"}}</p>
+      <ul>{{range .Kept}}<li>{{.}}</li>{{end}}</ul>
+    </div>
+    {{end}}
+    <a class="btn-primary" href="/borrowers" autofocus>{{T "borrowers.back"}}</a>
+  </div>
+{{else}}
+  {{with .Error}}<p class="err">{{.}}</p>{{end}}
+  {{if .Merges}}
+  <div class="warning">
+    <p>{{T "regroup.merge_intro"}}</p>
+    <ul>{{range .Merges}}<li>{{Tn "regroup.merge_entry" .Staying .Into .Sources}}</li>{{end}}</ul>
+    <p>{{T "regroup.merge_fix"}}</p>
+  </div>
+  {{end}}
+  <p>{{T "regroup.help_1"}} <b>{{T "regroup.help_new_group"}}</b> {{T "regroup.help_2"}}
+     <b>{{T "regroup.help_leaving"}}</b> {{T "regroup.help_3"}}</p>
+  {{if not .Merges}}<p class="note">{{T "regroup.help_prefilled"}}</p>{{end}}
+  {{if .Groups}}
+  <form method="post" action="/borrowers/regroup" class="scan-block"
+        data-confirm="{{T "regroup.confirm"}}">
+    <input type="hidden" name="n" value="{{len .Groups}}">
+    <input type="hidden" name="state" value="{{.State}}">
+    <table class="table">
+      <thead><tr><th>{{T "regroup.col_current"}}</th><th class="col-num">{{T "regroup.col_readers"}}</th><th>{{T "regroup.col_new"}}</th><th class="col-centre">{{T "regroup.col_leaving"}}</th></tr></thead>
+      <tbody>
+      {{range $i, $c := .Groups}}
+      <tr>
+        <td data-label="{{T "regroup.col_current"}}">{{$c.Group}}<input type="hidden" name="src_{{$i}}" value="{{$c.Group}}"></td>
+        <td data-label="{{T "regroup.col_readers"}}" class="col-num">{{$c.Count}}</td>
+        <td data-label="{{T "regroup.col_new"}}"><input name="dst_{{$i}}" placeholder="{{$c.Group}}" value="{{$c.Dst}}"></td>
+        {{/* A wrapped box, a larger target for a click that deactivates a
+             group; named for a screen reader, group included. */}}
+        <td data-label="{{T "regroup.col_leaving"}}" class="col-centre"><label class="check-cell"><input
+              type="checkbox" name="out_{{$i}}" value="1"{{if $c.Leaving}} checked{{end}}
+              aria-label="{{T "regroup.col_leaving"}} {{$c.Group}}"></label></td>
+      </tr>
+      {{end}}
+      </tbody>
+    </table>
+    <button class="btn-primary" type="submit">{{T "regroup.apply"}}</button>
+    {{/* Carries the merges shown above: changing the table and clicking this
+         checks again rather than confirming merges nobody has seen. */}}
+    {{if .Merges}}<button class="btn-secondary" type="submit" name="merge_ok" value="{{.MergeKey}}">{{T "regroup.merge_anyway"}}</button>{{end}}
+  </form>
+  {{else}}
+  <p class="empty">{{template "icon-empty" "empty-icon"}}{{T "regroup.no_group"}}</p>
+  {{end}}
+{{end}}
+{{end}}

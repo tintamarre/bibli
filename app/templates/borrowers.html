@@ -1,6 +1,6 @@
 {{define "title_icon"}}{{template "icon-borrowers" "title-icon"}}{{end}}
 {{/* Hard right: the add button, then one menu for what acts on the whole list
-     (import, cards, rollover). The button hides while its form is open (.btn-
+     (import, cards, regroup). The button hides while its form is open (.btn-
      open-form). */}}
 {{define "title_actions"}}
 <button type="button" class="btn-secondary btn-open-form" onclick="openForm('add-borrower')"
@@ -11,7 +11,7 @@
     <a href="/borrowers/import">{{template "icon-import" "menu-icon"}}<span>{{T "borrowers.import_csv"}}</span></a>
     <a href="/borrowers/cards{{with .Group}}?group={{.}}{{end}}" target="_blank" rel="noopener"
       >{{template "icon-card" "menu-icon"}}<span>{{if .Group}}{{T "borrowers.print_cards_group" .Group}}{{else}}{{T "borrowers.print_cards_all"}}{{end}}</span></a>
-    <a href="/borrowers/rollover">{{template "icon-rollover" "menu-icon"}}<span>{{T "borrowers.rollover_action"}}</span></a>
+    <a href="/borrowers/regroup">{{template "icon-regroup" "menu-icon"}}<span>{{T "borrowers.regroup_action"}}</span></a>
   </div>
 </details>
 {{end}}
