@@ -224,7 +224,10 @@ func securityHeaders(next http.Handler) http.Handler {
 		h.Set("Content-Security-Policy", contentSecurityPolicy)
 		h.Set("X-Content-Type-Options", "nosniff")
 		h.Set("X-Frame-Options", "DENY")
-		h.Set("Referrer-Policy", "no-referrer")
+		// Not no-referrer: under it a browser posts forms with "Origin: null",
+		// which the cross-origin guard refuses on plain HTTP (http://PC-NAME:8080),
+		// where no Sec-Fetch-Site is sent.
+		h.Set("Referrer-Policy", "same-origin")
 		if !strings.HasPrefix(r.URL.Path, "/static/") {
 			// Reader data: "Back" after signing out must not show it from cache.
 			h.Set("Cache-Control", "no-store")

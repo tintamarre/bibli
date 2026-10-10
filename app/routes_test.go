@@ -428,6 +428,26 @@ func TestTheLoginPostPassesTheGuard(t *testing.T) {
 	}
 }
 
+// On a LAN server opened as http://PC-NAME:8080 the browser sends no
+// Sec-Fetch-Site: the guard judges on Origin, which the browser only fills in
+// if the referrer policy lets it.
+func TestTheLoginPostPassesTheGuardOverPlainHTTP(t *testing.T) {
+	a, h := testHandler(t)
+	a.throttle = newThrottle()
+	if p := get(h, "/login", nil).Header().Get("Referrer-Policy"); p == "no-referrer" {
+		t.Fatalf("Referrer-Policy %q: browsers then post with Origin: null", p)
+	}
+	r := httptest.NewRequest("POST", "http://biblio-pc:8080/login",
+		strings.NewReader(url.Values{"password": {"password"}}.Encode()))
+	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	r.Header.Set("Origin", "http://biblio-pc:8080")
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, r)
+	if w.Code != http.StatusSeeOther {
+		t.Errorf("POST /login over HTTP on the LAN = %d, want 303", w.Code)
+	}
+}
+
 // Every screen, every book and every borrower, over the demonstration data:
 // its NULLs (no ISBN, no group, no year, no location) and its lost, withdrawn
 // and anonymised rows are what a Scan into the wrong type trips on.
