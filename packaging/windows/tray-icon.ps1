@@ -1,14 +1,18 @@
 # A per-user system-tray icon for the Bibli server, started at each login by a
 # shortcut in the common Startup folder. It does NOT run the server itself —
 # that is the "Bibli" Windows service, under LOCAL SERVICE. The tray only opens
-# Bibli and starts/stops/restarts the service; those three need administrator rights, so
-# Windows asks for confirmation (UAC) each time. The hide item removes the icon
-# only; the server keeps running.
+# Bibli and starts/stops/restarts the service, or turns its automatic start
+# on and off; those need administrator rights, so Windows asks for confirmation
+# (UAC) each time. Hiding the icon keeps it hidden at the next logins, for this
+# user, until the "Show the notification icon" entry of the Start menu; the
+# server keeps running.
 $ErrorActionPreference = 'SilentlyContinue'
 Add-Type -AssemblyName System.Windows.Forms, System.Drawing
 . (Join-Path $PSScriptRoot 'lang.ps1'); $T = Get-BibliStrings
 
 $prog = Join-Path $env:ProgramFiles 'Bibli'
+$hiddenFlag = Join-Path $env:APPDATA 'Bibli\tray-hidden'
+if (Test-Path $hiddenFlag) { exit }
 # A tray-tuned glyph (brighter, full bleed, no panel) that reads at 16 px on any
 # taskbar; fall back to the full logo if it is missing.
 $ico  = Join-Path $prog 'bibli-tray.ico'
@@ -16,7 +20,9 @@ if (-not (Test-Path $ico)) { $ico = Join-Path $prog 'bibli.ico' }
 $service = 'Bibli'
 $port = 8080
 $url  = "http://$($env:COMPUTERNAME):$port/"
+$local = "http://localhost:$port/"
 
+function Test-AutoStart { (Get-CimInstance Win32_Service -Filter "Name='$service'").StartMode -eq 'Auto' }
 function Test-Up {
   try { return (Invoke-WebRequest -UseBasicParsing -TimeoutSec 1 "http://localhost:$port/healthcheck").StatusCode -eq 200 }
   catch { return $false }
@@ -27,8 +33,8 @@ function Open-Bibli {
          "$env:ProgramFiles\Google\Chrome\Application\chrome.exe",
          "${env:ProgramFiles(x86)}\Google\Chrome\Application\chrome.exe") |
     Where-Object { Test-Path $_ } | Select-Object -First 1
-  if ($b) { Start-Process $b -ArgumentList "--app=$url", '--no-first-run', '--no-default-browser-check' }
-  else    { Start-Process $url }
+  if ($b) { Start-Process $b -ArgumentList "--app=$local", '--no-first-run', '--no-default-browser-check' }
+  else    { Start-Process $local }
 }
 # The balloon only follows a command that ran: a cancelled UAC prompt throws.
 function Invoke-Admin($command, $balloon) {
@@ -60,15 +66,29 @@ Add-Item "$($T.sc_address)…" {
 Add-Item "$($T.sc_status)…" {
   $state = (Get-Service -Name $service).Status
   $up = if (Test-Up) { $T.yes } else { $T.no }
-  [System.Windows.Forms.MessageBox]::Show("$($T.lbl_task) $state`n$($T.lbl_responds) $up`n$($T.lbl_address) $url", 'Bibli') | Out-Null
+  $auto = if (Test-AutoStart) { $T.yes } else { $T.no }
+  [System.Windows.Forms.MessageBox]::Show("$($T.lbl_task) $state`n$($T.lbl_responds) $up`n$($T.lbl_autostart) $auto`n$($T.lbl_address) $url", 'Bibli') | Out-Null
 }
 Add-Sep
 Add-Item $T.sc_start   { Invoke-Admin "Start-Service -Name $service" $T.msg_started }
 Add-Item $T.sc_stop    { Invoke-Admin "Stop-Service -Name $service" $T.msg_stopped }
 Add-Item $T.sc_restart { Invoke-Admin "Restart-Service -Name $service" $T.msg_restarted }
+$script:autoItem = $menu.Items.Add($T.t_autostart)
+$script:autoItem.Add_Click({
+  if ($script:autoItem.Checked) { Invoke-Admin "Set-Service -Name $service -StartupType Manual" $T.msg_auto_off }
+  else { Invoke-Admin "Set-Service -Name $service -StartupType Automatic" $T.msg_auto_on }
+})
+$menu.Add_Opening({ $script:autoItem.Checked = Test-AutoStart })
 Add-Sep
+Add-Item "$($T.sc_uninstall)…" {
+  Start-Process powershell.exe -WindowStyle Hidden -ArgumentList '-NoProfile', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-File', "`"$(Join-Path $prog 'uninstall.ps1')`""
+}
 Add-Item $T.t_hide {
-  $script:notify.Visible = $false; $script:timer.Stop(); [System.Windows.Forms.Application]::Exit()
+  New-Item -ItemType Directory -Force -Path (Split-Path $hiddenFlag) | Out-Null
+  New-Item -ItemType File -Force -Path $hiddenFlag | Out-Null
+  $script:notify.Visible = $false; $script:timer.Stop()
+  [System.Windows.Forms.MessageBox]::Show($T.t_hidden, 'Bibli') | Out-Null
+  [System.Windows.Forms.Application]::Exit()
 }
 $script:notify.ContextMenuStrip = $menu
 $script:notify.Add_MouseDoubleClick({ Open-Bibli })

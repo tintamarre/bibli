@@ -146,7 +146,7 @@ Les données ne sont pas dans l'application : elles restent. Par prudence, tél�
 
 **Désinstaller** :
 
-- supprimer l'application (`Bibli.app` sur Mac ; sous Windows le dossier `%LOCALAPPDATA%\Programs\Bibli` et les raccourcis du Bureau et du menu Démarrer ; sous Linux le dossier `Bibli` de Documents) : les données restent ;
+- supprimer l'application (`Bibli.app` sur Mac ; sous Windows *Paramètres → Applications → Bibli → Désinstaller* ; sous Linux le dossier `Bibli` de Documents) : les données restent ;
 - supprimer **aussi** le dossier des données (voir [§4](#4-où-sont-les-données)) efface toute la bibliothèque. Faites d'abord une sauvegarde si elle peut encore servir.
 
 ## 8. Mot de passe oublié

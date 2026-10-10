@@ -127,6 +127,8 @@ jobs:
           if ($svc.StartMode -ne 'Auto') { throw "start mode $($svc.StartMode)" }
           $readers = (Get-Acl (Join-Path $data 'password')).Access | Where-Object { $_.IdentityReference -match 'Users|Everyone|Utilisateurs' }
           if ($readers) { throw "password file readable by $($readers.IdentityReference)" }
+          $apps = 'HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\Bibli'
+          if (-not (Get-ItemProperty $apps).UninstallString) { throw 'not listed in Settings > Apps' }
 
           Write-Host 'clean stop'
           Stop-Service Bibli
@@ -152,6 +154,7 @@ jobs:
           for ($i = 0; $i -lt 10 -and (Get-Service Bibli -ErrorAction SilentlyContinue); $i++) { Start-Sleep 1 }
           if (Get-Service Bibli -ErrorAction SilentlyContinue) { throw 'service still registered' }
           if (Test-Path 'C:\Program Files\Bibli') { throw 'program folder left behind' }
+          if (Test-Path $apps) { throw 'still listed in Settings > Apps' }
           if (-not (Test-Path (Join-Path $data 'biblio.db'))) { throw 'uninstall removed the database' }
           Write-Host 'all good'
 

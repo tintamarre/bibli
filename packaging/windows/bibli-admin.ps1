@@ -7,6 +7,7 @@ $data = Join-Path $env:ProgramData 'Bibli'
 $service = 'Bibli'
 $port = 8080
 $url  = "http://$($env:COMPUTERNAME):$port/"
+$local = "http://localhost:$port/"
 
 function Need-Admin {
   if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
@@ -14,6 +15,7 @@ function Need-Admin {
     exit
   }
 }
+function Test-AutoStart { (Get-CimInstance Win32_Service -Filter "Name='$service'").StartMode -eq 'Auto' }
 function Pause-Key { Write-Host ''; Write-Host $T.press_enter; [void](Read-Host) }
 function Invoke-Service($block, $done) {
   try { & $block; Write-Host $done } catch { Write-Host "$_" -ForegroundColor Red }
@@ -21,7 +23,7 @@ function Invoke-Service($block, $done) {
 }
 
 switch ($Action) {
-  'open'    { Start-Process $url }
+  'open'    { Start-Process $local }
   'start'   { Need-Admin; Invoke-Service { Start-Service -Name $service -ErrorAction Stop } $T.msg_started }
   'stop'    { Need-Admin; Invoke-Service { Stop-Service -Name $service -ErrorAction Stop } $T.msg_stopped }
   'restart' { Need-Admin; Invoke-Service { Restart-Service -Name $service -ErrorAction Stop } $T.msg_restarted }
@@ -30,6 +32,7 @@ switch ($Action) {
       try { $up = (Invoke-WebRequest -UseBasicParsing -TimeoutSec 2 "http://localhost:$port/healthcheck").StatusCode -eq 200 } catch {}
       Write-Host "$($T.lbl_task) $((Get-Service -Name $service).Status)"
       Write-Host "$($T.lbl_responds) $(if ($up) { $T.yes } else { $T.no })"
+      Write-Host "$($T.lbl_autostart) $(if (Test-AutoStart) { $T.yes } else { $T.no })"
       Write-Host "$($T.lbl_address) $url"
       Pause-Key
   }
@@ -41,6 +44,30 @@ switch ($Action) {
         ForEach-Object { Write-Host ("  http://{0}:{1}/" -f $_.IPAddress, $port) }
       Pause-Key
   }
+  'autostart' {
+      # Asked before the administrator prompt, which only applies the answer.
+      Add-Type -AssemblyName System.Windows.Forms
+      $on = Test-AutoStart
+      $q = if ($on) { $T.as_off_q } else { $T.as_on_q }
+      if ([System.Windows.Forms.MessageBox]::Show($q, 'Bibli', 'YesNo', 'Question') -eq 'Yes') {
+        $mode = if ($on) { 'Manual' } else { 'Automatic' }
+        try {
+          $p = Start-Process powershell.exe -Verb RunAs -Wait -PassThru -WindowStyle Hidden -ErrorAction Stop `
+            -ArgumentList '-NoProfile', '-Command', "Set-Service -Name $service -StartupType $mode"
+          if ($p.ExitCode -eq 0) {
+            [System.Windows.Forms.MessageBox]::Show($(if ($on) { $T.msg_auto_off } else { $T.msg_auto_on }), 'Bibli') | Out-Null
+          }
+        } catch {}  # the administrator prompt was declined
+      }
+  }
+  'tray'    {
+      Remove-Item -Force (Join-Path $env:APPDATA 'Bibli\tray-hidden')
+      $running = Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" |
+        Where-Object { $_.CommandLine -like '*tray-icon.ps1*' -and $_.ProcessId -ne $PID }
+      if (-not $running) {
+        Start-Process powershell.exe -WindowStyle Hidden -ArgumentList '-NoProfile', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-File', "`"$(Join-Path $prog 'tray-icon.ps1')`""
+      }
+  }
   'logs'    { Start-Process notepad.exe (Join-Path $data 'logs\bibli.log') }
   'data'    { Start-Process explorer.exe $data }
   'update'    {
@@ -51,6 +78,8 @@ switch ($Action) {
       $dlg.Filter = 'Bibli (*.exe)|*.exe'
       if ($dlg.ShowDialog() -eq 'OK') { Start-Process $dlg.FileName -ArgumentList 'install' }
   }
-  'uninstall' { & (Join-Path $prog 'uninstall.ps1') }
+  'uninstall' {
+      Start-Process powershell.exe -WindowStyle Hidden -ArgumentList '-NoProfile', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-File', "`"$(Join-Path $prog 'uninstall.ps1')`""
+  }
   default   { Write-Host "Unknown action: $Action" }
 }

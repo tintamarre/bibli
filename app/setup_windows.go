@@ -73,7 +73,8 @@ func setup(extra []string, hidden bool) error {
 	if hidden {
 		args = append(args, "-WindowStyle", "Hidden")
 	}
-	args = append(args, "-File", filepath.Join(dir, "install.ps1"), "-Exe", exe)
+	args = append(args, "-File", filepath.Join(dir, "install.ps1"), "-Exe", exe,
+		"-Version", displayVersion(), "-Source", sourceURL)
 	args = append(args, extra...)
 	cmd := osexec.Command("powershell.exe", args...)
 	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
