@@ -219,7 +219,9 @@ Sauvegarde manuelle ponctuelle, sans arrêter le service :
 
     sqlite3 /var/lib/bibli/biblio.db ".backup '/media/usb/biblio-$(date +%F).db'"
 
-Restauration : arrêter le service, remplacer le fichier de base par la sauvegarde, redémarrer.
+Restauration : depuis **Réglages → Installation → Restaurer une sauvegarde**, sans arrêter le service. Bibli vérifie le fichier (SQLite intact, schéma Bibli, version pas plus récente), montre la base actuelle et la sauvegarde côte à côte, demande le mot de passe, puis remplace la base par l'API de sauvegarde de SQLite. Il garde d'abord la base remplacée (`biblio-before-restore.db` dans `-backup-dir`), qu'un bouton remet en place. Ce bouton n'existe pas sans dossier de sauvegarde (`-backup-dir ""`, instance de démonstration).
+
+À la main, en ligne de commande : arrêter le service, remplacer le fichier de base par la sauvegarde, redémarrer.
 
     sudo systemctl stop biblio
     sudo cp /media/usb/biblio-2026-09-12.db /var/lib/bibli/biblio.db

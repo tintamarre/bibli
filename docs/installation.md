@@ -120,19 +120,19 @@ Ce fichier contient la liste des emprunteurs : rangez la clé comme le registre 
 **Changer d'ordinateur**, depuis le même système (Mac vers Mac, par exemple) ou non :
 
 1. Sur l'ancien ordinateur, télécharger une sauvegarde récente (voir [§5](#5-sauvegarder)) et la copier sur une clé USB.
-2. Sur le nouveau, installer Bibli (voir [§2](#2-installer-et-lancer-la-première-fois)) et le lancer une fois, pour qu'il crée son dossier de données. Choisir le mot de passe, puis **quitter** Bibli.
+2. Sur le nouveau, installer Bibli (voir [§2](#2-installer-et-lancer-la-première-fois)), quel que soit le mode (application, serveur Windows, Docker…), et choisir le mot de passe.
 3. Restaurer la sauvegarde, comme ci-dessous.
 
 **Restaurer une sauvegarde** (même ordinateur ou nouveau) :
 
-1. **Quitter Bibli** (fermer sa fenêtre). Ne jamais remplacer le fichier pendant que Bibli tourne.
-2. Ouvrir le dossier des données (voir [§4](#4-où-sont-les-données)).
-3. Si les fichiers `biblio.db-wal` et `biblio.db-shm` s'y trouvent, les supprimer.
-4. Renommer l'actuel `biblio.db` en `biblio-ancien.db`, par précaution.
-5. Copier la sauvegarde dans le dossier et la renommer **`biblio.db`**.
-6. Relancer Bibli : la bibliothèque est revenue à la date de la sauvegarde. Tout ce qui a été fait depuis (prêts, retours, livres ajoutés) est à refaire.
+1. Dans Bibli, ouvrir **Réglages** → onglet *Installation* → *Restaurer une sauvegarde*.
+2. Choisir le fichier `.db`, puis **Vérifier le fichier**. Bibli refuse ce qui n'est pas une sauvegarde Bibli intacte (fichier abîmé, autre programme, version plus récente de Bibli), sans rien toucher.
+3. Bibli montre côte à côte la base actuelle et la sauvegarde : nom de la bibliothèque, nombre de livres, d'exemplaires, de lecteurs, de prêts en cours, date de la dernière activité. Il prévient si la sauvegarde contient moins de livres, si elle est plus ancienne, ou si elle vient d'une autre bibliothèque.
+4. Pour confirmer, retaper le mot de passe de la bibliothèque, puis **Remplacer toutes les données**. Tout ce qui a été fait depuis la sauvegarde (prêts, retours, livres ajoutés) est à refaire.
 
-Le mot de passe n'est pas dans la sauvegarde : sur un nouvel ordinateur, c'est celui choisi au premier lancement.
+Avant de remplacer, Bibli garde une copie de la base qu'il remplace. En cas d'erreur, **Réglages → Installation → Revenir à cette base** la remet en place, avec la même vérification. Cette copie peut aussi être téléchargée.
+
+Le mot de passe n'est pas dans la sauvegarde : c'est toujours celui de l'installation, et personne n'est déconnecté.
 
 ## 7. Mettre à jour, désinstaller
 

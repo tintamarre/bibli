@@ -2,6 +2,7 @@
 {{define "width"}} page-medium{{end}}
 {{define "content"}}
 {{if .Ok}}<p class="ok">{{T "settings.saved"}}</p>{{end}}
+{{if .Restored}}<p class="ok">{{T "settings.restored"}}</p>{{end}}
 {{if .ForgottenShown}}<p class="ok">{{Tn "settings.covers_forgotten" .Forgotten}}</p>{{end}}
 {{/* The error sits above the tabs, always visible; ErrorTab opens the tab the
      faulty field is on. */}}
@@ -201,6 +202,24 @@
           {{end}}
         </ul>
         <p class="note">{{T "settings.backup_download_note"}}</p>
+        {{end}}
+        {{if .Active}}
+        <h4 id="restore">{{T "settings.restore_heading"}}</h4>
+        {{with .Before}}
+        <p class="backup-download-label">{{T "settings.restore_before"}}</p>
+        <ul class="backup-list">
+          <li><a href="/settings/backup/{{.Name}}" download>{{template "icon-download" "icon-inline"}}<span>{{.When}}</span></a>
+            <span class="backup-size">{{.Size}}</span></li>
+        </ul>
+        <form method="post" action="/settings/restore/undo">
+          <button class="btn-secondary" type="submit">{{template "icon-history" "icon-inline"}}{{T "settings.restore_undo"}}</button>
+        </form>
+        {{end}}
+        <p>{{T "settings.restore_intro"}}</p>
+        <form method="post" action="/settings/restore" enctype="multipart/form-data" class="restore-upload">
+          <input type="file" name="file" accept=".db" required aria-label="{{T "settings.restore_heading"}}">
+          <button class="btn-secondary" type="submit">{{T "settings.restore_check"}}</button>
+        </form>
         {{end}}
         {{end}}
       </section>

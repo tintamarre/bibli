@@ -195,25 +195,14 @@ func gdprPurge(db *sql.DB) {
 }
 
 // backup copies the database with VACUUM INTO, never cp, while the service
-// runs. VACUUM INTO refuses an existing file: write alongside, then rename.
+// runs.
 func backup(db *sql.DB, dir string, now time.Time) (string, error) {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return "", err
 	}
-	tmp := filepath.Join(dir, "biblio.db.tmp")
-	_ = os.Remove(tmp) // leftover from an interrupted attempt
-
-	// The path is controlled by the app; quotes are escaped all the same.
-	q := "VACUUM INTO '" + strings.ReplaceAll(tmp, "'", "''") + "'"
-	if _, err := db.Exec(q); err != nil {
-		_ = os.Remove(tmp)
-		return "", fmt.Errorf("VACUUM INTO %s: %w", tmp, err)
-	}
-
 	dest := filepath.Join(dir, dailyBackupName(now))
-	if err := os.Rename(tmp, dest); err != nil {
-		_ = os.Remove(tmp)
-		return "", fmt.Errorf("replacing %s: %w", dest, err)
+	if err := vacuumInto(db, dest); err != nil {
+		return "", err
 	}
 	log.Printf("daily backup written: %s", dest)
 
@@ -250,9 +239,13 @@ func monthlyBackupName(slot int) string {
 	return fmt.Sprintf("biblio-monthly-%d.db", slot)
 }
 
-// isBackupName whitelists the names the three builders above produce: the
-// download route takes the name from a URL and serves nothing else.
+// isBackupName whitelists the names the three builders above produce, and the
+// copy a restore keeps: the download route takes the name from a URL and
+// serves nothing else.
 func isBackupName(name string) bool {
+	if name == beforeRestoreName {
+		return true
+	}
 	if name == "" || name != filepath.Base(name) {
 		return false
 	}

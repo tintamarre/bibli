@@ -296,6 +296,10 @@ func (a *app) handler() http.Handler {
 	mux.HandleFunc("POST /settings", a.settingsSave)
 	mux.HandleFunc("POST /settings/covers/absences/forget", a.settingsForgetAbsences)
 	mux.HandleFunc("GET /settings/backup/{name}", a.backupDownload)
+	mux.HandleFunc("POST /settings/restore", a.restoreUpload)
+	mux.HandleFunc("POST /settings/restore/undo", a.restoreUndo)
+	mux.HandleFunc("POST /settings/restore/confirm", a.restoreConfirm)
+	mux.HandleFunc("POST /settings/restore/cancel", a.restoreCancel)
 
 	// About
 	mux.HandleFunc("GET /about", a.about)

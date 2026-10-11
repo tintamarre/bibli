@@ -1370,6 +1370,23 @@ button, input, select, textarea { font-family: inherit; }
 /* Touch: each date is a 44 px target. */
 @media (pointer: coarse) { .backup-list a { min-height: 44px; } }
 
+/* Restoring a backup (settings, then its own comparison page). */
+.info-block h4 { font-size: .9rem; margin: 1.25rem 0 .4rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+.restore-upload { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+.restore-upload input[type=file] { max-width: 100%; font: inherit; }
+.restore-upload input[type=file]::file-selector-button {
+  min-height: 44px; padding: 0 1.1rem; margin-right: .75rem;
+  font: inherit; font-weight: 600; color: var(--accent-dark); background: var(--surface);
+  border: 1px solid var(--border-strong); border-radius: var(--radius-s); cursor: pointer;
+}
+.restore-compare { max-width: 44rem; }
+/* Replacing the whole library: amber like the warning above it, never red,
+   which means overdue. */
+.btn-caution { background: var(--alert); }
+.btn-caution:hover { background: #93370d; }
+.restore-compare thead th { vertical-align: bottom; }
+.restore-compare .detail { color: var(--muted); font-size: .85rem; font-weight: 400; overflow-wrap: anywhere; }
+
 /* ====================================================================
    Small screens
    ==================================================================== */

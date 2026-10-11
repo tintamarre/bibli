@@ -26,6 +26,7 @@ type backupStatus struct {
 	DBPath  string
 	Started string
 	Files   []backupFile // what can be downloaded, newest first
+	Before  *backupFile  // the database the last restore replaced
 }
 
 // backupFile is one snapshot offered for download.
@@ -81,7 +82,7 @@ func listBackups(dir, lang string) []backupFile {
 	}
 	newest := map[string]fs.FileInfo{}
 	for _, e := range entries {
-		if e.IsDir() || !isBackupName(e.Name()) {
+		if e.IsDir() || !isBackupName(e.Name()) || e.Name() == beforeRestoreName {
 			continue
 		}
 		info, err := e.Info()
@@ -113,15 +114,21 @@ func listBackups(dir, lang string) []backupFile {
 
 func backupView(r *http.Request, basePath, backupDir string) backupStatus {
 	e := LastBackup()
+	lang := requestLang(r)
 	s := backupStatus{Active: e.Active, Path: e.Path, Error: e.Error, DBPath: basePath,
-		Files: listBackups(backupDir, requestLang(r))}
+		Files: listBackups(backupDir, lang)}
+	if backupDir != "" {
+		if info, err := os.Stat(filepath.Join(backupDir, beforeRestoreName)); err == nil {
+			s.Before = &backupFile{Name: beforeRestoreName, Size: humanSize(info.Size(), lang),
+				When: tr(r, "format.datetime", info.ModTime().Format(dateLayout(lang)), info.ModTime().Format("15:04"))}
+		}
+	}
 	if e.When.IsZero() {
 		s.Never = true
 		return s
 	}
 	// The joining word is translated; the layouts stay numeric, since a letter
 	// in a `time` layout can be a symbol.
-	lang := requestLang(r)
 	s.When = tr(r, "format.datetime",
 		e.When.Format(dateLayout(lang)), e.When.Format("15:04"))
 	return s
@@ -210,6 +217,11 @@ func offeredLangs(selected string) []offeredLang {
 func (a *app) settingsScreen(w http.ResponseWriter, r *http.Request) {
 	d := a.settingsData(r, libraryName(), instanceLang(), instanceTheme())
 	d["Ok"] = r.URL.Query().Get("ok") == "1"
+	d["Restored"] = r.URL.Query().Get("restored") == "1"
+	// Back from a restore, the tab that holds it is the one to see.
+	if d["Restored"] == true || r.URL.Query().Get("tab") == "installation" {
+		d["ErrorTab"] = "installation"
+	}
 	// Absent is not zero: "0 forgotten" is said only to whoever just clicked.
 	if v := r.URL.Query().Get("forgotten"); v != "" {
 		if n, err := strconv.Atoi(v); err == nil && n >= 0 {

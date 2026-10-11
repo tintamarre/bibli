@@ -1,0 +1,46 @@
+{{define "title_icon"}}{{template "icon-history" "title-icon"}}{{end}}
+{{define "back_link"}}<p class="back-link"><a class="link-quiet" href="/settings?tab=installation">{{template "icon-back" "icon-inline"}}{{T "restore.back"}}</a></p>{{end}}
+{{define "content"}}
+{{with .P}}
+{{if .Error}}
+  <p class="err">{{.Error}}</p>
+  <p><a class="btn-secondary" href="/settings?tab=installation">{{T "restore.back"}}</a></p>
+{{else}}
+  <p class="ok">{{T "restore.checked" .FileName}}</p>
+  <table class="table restore-compare">
+    <thead><tr><th></th><th>{{T "restore.col_current"}}<br><span class="detail">{{T "restore.col_current_note"}}</span></th><th>{{T "restore.col_backup"}}<br><span class="detail">{{.FileName}}</span></th></tr></thead>
+    <tbody>
+      <tr><th scope="row">{{T "restore.row_name"}}</th>
+        <td data-label="{{T "restore.col_current"}}">{{or .Current.Name "—"}}</td><td data-label="{{T "restore.col_backup"}}">{{or .Backup.Name "—"}}</td></tr>
+      <tr><th scope="row">{{T "restore.row_books"}}</th>
+        <td data-label="{{T "restore.col_current"}}" class="col-num">{{.Current.Books}}</td><td data-label="{{T "restore.col_backup"}}" class="col-num">{{.Backup.Books}}</td></tr>
+      <tr><th scope="row">{{T "restore.row_copies"}}</th>
+        <td data-label="{{T "restore.col_current"}}" class="col-num">{{.Current.Copies}}</td><td data-label="{{T "restore.col_backup"}}" class="col-num">{{.Backup.Copies}}</td></tr>
+      <tr><th scope="row">{{T "restore.row_readers"}}</th>
+        <td data-label="{{T "restore.col_current"}}" class="col-num">{{.Current.Readers}}</td><td data-label="{{T "restore.col_backup"}}" class="col-num">{{.Backup.Readers}}</td></tr>
+      <tr><th scope="row">{{T "restore.row_loans"}}</th>
+        <td data-label="{{T "restore.col_current"}}" class="col-num">{{.Current.OpenLoans}}</td><td data-label="{{T "restore.col_backup"}}" class="col-num">{{.Backup.OpenLoans}}</td></tr>
+      <tr><th scope="row">{{T "restore.row_last"}}</th>
+        <td data-label="{{T "restore.col_current"}}">{{with .Current.LastActivity}}{{shortDate .}}{{else}}—{{end}}</td><td data-label="{{T "restore.col_backup"}}">{{with .Backup.LastActivity}}{{shortDate .}}{{else}}—{{end}}</td></tr>
+    </tbody>
+  </table>
+  <div class="warning">
+    <p>{{T "restore.warning"}}</p>
+    {{with .Warnings}}<ul>{{range .}}<li>{{.}}</li>{{end}}</ul>{{end}}
+  </div>
+  <p>{{T "restore.safety"}}</p>
+  <form method="post" action="/settings/restore/confirm" class="scan-block">
+    <input type="hidden" name="token" value="{{.Token}}">
+    <input type="hidden" name="file_name" value="{{.FileName}}">
+    {{with .PasswordError}}<p class="err">{{.}}</p>{{end}}
+    <label class="field"><span>{{T "restore.password"}}</span>
+      <input type="password" name="password" required autocomplete="current-password" autofocus></label>
+    <button class="btn-primary btn-caution" type="submit">{{template "icon-alert" "icon-inline"}}{{T "restore.confirm"}}</button>
+  </form>
+  <form method="post" action="/settings/restore/cancel">
+    <input type="hidden" name="token" value="{{.Token}}">
+    <button class="btn-secondary" type="submit">{{T "restore.cancel"}}</button>
+  </form>
+{{end}}
+{{end}}
+{{end}}
