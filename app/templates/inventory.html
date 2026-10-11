@@ -129,7 +129,7 @@
 
 {{define "inv_row"}}
 <tr id="ex-{{.ID}}"{{if .Flash}} class="flash-ok"{{end}}>
-  <td data-label="{{T "inventory.col_mark"}}" class="col-code"><span class="code">{{.Mark}}</span></td>
+  <td data-label="{{T "inventory.col_mark"}}" class="col-code">{{with .Mark}}<span class="mark-chip">{{.}}</span>{{end}}</td>
   {{/* The column class clips the title (app.css); the whole title is under the
        pointer. */}}
   <td class="col-title" data-label="{{T "inventory.col_title"}}"

@@ -21,9 +21,10 @@
   --surface:       #ffffff;
   --border:        #d6d8e2;
   --border-strong: #b8bcca;
-  /* A band set into the page (table heading row, filter bar): darker than both
-     the page and the rows, so it caps the table. */
-  --sunken:        #e3e7f1;
+  /* A fill set into a white surface: the fields edited in place in a table. */
+  --sunken:        #f0f2f7;
+  /* Every other row of a table, lighter than --sunken so the fields still show. */
+  --stripe:        #fafbfd;
   --text:          #1c2230;
   /* Secondary text: table headings, hints, axis labels. Held at 6:1 on the
      darkest background it sits on (the heading band); themes_test.go measures it. */
@@ -107,7 +108,8 @@
   --surface:       #ffffff;
   --border:        #c3cddc;
   --border-strong: #7d8ba1;
-  --sunken:        #e8effa;
+  --sunken:        #ebf0f8;
+  --stripe:        #f6f8fc;
   --text:          #0b1220;
   --muted:         #2c3647;
   --accent:        #1d4ed8;
@@ -629,8 +631,21 @@ button, input, select, textarea { font-family: inherit; }
 .table th, .table td { text-align: left; vertical-align: middle; padding: .8rem .75rem;
   border-bottom: 1px solid var(--border); }
 .table tbody tr:last-child td { border-bottom: 0; }
-.table th { background: var(--sunken); font-size: .88rem; font-weight: 700; color: var(--muted);
-  border-bottom: 1px solid var(--border-strong); }
+.table th { background: var(--accent-light); font-size: .88rem; font-weight: 700; color: var(--accent-dark);
+  border-bottom: 1px solid var(--accent-border); }
+/* Every other row tinted, on screens wide enough for rows. Not in the grouped
+   loans, whose borrower bands already break the rows up. :where keeps it under
+   the row tints (.row-new). */
+@media (min-width: 40rem) {
+  :where(.table:not(:has(.row-borrower)) tbody tr:nth-child(even)) > td { background: var(--stripe); }
+}
+/* The inventory's shelf mark, a chip like the spine label it copies. */
+.mark-chip {
+  display: inline-block; padding: .05rem .5rem;
+  font-size: .85rem; font-weight: 700; letter-spacing: .05em; white-space: nowrap;
+  color: var(--accent-dark); background: var(--accent-light);
+  border: 1px solid var(--accent-border); border-radius: 6px;
+}
 /* Quantities right-aligned, text and identifiers left. Under .table, or the
    rule above that left-aligns every cell outranks them. */
 .table .col-centre { text-align: center; }
@@ -751,7 +766,7 @@ button, input, select, textarea { font-family: inherit; }
 .inv-status { padding: .4rem .5rem; }
 /* Editable in place, read far more often: no border until focused, and still
    a filled field on a tablet, where nothing hovers. */
-.table .inv-location, .table .inv-status { border-color: transparent; background-color: var(--bg); }
+.table .inv-location, .table .inv-status { border-color: transparent; background-color: var(--sunken); }
 .table .inv-location:focus, .table .inv-status:focus { border-color: var(--accent); background-color: var(--surface); }
 .table .status-damaged { background-color: var(--alert-bg); border-color: var(--alert-border); }
 /* The status reads by colour first. Green in service, orange damaged, grey out
@@ -792,24 +807,29 @@ button, input, select, textarea { font-family: inherit; }
 .filter-bar {
   display: flex; flex-wrap: wrap; align-items: center;
   gap: .6rem 1.25rem; margin: 0 0 1rem;
-  padding: .7rem .85rem;
-  background: var(--sunken);
+  padding: .85rem 1rem;
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
 }
 .filter-bar .search { flex: 1 1 16rem; min-width: 0; margin: 0; }
 .filter-bar .search-wrap { max-width: none; }
 /* The inventory's filters are two lines: the search box full width, then the
-   dropdowns against the right edge. */
+   dropdowns under it from the left. */
 .filter-row-search { flex: 1 1 100%; }
 .filter-row > .search-wrap { flex: 1 1 16rem; min-width: 0; }
-.filter-row-selects { flex: 1 1 100%; justify-content: flex-end; }
+.filter-row-selects { flex: 1 1 100%; }
 
 /* One labelled row per filter, so they never run together. */
 .filter-row { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem .75rem; }
 .filter-label {
   flex: 0 0 auto; min-width: 4.5rem;
-  font-size: .9rem; font-weight: 700; color: var(--muted);
+  font-size: .9rem; color: var(--muted);
+}
+/* A bar right above its table joins it: one card, the filters as its top. */
+@media (min-width: 40rem) {
+  .filter-bar:has(+ .table-scroll) { margin-bottom: 0; border-bottom: 0; border-radius: var(--radius) var(--radius) 0 0; }
+  .filter-bar + .table-scroll > .table { border-top-left-radius: 0; border-top-right-radius: 0; }
 }
 .filter-form { display: flex; align-items: center; gap: .5rem; margin: 0; }
 /* A label and its control wrap as one. */
@@ -1149,10 +1169,10 @@ button, input, select, textarea { font-family: inherit; }
      carries neither: take them from the <th> explicitly. */
   text-transform: inherit; letter-spacing: inherit;
 }
-.th-sort:hover { color: var(--accent-dark); }
+.th-sort:hover { color: var(--accent); }
 .th-sort:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
 /* The sorting column, darker than its neighbours. */
-.th-sorted { color: var(--text); }
+.th-sorted { text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 5px; }
 /* em-sized, in proportion to the heading. */
 .sort-arrow { width: 1.15em; height: 1.15em; flex: none; }
 /* The "can be sorted" pair, in the arrow's box so the width holds. Faint but
