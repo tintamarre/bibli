@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"log"
 	"net/http"
 	"os"
@@ -139,7 +140,7 @@ func vacuumInto(db *sql.DB, dest string) error {
 		_ = os.Remove(tmp)
 		return fmt.Errorf("VACUUM INTO %s: %w", tmp, err)
 	}
-	if err := os.Rename(tmp, dest); err != nil {
+	if err := retryFile(func() error { return os.Rename(tmp, dest) }); err != nil {
 		_ = os.Remove(tmp)
 		return fmt.Errorf("replacing %s: %w", dest, err)
 	}
@@ -242,6 +243,14 @@ func newRestoreToken() string {
 	return hex.EncodeToString(b)
 }
 
+// removePending deletes an uploaded file, which holds every reader: one left
+// behind is said in the log, and the next sweep takes it.
+func removePending(path string) {
+	if err := retryFile(func() error { return os.Remove(path) }); err != nil && !errors.Is(err, fs.ErrNotExist) {
+		log.Printf("restore: could not delete %s: %v", path, err)
+	}
+}
+
 // sweepPending removes uploads nobody confirmed.
 func (a *app) sweepPending() {
 	matches, _ := filepath.Glob(filepath.Join(filepath.Dir(a.dbPath), "restore-*.db"))
@@ -301,7 +310,7 @@ func (a *app) restoreUpload(w http.ResponseWriter, r *http.Request) {
 			err = cerr
 		}
 		if err != nil {
-			_ = os.Remove(path)
+			removePending(path)
 			var tooBig *http.MaxBytesError
 			if errors.As(err, &tooBig) {
 				a.restoreScreen(w, r, restorePage{Error: tr(r, "restore.err_too_big")})
@@ -338,7 +347,7 @@ func (a *app) restorePreview(w http.ResponseWriter, r *http.Request, token, file
 	path := a.pendingPath(token)
 	backup, err := inspectBackup(path)
 	if err != nil {
-		_ = os.Remove(path)
+		removePending(path)
 		msg := tr(r, "restore.err_corrupt")
 		for _, known := range []error{errRestoreNotSQLite, errRestoreCorrupt, errRestoreNotBibli, errRestoreNewer} {
 			if errors.Is(err, known) {
@@ -432,7 +441,7 @@ func (a *app) restoreConfirm(w http.ResponseWriter, r *http.Request) {
 		a.restoreScreen(w, r, restorePage{Error: tr(r, "restore.err_failed", err.Error())})
 		return
 	}
-	_ = os.Remove(path)
+	removePending(path)
 	log.Printf("database restored from %s; the previous one is kept as %s", fileName, beforeRestoreName)
 	http.Redirect(w, r, "/settings?restored=1", http.StatusSeeOther)
 }
@@ -440,7 +449,7 @@ func (a *app) restoreConfirm(w http.ResponseWriter, r *http.Request) {
 // restoreCancel drops the pending file.
 func (a *app) restoreCancel(w http.ResponseWriter, r *http.Request) {
 	if token := r.FormValue("token"); validToken(token) {
-		_ = os.Remove(a.pendingPath(token))
+		removePending(a.pendingPath(token))
 	}
 	http.Redirect(w, r, "/settings?tab=installation", http.StatusSeeOther)
 }

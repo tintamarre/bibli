@@ -2,8 +2,10 @@ package main
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"log"
 	"os"
 	"path/filepath"
@@ -327,7 +329,21 @@ func replaceFile(src, dest string) error {
 		_ = os.Remove(tmp)
 		return err
 	}
-	return os.Rename(tmp, dest)
+	return retryFile(func() error { return os.Rename(tmp, dest) })
+}
+
+// retryFile runs a rename or a delete again for up to two seconds: on Windows,
+// an antivirus scanning a file just written holds it a moment. A missing file
+// is not worth waiting for.
+func retryFile(op func() error) error {
+	var err error
+	for i := 0; i < 10; i++ {
+		if err = op(); err == nil || errors.Is(err, fs.ErrNotExist) {
+			return err
+		}
+		time.Sleep(200 * time.Millisecond)
+	}
+	return err
 }
 
 // purgeLegacyBackups removes dated files (biblio-YYYY-MM-DD.db), which the

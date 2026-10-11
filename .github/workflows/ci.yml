@@ -38,6 +38,23 @@ jobs:
       - name: Code coverage
         run: go tool cover -func=coverage.out
 
+  # Backups and restores on Windows itself: renaming over a file, deleting
+  # one just closed and opening a C:\ path are where it differs from Linux.
+  windows-tests:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version: '1.27'
+          cache-dependency-path: go.sum
+
+      - name: Backup and restore tests
+        run: go test -v -run 'Backup|Restore|Refused' ./app
+
   # The Windows exe, built where the release builds it.
   windows-package:
     runs-on: ubuntu-latest
