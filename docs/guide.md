@@ -218,7 +218,7 @@ Trois chemins, selon le moment :
 
 ![La planche d'étiquettes : nom de la bibliothèque, titre, code-barres, code interne et cote en gros](img/labels.png)
 
-La planche est prévue pour les **planches A4 de 44 étiquettes autocollantes 48,5 × 25,4 mm** (4 colonnes × 11 lignes, type Avery Zweckform 3657 et compatibles).
+La planche est prévue pour les **planches A4 de 40 étiquettes autocollantes 48,5 × 25,4 mm** (4 colonnes × 10 lignes, marges de 21,5 mm en haut et en bas, type Avery Zweckform 3657 et compatibles).
 
 - **Imprimez à 100 %** (« taille réelle »), jamais « ajuster à la page », sinon les étiquettes ne tombent plus sur les autocollants.
 - **Avant d'acheter une boîte**, imprimez une page sur papier ordinaire et posez-la sur une planche devant une fenêtre : tout doit coïncider.
@@ -246,7 +246,7 @@ Une personne seule s'ajoute à la main avec *Ajouter*.
 
 ### Les cartes
 
-*Imprimer les cartes de P3* (ou *Imprimer toutes les cartes*) produit des cartes à code-barres sur les mêmes planches de 44 autocollants que les étiquettes, à coller sur un carton ou dans un cahier.
+*Imprimer les cartes de P3* (ou *Imprimer toutes les cartes*) produit des cartes à code-barres sur les mêmes planches de 40 autocollants que les étiquettes, à coller sur un carton ou dans un cahier.
 
 Astuce : imprimée sur papier ordinaire et non découpée, la page d'un groupe devient une **feuille de groupe** à garder au comptoir. On y scanne la carte d'un emprunteur qui a oublié la sienne.
 

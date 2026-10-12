@@ -743,7 +743,7 @@
   "status.lost": "lost",
   "status.withdrawn": "withdrawn",
   "sticker.cut_lines": "Cut lines (plain paper)",
-  "sticker.note": "For A4 sheets of 44 labels, 48.5 × 25.4 mm (Avery 3657 type). Print at 100% (\"actual size\"), without fitting to the page. Starting at label 5 leaves the first 4, already used, blank.",
+  "sticker.note": "For A4 sheets of 40 labels, 48.5 × 25.4 mm (Avery 3657 type). Print at 100% (\"actual size\"), without fitting to the page. Starting at label 5 leaves the first 4, already used, blank.",
   "sticker.start": "Start at label",
 
   "theme.ink": "Ink — indigo top bar",

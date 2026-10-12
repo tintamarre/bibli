@@ -25,16 +25,17 @@
 </script>{{end}}
 
 {{/* The sticker sheet the copy labels and the borrower cards both print on: an
-     A4 sheet of 44 stickers, 48.5 × 25.4 mm, 4 × 11, edge to edge (Avery
-     Zweckform 3657 and its compatibles). The product is these five numbers;
-     the script reads the count per page from them, so another product is a
-     change here and nowhere else. Every size is millimetres of paper and the
+     A4 sheet of 40 stickers, 48.5 × 25.4 mm, 4 × 10, touching, between a
+     21.5 mm strip of backing paper at the top and bottom and 8 mm at the
+     sides (Avery Zweckform 3657 and its compatibles). The product is these
+     six numbers; the script reads the count per page from them, so another
+     product is a change here and nowhere else. Every size is millimetres of paper and the
      page has no margin of its own, so what is drawn lands on the sticker —
      provided the print dialog prints at 100 %. */}}
 {{define "sticker_style"}}<style>
   :root {
-    --st-w: 48.5mm; --st-h: 25.4mm; --st-cols: 4; --st-rows: 11;
-    --st-margin-x: 8mm; --st-margin-y: 8.8mm;
+    --st-w: 48.5mm; --st-h: 25.4mm; --st-cols: 4; --st-rows: 10;
+    --st-margin-x: 8mm; --st-margin-y: 21.5mm;
   }
   @page { size: A4; margin: 0; }
   body { background: var(--bg); }
@@ -45,7 +46,7 @@
   }
   /* What the stack is — a class, the school — in the top margin, which on a
      sticker sheet is backing paper and on plain paper heads the class sheet. */
-  .page-head { position: absolute; top: 4mm; left: var(--st-margin-x); right: var(--st-margin-x);
+  .page-head { position: absolute; top: 10mm; left: var(--st-margin-x); right: var(--st-margin-x);
     font-size: 7pt; line-height: 1; color: #777; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .sticker {
     width: var(--st-w); height: var(--st-h); overflow: hidden; padding: 1.6mm 2.5mm 1.4mm;
