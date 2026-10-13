@@ -2,8 +2,8 @@
 {{define "back_link"}}<p class="back-link"><a class="link-quiet" href="/borrowers">{{template "icon-back" "icon-inline"}}{{T "borrowers.back"}}</a></p>{{end}}
 {{define "content"}}
 <section class="scan-block form-measured">
-  {{/* An empty sheet to fill in and paste back: pasted cells arrive
-       tab-separated, header row included, and parseCSV reads both. */}}
+  {{/* An empty sheet to fill in, then upload or paste back: pasted cells
+       arrive tab-separated, header row included, and parseCSV reads both. */}}
   <p><a class="link-quiet" href="/borrowers/import/template.xlsx" download
     >{{template "icon-download" "icon-inline"}}{{T "import.template_link"}}</a></p>
   <p class="note">{{T "import.template_hint"}}</p>
@@ -11,7 +11,7 @@
         hx-encoding="multipart/form-data">
     <textarea class="csv-area" name="csv" rows="7"
               placeholder="{{T "import.placeholder"}}"></textarea>
-    <p class="note">{{T "import.or_file"}} <input type="file" name="file" accept=".csv,text/csv"></p>
+    <p class="note">{{T "import.or_file"}} <input type="file" name="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"></p>
     <p class="note">{{T "import.columns_label"}} <b>{{T "import.columns_list"}}</b>. {{T "import.columns_rules"}}</p>
     <button class="btn-secondary" type="submit">{{T "import.preview"}}</button>
   </form>

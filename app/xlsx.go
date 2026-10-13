@@ -2,9 +2,12 @@ package main
 
 import (
 	"archive/zip"
+	"bytes"
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"io"
+	"path"
 	"strconv"
 	"strings"
 )
@@ -216,4 +219,156 @@ func escapeXML(s string) string {
 		return ""
 	}
 	return out.String()
+}
+
+// readXLSX hands back the first cols columns of a workbook's first tab, row by
+// row, every cell as text: what Excel, LibreOffice and Google Sheets save. A
+// date or a formula comes back as stored (a serial number, the last result).
+func readXLSX(b []byte, cols int) ([][]string, error) {
+	z, err := zip.NewReader(bytes.NewReader(b), int64(len(b)))
+	if err != nil {
+		return nil, err
+	}
+	part := func(name string) ([]byte, error) {
+		for _, f := range z.File {
+			if strings.EqualFold(f.Name, name) {
+				rc, err := f.Open()
+				if err != nil {
+					return nil, err
+				}
+				defer rc.Close()
+				// A few kilobytes for a list of readers; the bound stops a zip bomb.
+				return io.ReadAll(io.LimitReader(rc, 32<<20))
+			}
+		}
+		return nil, fmt.Errorf("%s: missing", name)
+	}
+
+	// The first tab in the workbook's order, wherever its relationship says it is.
+	raw, err := part("xl/workbook.xml")
+	if err != nil {
+		return nil, err
+	}
+	var wb struct {
+		Sheets []struct {
+			ID string `xml:"http://schemas.openxmlformats.org/officeDocument/2006/relationships id,attr"`
+		} `xml:"sheets>sheet"`
+	}
+	if err := xml.Unmarshal(raw, &wb); err != nil {
+		return nil, fmt.Errorf("workbook: %w", err)
+	}
+	if len(wb.Sheets) == 0 {
+		return nil, errors.New("workbook: no sheet")
+	}
+	if raw, err = part("xl/_rels/workbook.xml.rels"); err != nil {
+		return nil, err
+	}
+	var rels struct {
+		Rel []struct {
+			ID     string `xml:"Id,attr"`
+			Target string `xml:"Target,attr"`
+		} `xml:"Relationship"`
+	}
+	if err := xml.Unmarshal(raw, &rels); err != nil {
+		return nil, fmt.Errorf("workbook rels: %w", err)
+	}
+	sheetPath := ""
+	for _, r := range rels.Rel {
+		if r.ID == wb.Sheets[0].ID {
+			// Relative to xl/, or absolute from the package root.
+			if strings.HasPrefix(r.Target, "/") {
+				sheetPath = strings.TrimPrefix(r.Target, "/")
+			} else {
+				sheetPath = path.Join("xl", r.Target)
+			}
+		}
+	}
+	if sheetPath == "" {
+		return nil, errors.New("workbook: the first sheet has no part")
+	}
+
+	// Excel keeps text in one shared table; Bibli's own sheets write it inline.
+	type text struct {
+		T    string `xml:"t"`
+		Runs []struct {
+			T string `xml:"t"`
+		} `xml:"r"`
+	}
+	flat := func(t text) string {
+		s := t.T
+		for _, r := range t.Runs {
+			s += r.T
+		}
+		return s
+	}
+	var shared []string
+	if raw, err := part("xl/sharedStrings.xml"); err == nil {
+		var sst struct {
+			SI []text `xml:"si"`
+		}
+		if err := xml.Unmarshal(raw, &sst); err != nil {
+			return nil, fmt.Errorf("shared strings: %w", err)
+		}
+		for _, si := range sst.SI {
+			shared = append(shared, flat(si))
+		}
+	}
+
+	if raw, err = part(sheetPath); err != nil {
+		return nil, err
+	}
+	var ws struct {
+		Rows []struct {
+			Cells []struct {
+				Ref    string `xml:"r,attr"`
+				Type   string `xml:"t,attr"`
+				Value  string `xml:"v"`
+				Inline text   `xml:"is"`
+			} `xml:"c"`
+		} `xml:"sheetData>row"`
+	}
+	if err := xml.Unmarshal(raw, &ws); err != nil {
+		return nil, fmt.Errorf("sheet: %w", err)
+	}
+	var out [][]string
+	for _, row := range ws.Rows {
+		cells := make([]string, cols)
+		next := 0
+		for _, c := range row.Cells {
+			// An empty cell is left out of the file, so the reference places
+			// the next one; without it, cells follow on.
+			col := next
+			if c.Ref != "" {
+				col = columnIndex(c.Ref)
+			}
+			next = col + 1
+			if col < 0 || col >= cols {
+				continue
+			}
+			switch c.Type {
+			case "s":
+				if i, err := strconv.Atoi(c.Value); err == nil && i >= 0 && i < len(shared) {
+					cells[col] = shared[i]
+				}
+			case "inlineStr":
+				cells[col] = flat(c.Inline)
+			default:
+				cells[col] = c.Value
+			}
+		}
+		out = append(out, cells)
+	}
+	return out, nil
+}
+
+// columnIndex reads the column of a cell reference: "A7" -> 0, "AB12" -> 27.
+func columnIndex(ref string) int {
+	n := 0
+	for _, r := range ref {
+		if r < 'A' || r > 'Z' || n > 1<<16 {
+			break
+		}
+		n = n*26 + int(r-'A'+1)
+	}
+	return n - 1
 }

@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/xml"
 	"io"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -219,5 +220,79 @@ func TestXLSXWritesNumericColumnsAsNumbers(t *testing.T) {
 	}
 	if !strings.Contains(sh, `>n/a<`) {
 		t.Error("a non-number in a numeric column was dropped")
+	}
+}
+
+// zipParts writes the given parts as a zip, the way another program would.
+func zipParts(t *testing.T, parts map[string]string) []byte {
+	t.Helper()
+	var buf bytes.Buffer
+	z := zip.NewWriter(&buf)
+	for name, content := range parts {
+		f, err := z.Create(name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		io.WriteString(f, content)
+	}
+	if err := z.Close(); err != nil {
+		t.Fatal(err)
+	}
+	return buf.Bytes()
+}
+
+// A workbook as Excel saves it: text in the shared table, some of it rich,
+// an empty cell left out, a number, and the tab shown first stored second.
+func TestReadXLSXReadsWhatExcelSaves(t *testing.T) {
+	const main = `xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"`
+	b := zipParts(t, map[string]string{
+		"xl/workbook.xml": `<workbook ` + main + `><sheets>` +
+			`<sheet name="Lecteurs" sheetId="2" r:id="rId7"/><sheet name="Notes" sheetId="1" r:id="rId1"/></sheets></workbook>`,
+		"xl/_rels/workbook.xml.rels": `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">` +
+			`<Relationship Id="rId1" Target="worksheets/sheet1.xml"/><Relationship Id="rId7" Target="/xl/worksheets/sheet2.xml"/></Relationships>`,
+		"xl/sharedStrings.xml": `<sst ` + main + `><si><t>Prénom</t></si><si><t>Nom</t></si><si><t>Classe</t></si>` +
+			`<si><t>Léa</t></si><si><r><t>Du</t></r><r><rPr><b/></rPr><t>rant</t></r></si><si><t>Tom</t></si></sst>`,
+		"xl/worksheets/sheet1.xml": `<worksheet ` + main + `><sheetData><row r="1"><c r="A1" t="inlineStr"><is><t>wrong tab</t></is></c></row></sheetData></worksheet>`,
+		"xl/worksheets/sheet2.xml": `<worksheet ` + main + `><sheetData>` +
+			`<row r="1"><c r="A1" t="s"><v>0</v></c><c r="B1" t="s"><v>1</v></c><c r="C1" t="s"><v>2</v></c><c r="D1"><v>99</v></c></row>` +
+			`<row r="2"><c r="A2" t="s"><v>3</v></c><c r="B2" t="s"><v>4</v></c><c r="C2"><v>4</v></c></row>` +
+			`<row r="4"><c r="A4" t="s"><v>5</v></c><c r="C4" t="inlineStr"><is><t>P3</t></is></c></row>` +
+			`</sheetData></worksheet>`,
+	})
+	got, err := readXLSX(b, 3)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := [][]string{{"Prénom", "Nom", "Classe"}, {"Léa", "Durant", "4"}, {"Tom", "", "P3"}}
+	if len(got) != len(want) {
+		t.Fatalf("rows = %q, want %q", got, want)
+	}
+	for i := range want {
+		if !slices.Equal(got[i], want[i]) {
+			t.Errorf("row %d = %q, want %q", i, got[i], want[i])
+		}
+	}
+
+	// Through the import: the header goes, Tom has no last name and is counted.
+	rows, skipped := parseCSV(tabText(got))
+	if len(rows) != 1 || rows[0] != (importRow{"Léa", "D.", "4", false}) || skipped != 1 {
+		t.Errorf("imports as %+v (%d skipped)", rows, skipped)
+	}
+}
+
+// What the import writes back for the confirmation survives a quote or a tab
+// typed into a cell.
+func TestTabTextRoundTrips(t *testing.T) {
+	rows, _ := parseCSV(tabText([][]string{{"Prénom", "Nom", "Groupe"}, {`Jean "Jo"`, "Dupont", "P4\tbis"}}))
+	if len(rows) != 1 || rows[0] != (importRow{`Jean "Jo"`, "D.", "P4\tbis", false}) {
+		t.Errorf("imports as %+v", rows)
+	}
+}
+
+func TestColumnIndex(t *testing.T) {
+	for ref, want := range map[string]int{"A1": 0, "C7": 2, "Z9": 25, "AA1": 26, "AB12": 27, "1": -1} {
+		if got := columnIndex(ref); got != want {
+			t.Errorf("columnIndex(%q) = %d, want %d", ref, got, want)
+		}
 	}
 }

@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"fmt"
 	"mime/multipart"
+	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"os"
@@ -270,6 +271,8 @@ func TestParseCSV(t *testing.T) {
 			[]importRow{{"Léa", "D.", "P4", false}}},
 		{"cells pasted from a spreadsheet", "Léa\tDurant\tP4\nTom\tBernard\tP3",
 			[]importRow{{"Léa", "D.", "P4", false}, {"Tom", "B.", "P3", false}}},
+		{"an empty pasted cell keeps its column", "Léa\t\tP4\nTom\tBernard\t\nZoé\t Martin\tP3",
+			[]importRow{{"Tom", "B.", "", false}, {"Zoé", "M.", "P3", false}}},
 		{"a line without a last name is skipped", "Léa Durant\nTom,Bernard,P3",
 			[]importRow{{"Tom", "B.", "P3", false}}},
 	}
@@ -835,58 +838,64 @@ func TestUrlGroupIgnoresThePostedField(t *testing.T) {
 	}
 }
 
-// The list arrives pasted or as a file; both paths end in the same parser.
-func TestReadIncomingCSV(t *testing.T) {
+// uploadList posts the import form: a paste in the box and a file chosen.
+func uploadList(t *testing.T, paste, name string, file []byte) *http.Request {
+	t.Helper()
+	var body bytes.Buffer
+	mw := multipart.NewWriter(&body)
+	mw.WriteField("csv", paste)
+	part, err := mw.CreateFormFile("file", name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	part.Write(file)
+	mw.Close()
+	r := httptest.NewRequest("POST", "/borrowers/import/preview", &body)
+	r.Header.Set("Content-Type", mw.FormDataContentType())
+	return r
+}
+
+// The list arrives pasted or as a workbook; both paths end in the same parser.
+func TestReadIncomingList(t *testing.T) {
 	const list = "Prénom;Nom;Classe\nLéa;Durant;P4\nTom;Bastin;P3\n"
+	want := []importRow{{"Léa", "D.", "P4", false}, {"Tom", "B.", "P3", false}}
 
 	// Pasted into the text box.
 	r := httptest.NewRequest("POST", "/borrowers/import/preview",
 		strings.NewReader("csv="+url.QueryEscape(list)))
 	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	if got := readIncomingCSV(r); got != list {
-		t.Errorf("pasted CSV: %q", got)
+	if got, err := readIncomingList(r); err != nil || got != list {
+		t.Errorf("pasted list: %q, %v", got, err)
 	}
 
-	// Uploaded as a file, which wins: choosing a file and leaving an old paste
-	// in the box must send the file.
-	var body bytes.Buffer
-	mw := multipart.NewWriter(&body)
-	if err := mw.WriteField("csv", "stale paste"); err != nil {
+	// Uploaded as a workbook, which wins: choosing a file and leaving an old
+	// paste in the box must send the file.
+	var wb bytes.Buffer
+	if err := writeXLSX(&wb, sheet{Name: "Lecteurs", Header: []string{"Prénom", "Nom", "Classe"},
+		Rows: [][]string{{"Léa", "Durant", "P4"}, {"Tom", "Bastin", "P3"}}}); err != nil {
 		t.Fatal(err)
 	}
-	part, err := mw.CreateFormFile("file", "eleves.csv")
+	got, err := readIncomingList(uploadList(t, "stale paste", "eleves.xlsx", wb.Bytes()))
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("uploaded workbook: %v", err)
 	}
-	if _, err := part.Write([]byte(list)); err != nil {
-		t.Fatal(err)
-	}
-	mw.Close()
-
-	r = httptest.NewRequest("POST", "/borrowers/import/preview", &body)
-	r.Header.Set("Content-Type", mw.FormDataContentType())
-	if got := readIncomingCSV(r); got != list {
-		t.Errorf("uploaded file: %q", got)
+	rows, skipped := parseCSV(got)
+	if !slices.Equal(rows, want) || skipped != 0 {
+		t.Errorf("the uploaded workbook imports as %+v (%d skipped), want %+v", rows, skipped, want)
 	}
 
 	// An empty file falls back to the text box rather than importing nothing.
-	body.Reset()
-	mw = multipart.NewWriter(&body)
-	mw.WriteField("csv", list)
-	part, _ = mw.CreateFormFile("file", "vide.csv")
-	part.Write(nil)
-	mw.Close()
-	r = httptest.NewRequest("POST", "/borrowers/import/preview", &body)
-	r.Header.Set("Content-Type", mw.FormDataContentType())
-	if got := readIncomingCSV(r); got != list {
-		t.Errorf("empty file: the pasted list was dropped (%q)", got)
+	if got, err := readIncomingList(uploadList(t, list, "vide.xlsx", nil)); err != nil || got != list {
+		t.Errorf("empty file: the pasted list was dropped (%q, %v)", got, err)
 	}
 
-	// And what comes out of either path only ever carries the initial.
-	rows, _ := parseCSV(readIncomingCSV(r))
-	for _, row := range rows {
-		if len(row.LastInitial) > 2 {
-			t.Errorf("a full last name survived the import: %q", row.LastInitial)
+	// Anything else is refused rather than previewed as bytes.
+	for name, file := range map[string][]byte{
+		"eleves.csv": []byte(list),
+		"eleves.xls": []byte("\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1 old Excel"),
+	} {
+		if _, err := readIncomingList(uploadList(t, "", name, file)); err == nil {
+			t.Errorf("%s: read as a workbook", name)
 		}
 	}
 }
@@ -1119,41 +1128,6 @@ func TestReactivationGuards(t *testing.T) {
 	}
 }
 
-// Excel on Windows saves a French "CSV" in Windows-1252: its bytes are not
-// UTF-8, and read as such every accent becomes U+FFFD.
-func TestDecodeCSVBytesReadsWindows1252(t *testing.T) {
-	cases := []struct {
-		in   []byte
-		want string
-	}{
-		{[]byte("\xc9mile;Fran\xe7ois;P4"), "Émile;François;P4"},
-		{[]byte("L\xe9a;H\xe8gre;P3"), "Léa;Hègre;P3"},
-		{[]byte("Z\x9c;\x80uro;\x8c"), "Zœ;€uro;Œ"},
-		{[]byte("Léa;Durant;P4"), "Léa;Durant;P4"}, // UTF-8 stays as it is
-	}
-	for _, c := range cases {
-		if got := decodeCSVBytes(c.in); got != c.want {
-			t.Errorf("decodeCSVBytes(%q) = %q, want %q", c.in, got, c.want)
-		}
-	}
-
-	// Through the upload, down to the rows the preview shows.
-	var body bytes.Buffer
-	mw := multipart.NewWriter(&body)
-	part, err := mw.CreateFormFile("file", "eleves.csv")
-	if err != nil {
-		t.Fatal(err)
-	}
-	part.Write([]byte("Pr\xe9nom;Nom;Classe\r\n\xc9mile;\xc9tienne;P4\r\n"))
-	mw.Close()
-	r := httptest.NewRequest("POST", "/borrowers/import", &body)
-	r.Header.Set("Content-Type", mw.FormDataContentType())
-	rows, _ := parseCSV(readIncomingCSV(r))
-	if len(rows) != 1 || rows[0] != (importRow{"Émile", "É.", "P4", false}) {
-		t.Errorf("a Windows-1252 file imports as %+v", rows)
-	}
-}
-
 // The empty sheet is a workbook Excel opens, headed in the instance language
 // with words the import skips, so pasting it whole imports the readers only.
 func TestImportTemplateRoundTrips(t *testing.T) {
@@ -1200,9 +1174,12 @@ func TestImportTemplateRoundTrips(t *testing.T) {
 			t.Errorf("%s: the pasted sheet imports as %+v (%d skipped), want %+v", lang, rows, skipped, want)
 		}
 
-		// Uploaded as it is, it is refused in words rather than previewed.
-		if !isZip(w.Body.String()) {
-			t.Errorf("%s: the workbook is not recognised as one", lang)
+		// Uploaded as it is, it imports nobody: its only row is the header.
+		raw, err := readIncomingList(uploadList(t, "", "lecteurs.xlsx", w.Body.Bytes()))
+		if err != nil {
+			t.Errorf("%s: the empty sheet does not read back: %v", lang, err)
+		} else if rows, skipped := parseCSV(raw); len(rows) != 0 || skipped != 0 {
+			t.Errorf("%s: the empty sheet imports as %+v (%d skipped)", lang, rows, skipped)
 		}
 	}
 }

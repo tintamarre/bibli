@@ -234,10 +234,11 @@ Collez l'étiquette sur la couverture arrière, **sans masquer le code-barres IS
 
 ### Importer la liste des emprunteurs
 
-**Emprunteurs** → *Gérer la liste* → *Importer des lecteurs (CSV)*.
+**Emprunteurs** → *Gérer la liste* → *Importer des lecteurs*.
 
-- Coller la liste (colonnes **prénom, nom, groupe**) copiée depuis un tableur, ou choisir un fichier CSV.
-- *Télécharger une feuille Excel vide* fournit un modèle à remplir, puis à copier-coller dans la zone.
+- Coller la liste (colonnes **prénom, nom, groupe**) copiée depuis un tableur, ou choisir un fichier Excel (.xlsx) : seul le premier onglet est lu.
+- *Télécharger une feuille Excel vide* fournit un modèle à remplir, puis à choisir avec le bouton de fichier ou à copier-coller dans la zone.
+- Un autre format (.csv, .xls, .ods) : enregistrez-le en .xlsx depuis le tableur, ou copiez-collez ses cellules.
 - *Prévisualiser* montre ce qui sera créé. Les emprunteurs déjà enregistrés (même prénom, même initiale, même groupe) sont reconnus et ignorés : on peut réimporter la liste à jour (celle de l'administration, par exemple, à chaque nouvelle année) sans créer de doublons.
 
 Le *groupe* sert à regrouper les emprunteurs : une classe, un étage, une unité de soins, un atelier, ou rien du tout. Le personnel peut avoir son propre groupe (« Enseignants », « Équipe »).

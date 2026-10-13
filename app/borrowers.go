@@ -16,7 +16,6 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-	"unicode/utf8"
 )
 
 // Borrowers: entry, CSV import with preview, barcode cards, group changes.
@@ -659,7 +658,10 @@ func parseCSV(raw string) (rows []importRow, skipped int) {
 	rd := csv.NewReader(strings.NewReader(raw))
 	rd.Comma = comma
 	rd.FieldsPerRecord = -1
-	rd.TrimLeadingSpace = true
+	// Not for tabs: the reader counts a tab as leading space even when it is
+	// the separator, so an empty cell would pull the next one into its place.
+	// Each field is trimmed below anyway.
+	rd.TrimLeadingSpace = comma != '\t'
 	records, err := rd.ReadAll()
 	if err != nil {
 		// Tolerant fallback: split by hand.
@@ -729,16 +731,11 @@ func (a *app) borrowersImportTemplate(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// A workbook is a zip: the import reads text, and says so rather than
-// previewing its bytes.
-func isZip(raw string) bool {
-	return strings.HasPrefix(raw, "PK\x03\x04")
-}
-
 func (a *app) borrowersImportPreview(w http.ResponseWriter, r *http.Request) {
-	raw := readIncomingCSV(r)
-	if isZip(raw) {
-		a.fragment(w, r, "borrowers", "import_preview", map[string]any{"Error": tr(r, "import.err_workbook")})
+	raw, err := readIncomingList(r)
+	if err != nil {
+		log.Printf("import/preview (workbook): %v", err)
+		a.fragment(w, r, "borrowers", "import_preview", map[string]any{"Error": tr(r, "import.err_not_xlsx")})
 		return
 	}
 	rows, skipped := parseCSV(raw)
@@ -843,40 +840,38 @@ func (a *app) borrowersImportConfirm(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/borrowers", http.StatusSeeOther)
 }
 
-// From the text field OR the uploaded file.
-func readIncomingCSV(r *http.Request) string {
-	if f, _, err := r.FormFile("file"); err == nil {
-		defer f.Close()
-		if b, err := io.ReadAll(io.LimitReader(f, 4<<20)); err == nil && len(b) > 0 {
-			return decodeCSVBytes(b)
-		}
+// From the uploaded workbook OR the text field. The file wins: choosing one
+// and leaving an old paste in the box must send the file, and an empty file
+// falls back to the box.
+func readIncomingList(r *http.Request) (string, error) {
+	f, _, err := r.FormFile("file")
+	if err != nil {
+		return r.FormValue("csv"), nil
 	}
-	return r.FormValue("csv")
+	defer f.Close()
+	b, err := io.ReadAll(io.LimitReader(f, 4<<20))
+	if err != nil || len(b) == 0 {
+		return r.FormValue("csv"), nil
+	}
+	cells, err := readXLSX(b, 3)
+	if err != nil {
+		return "", err
+	}
+	return tabText(cells), nil
 }
 
-// decodeCSVBytes reads a file as UTF-8, or as Windows-1252 when it is not
-// valid UTF-8: what Excel on Windows writes for a plain "CSV" in French.
-func decodeCSVBytes(b []byte) string {
-	if utf8.Valid(b) {
-		return string(b)
+// tabText writes rows as cells pasted from a spreadsheet arrive, which is
+// what parseCSV reads and the preview hands back to the confirmation. Every
+// row has the same three columns, so the first line tells the separator.
+func tabText(rows [][]string) string {
+	var b strings.Builder
+	cw := csv.NewWriter(&b)
+	cw.Comma = '\t'
+	for _, row := range rows {
+		cw.Write(row)
 	}
-	var sb strings.Builder
-	sb.Grow(len(b) + len(b)/4)
-	for _, c := range b {
-		if c >= 0x80 && c <= 0x9f {
-			sb.WriteRune(cp1252[c-0x80])
-		} else {
-			sb.WriteRune(rune(c)) // the rest of Windows-1252 is Latin-1
-		}
-	}
-	return sb.String()
-}
-
-// cp1252 is the 0x80–0x9F block of Windows-1252; its five unassigned bytes
-// keep their Latin-1 code point, as browsers decode them.
-var cp1252 = [32]rune{
-	'€', 0x81, '‚', 'ƒ', '„', '…', '†', '‡', 'ˆ', '‰', 'Š', '‹', 'Œ', 0x8d, 'Ž', 0x8f,
-	0x90, '‘', '’', '“', '”', '•', '–', '—', '˜', '™', 'š', '›', 'œ', 0x9d, 'ž', 'Ÿ',
+	cw.Flush()
+	return b.String()
 }
 
 // Card is one printable barcode card.
