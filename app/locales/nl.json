@@ -394,7 +394,7 @@
   "inventory_print.heading": "Inventaris van de collectie",
 
   "js.aim_barcode": "Richt op de streepjescode…",
-  "js.batch_add_failed": "De opzoeking is mislukt.",
+  "js.batch_add_failed": "De opzoeking is mislukt: scan het opnieuw.",
   "js.batch_copies.one": "{0} exemplaar",
   "js.batch_copies.other": "{0} exemplaren",
   "js.batch_new_confirm.one": "Bevestig de nieuwe reeks.\n{0} niet toegevoegd boek *wordt niet meer getoond*: leg het opzij om het met de hand toe te voegen.",

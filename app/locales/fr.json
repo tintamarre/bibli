@@ -394,7 +394,7 @@
   "inventory_print.heading": "Inventaire du fonds",
 
   "js.aim_barcode": "Visez le code-barres…",
-  "js.batch_add_failed": "La recherche a échoué.",
+  "js.batch_add_failed": "La recherche a échoué : scannez-le à nouveau.",
   "js.batch_copies.one": "{0} exemplaire",
   "js.batch_copies.other": "{0} exemplaires",
   "js.batch_new_confirm.one": "Veuillez confirmer le nouveau lot.\n{0} livre non ajouté *ne sera plus listé* : gardez-le de côté pour l'ajouter à la main.",

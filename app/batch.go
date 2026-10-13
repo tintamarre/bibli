@@ -58,8 +58,8 @@ type batchRow struct {
 	Codes  []string
 }
 
-// labelsPerSheet is how many stickers a sheet holds, as sticker_style
-// (sheet.html) lays them out: the batch screen counts its copies in sheets.
+// labelsPerSheet is how many stickers a sheet holds: it must match the layout
+// in sticker_style (sheet.html). The batch screen counts its copies in sheets.
 const labelsPerSheet = 40
 
 func (a *app) batchScreen(w http.ResponseWriter, r *http.Request) {

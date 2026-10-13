@@ -343,7 +343,7 @@ function catalogueSearch(e) {
 // book is staged with its copies, to be checked, and added under the shelf
 // typed beside the button. A book no catalogue could place is refused and
 // listed, to be catalogued book by book in another tab.
-var batchQueue = [], batchBusy = false, batchSaving = false;
+var batchQueue = [], batchBusy = false, batchSaving = false, batchSeq = 0;
 
 function batchEl(id) { return document.getElementById(id); }
 
@@ -357,6 +357,7 @@ function batchScan(e) {
   batchAudio(); // created during the keypress, which browsers require
   var li = document.createElement("li");
   li.className = "batch-row batch-pending";
+  li.dataset.seq = ++batchSeq;
   var code = document.createElement("span");
   code.className = "code";
   code.textContent = isbn;
@@ -393,7 +394,6 @@ function batchPump() {
       why.className = "batch-why";
       why.textContent = T("js.batch_add_failed");
       job.li.appendChild(why);
-      job.li.dataset.manual = "";
       batchPlace(job.li, job.li);
     })
     .then(function () {
@@ -446,7 +446,7 @@ function batchSetCopies(li, n) {
 }
 
 // The same book scanned again is one line with one more copy, moved to the top
-// where the eye is.
+// where the eye is; it keeps its place in the scan order (data-seq).
 function batchStage(pending, row) {
   var list = batchEl("batch-list");
   var it = batchItem(row);
@@ -460,6 +460,7 @@ function batchStage(pending, row) {
     batchCardFound(same, Tn("js.batch_copies", batchItem(same).copies));
     return;
   }
+  row.dataset.seq = pending.dataset.seq;
   batchSetCopies(row, it.copies);
   batchCardFound(row, "");
   if (pending.parentNode === list) { pending.replaceWith(row); }
@@ -479,11 +480,8 @@ function batchRemove(btn) {
 }
 
 function batchRefresh() {
-  var books = 0, copies = 0;
-  document.querySelectorAll('#batch-list li[data-kind="found"]').forEach(function (li) {
-    books++;
-    copies += batchItem(li).copies;
-  });
+  var staged = batchStaged(), books = staged.length, copies = 0;
+  staged.forEach(function (s) { copies += s.item.copies; });
   batchEl("batch-summary").textContent = books ? Tn("js.books", books) + " · " + Tn("js.batch_copies", copies) : "";
   batchEl("batch-save").disabled = books === 0 || batchSaving;
   batchSheet(copies);
@@ -502,20 +500,21 @@ function batchRefresh() {
 // One transaction on the server: every staged book is added, under the shelf
 // the field holds at that moment, or none is.
 function batchSave() {
-  var all = document.querySelectorAll('#batch-list li[data-kind="found"]');
-  if (!all.length || batchSaving) { return; }
-  // A full sheet takes the oldest scans first (the list shows the newest on
-  // top); a book straddling the sheet's end sends only what fits.
-  var size = batchSheetSize(), full = batchCopies() >= size;
-  var rows = [], left = size;
+  var staged = batchStaged();
+  if (!staged.length || batchSaving) { return; }
+  // Sent, and so labelled, in the order the books were first scanned: the
+  // order of the pile. A full sheet takes the first scans; a book straddling
+  // the sheet's end sends only what fits.
+  var size = batchSheetSize(), total = 0;
+  staged.forEach(function (s) { total += s.item.copies; });
+  var full = total >= size, rows = [], left = size;
   var body = new URLSearchParams();
   body.set("location", batchEl("batch-location").value.trim());
-  for (var i = all.length - 1; i >= 0; i--) {
-    var it = batchItem(all[i]);
-    if (full && left <= 0) { break; }
+  for (var i = 0; i < staged.length && (!full || left > 0); i++) {
+    var it = staged[i].item;
     var n = full ? Math.min(it.copies, left) : it.copies;
     left -= n;
-    rows.push({ li: all[i], sent: n, kept: it.copies - n });
+    rows.push({ li: staged[i].li, sent: n });
     it.copies = n;
     body.append("item", JSON.stringify(it));
   }
@@ -531,13 +530,18 @@ function batchSave() {
       var t = document.createElement("template");
       t.innerHTML = html.trim();
       if (!t.content.querySelector(".batch-result")) { throw new Error("no result"); }
-      // Only what was sent: a scan may have landed meanwhile.
+      // Only what was sent comes off: a scan or a + may have landed meanwhile.
       rows.forEach(function (r) {
-        if (r.kept > 0) { batchSetCopies(r.li, r.kept); } else { r.li.remove(); }
+        if (!r.li.isConnected) { return; }
+        var rest = batchItem(r.li).copies - r.sent;
+        if (rest > 0) { batchSetCopies(r.li, rest); } else { r.li.remove(); }
       });
       result.innerHTML = html;
       var print = result.querySelector(".batch-print");
       if (win && print) { win.opener = null; win.location = print.href; win = null; }
+      if (win) { win.close(); win = null; }
+      // What is left may fill the next sheet: that one chimes too.
+      batchSheetWasFull = false;
       batchEl("batch-last").hidden = true;
     })
     .catch(function () {
@@ -565,7 +569,6 @@ function batchNew() {
     batchEl("batch-result").innerHTML = "";
     batchEl("batch-refused-list").innerHTML = "";
     batchEl("batch-last").hidden = true;
-    batchSheetWasFull = false;
     batchRefresh();
     refocusScan();
   });
@@ -573,10 +576,11 @@ function batchNew() {
 
 function batchSheetSize() { return parseInt(batchEl("batch-sheet").dataset.size, 10) || 40; }
 
-function batchCopies() {
-  var n = 0;
-  document.querySelectorAll('#batch-list li[data-kind="found"]').forEach(function (li) { n += batchItem(li).copies; });
-  return n;
+// The staged books in the order they were first scanned.
+function batchStaged() {
+  return Array.prototype.map.call(document.querySelectorAll('#batch-list li[data-kind="found"]'), function (li) {
+    return { li: li, item: batchItem(li), seq: parseInt(li.dataset.seq, 10) || 0 };
+  }).sort(function (a, b) { return a.seq - b.seq; });
 }
 
 // The sheet under way: how full it is, and when it fills, a chime and the
@@ -662,9 +666,14 @@ function batchAudio() {
   return batchAudioCtx;
 }
 
+// A sound that fails stays silent: it must never break the scan it follows.
 function batchTone(freqs, length) {
   var ctx = batchAudio();
   if (!ctx) { return; }
+  try { batchPlay(ctx, freqs, length); } catch (e) { /* no sound */ }
+}
+
+function batchPlay(ctx, freqs, length) {
   var t = ctx.currentTime;
   freqs.forEach(function (f, i) {
     var osc = ctx.createOscillator(), gain = ctx.createGain();
@@ -674,7 +683,8 @@ function batchTone(freqs, length) {
     gain.gain.setValueAtTime(0.0001, start);
     gain.gain.exponentialRampToValueAtTime(0.12, start + 0.015);
     gain.gain.exponentialRampToValueAtTime(0.0001, start + length);
-    osc.connect(gain).connect(ctx.destination);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
     osc.start(start);
     osc.stop(start + length + 0.02);
   });

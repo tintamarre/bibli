@@ -394,7 +394,7 @@
   "inventory_print.heading": "Collection inventory",
 
   "js.aim_barcode": "Point at the barcode…",
-  "js.batch_add_failed": "The search failed.",
+  "js.batch_add_failed": "The search failed: scan it again.",
   "js.batch_copies.one": "{0} copy",
   "js.batch_copies.other": "{0} copies",
   "js.batch_new_confirm.one": "Please confirm the new batch.\n{0} book not added *will no longer be listed*: keep it aside to add it by hand.",
