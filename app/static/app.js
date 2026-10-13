@@ -354,6 +354,7 @@ function batchScan(e) {
   field.value = "";
   field.focus();
   if (!isbn) { return false; }
+  batchAudio(); // created during the keypress, which browsers require
   var li = document.createElement("li");
   li.className = "batch-row batch-pending";
   var code = document.createElement("span");
@@ -392,6 +393,7 @@ function batchPump() {
       why.className = "batch-why";
       why.textContent = T("js.batch_add_failed");
       job.li.appendChild(why);
+      job.li.dataset.manual = "";
       batchPlace(job.li, job.li);
     })
     .then(function () {
@@ -407,6 +409,8 @@ function batchPlace(pending, row) {
     batchStage(pending, row);
     return;
   }
+  batchCardRefused(row);
+  batchTone([220], 0.22);
   // The same book twice is one line, said to be scanned twice.
   var same = Array.prototype.find.call(batchEl("batch-refused-list").children, function (li) {
     return li !== row && li.dataset.isbn === row.dataset.isbn;
@@ -453,9 +457,11 @@ function batchStage(pending, row) {
     batchSetCopies(same, batchItem(same).copies + it.copies);
     list.insertBefore(same, list.firstChild);
     pending.remove();
+    batchCardFound(same, Tn("js.batch_copies", batchItem(same).copies));
     return;
   }
   batchSetCopies(row, it.copies);
+  batchCardFound(row, "");
   if (pending.parentNode === list) { pending.replaceWith(row); }
   else { list.insertBefore(row, list.firstChild); }
 }
@@ -480,6 +486,10 @@ function batchRefresh() {
   });
   batchEl("batch-summary").textContent = books ? Tn("js.books", books) + " · " + Tn("js.batch_copies", copies) : "";
   batchEl("batch-save").disabled = books === 0 || batchSaving;
+  batchSheet(copies);
+  var waiting = batchQueue.length + (batchBusy ? 1 : 0);
+  batchEl("batch-pending").hidden = waiting === 0;
+  batchEl("batch-pending").textContent = waiting ? Tn("js.batch_pending", waiting) : "";
   var refused = batchEl("batch-refused-list").children.length;
   batchEl("batch-refused").hidden = refused === 0;
   var working = batchBusy || batchQueue.length > 0;
@@ -492,13 +502,28 @@ function batchRefresh() {
 // One transaction on the server: every staged book is added, under the shelf
 // the field holds at that moment, or none is.
 function batchSave() {
-  var rows = document.querySelectorAll('#batch-list li[data-kind="found"]');
-  if (!rows.length || batchSaving) { return; }
-  batchSaving = true;
-  batchRefresh();
+  var all = document.querySelectorAll('#batch-list li[data-kind="found"]');
+  if (!all.length || batchSaving) { return; }
+  // A full sheet takes the oldest scans first (the list shows the newest on
+  // top); a book straddling the sheet's end sends only what fits.
+  var size = batchSheetSize(), full = batchCopies() >= size;
+  var rows = [], left = size;
   var body = new URLSearchParams();
   body.set("location", batchEl("batch-location").value.trim());
-  rows.forEach(function (li) { body.append("item", li.dataset.item); });
+  for (var i = all.length - 1; i >= 0; i--) {
+    var it = batchItem(all[i]);
+    if (full && left <= 0) { break; }
+    var n = full ? Math.min(it.copies, left) : it.copies;
+    left -= n;
+    rows.push({ li: all[i], sent: n, kept: it.copies - n });
+    it.copies = n;
+    body.append("item", JSON.stringify(it));
+  }
+  // Opened now, inside the click: a window opened when the answer arrives
+  // would be stopped as a pop-up.
+  var win = full ? window.open("", "_blank") : null;
+  batchSaving = true;
+  batchRefresh();
   var result = batchEl("batch-result");
   fetch("/catalogue/batch/save", { method: "POST", body: body, credentials: "same-origin" })
     .then(function (r) { if (!r.ok) { throw new Error(r.status); } return r.text(); })
@@ -507,10 +532,16 @@ function batchSave() {
       t.innerHTML = html.trim();
       if (!t.content.querySelector(".batch-result")) { throw new Error("no result"); }
       // Only what was sent: a scan may have landed meanwhile.
-      rows.forEach(function (li) { li.remove(); });
+      rows.forEach(function (r) {
+        if (r.kept > 0) { batchSetCopies(r.li, r.kept); } else { r.li.remove(); }
+      });
       result.innerHTML = html;
+      var print = result.querySelector(".batch-print");
+      if (win && print) { win.opener = null; win.location = print.href; win = null; }
+      batchEl("batch-last").hidden = true;
     })
     .catch(function () {
+      if (win) { win.close(); win = null; }
       result.innerHTML = "";
       var p = document.createElement("p");
       p.className = "err";
@@ -523,6 +554,149 @@ function batchSave() {
       refocusScan();
     });
 }
+
+// Starts the next batch: the result and the refused books go, the location
+// and any scan made since stay.
+function batchNew() {
+  var refused = batchEl("batch-refused-list").children.length;
+  var go = refused ? askConfirm(Tn("js.batch_new_confirm", refused)) : Promise.resolve(true);
+  go.then(function (ok) {
+    if (!ok) { refocusScan(); return; }
+    batchEl("batch-result").innerHTML = "";
+    batchEl("batch-refused-list").innerHTML = "";
+    batchEl("batch-last").hidden = true;
+    batchSheetWasFull = false;
+    batchRefresh();
+    refocusScan();
+  });
+}
+
+function batchSheetSize() { return parseInt(batchEl("batch-sheet").dataset.size, 10) || 40; }
+
+function batchCopies() {
+  var n = 0;
+  document.querySelectorAll('#batch-list li[data-kind="found"]').forEach(function (li) { n += batchItem(li).copies; });
+  return n;
+}
+
+// The sheet under way: how full it is, and when it fills, a chime and the
+// add button offering exactly one sheet.
+var batchSheetWasFull = false;
+function batchSheet(copies) {
+  var size = batchSheetSize(), full = copies >= size;
+  batchEl("batch-sheet-fill").style.width = Math.min(100, copies * 100 / size) + "%";
+  batchEl("batch-sheet").classList.toggle("is-full", full);
+  batchEl("batch-sheet-text").textContent = copies
+    ? T("js.batch_sheet", Math.min(copies, size), size) + (copies > size ? " · " + Tn("js.batch_sheet_next", copies - size) : "")
+    : "";
+  batchEl("batch-sheet-full").hidden = !full;
+  var save = batchEl("batch-save");
+  save.querySelector("[data-save-all]").hidden = full;
+  save.querySelector("[data-save-sheet]").hidden = !full;
+  if (full && !batchSheetWasFull) { batchTone([660, 880], 0.12); }
+  batchSheetWasFull = full;
+}
+
+// The card under the scan field: the last answer, until the next one.
+function batchCard(kind) {
+  var card = batchEl("batch-last");
+  card.className = "batch-last " + kind;
+  card.innerHTML = "";
+  card.hidden = false;
+  return card;
+}
+
+function batchCardFound(row, again) {
+  var card = batchCard(row.querySelector(".batch-badge-known") ? "batch-last-known" : "batch-last-new");
+  var cover = row.querySelector(".batch-cover");
+  if (cover) { card.appendChild(cover.cloneNode()); }
+  var main = document.createElement("div");
+  main.className = "batch-last-main";
+  var title = document.createElement("b");
+  title.textContent = "✓ " + row.querySelector(".batch-title").textContent;
+  main.appendChild(title);
+  var meta = row.querySelector(".batch-meta");
+  if (meta) { var m = document.createElement("span"); m.className = "batch-meta"; m.textContent = meta.textContent; main.appendChild(m); }
+  var badge = document.createElement("span");
+  badge.className = "batch-last-badge";
+  badge.textContent = again || row.querySelector(".batch-badge").textContent;
+  main.appendChild(badge);
+  card.appendChild(main);
+}
+
+function batchCardRefused(row) {
+  var card = batchCard("batch-last-refused");
+  var main = document.createElement("div");
+  main.className = "batch-last-main";
+  var title = document.createElement("b");
+  title.textContent = "✗ " + (row.querySelector(".batch-why") || {}).textContent;
+  main.appendChild(title);
+  var code = document.createElement("span");
+  code.className = "code";
+  code.textContent = row.dataset.isbn;
+  main.appendChild(code);
+  // A valid ISBN no catalogue knows goes on the pile to catalogue by hand; a
+  // misread is scanned again, its message says so.
+  if (row.hasAttribute("data-manual")) {
+    var aside = document.createElement("span");
+    aside.className = "batch-last-badge";
+    aside.textContent = T("js.batch_set_aside");
+    main.appendChild(aside);
+  }
+  card.appendChild(main);
+}
+
+// Short, quiet tones from the browser itself: no sound file to fetch. Off when
+// muted on this computer.
+var batchAudioCtx = null;
+function batchSoundOn() {
+  try { return localStorage.getItem("bibli.batchSound") !== "off"; } catch (e) { return true; }
+}
+
+function batchAudio() {
+  if (!batchSoundOn()) { return null; }
+  try {
+    if (!batchAudioCtx) { batchAudioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+    if (batchAudioCtx.state === "suspended") { batchAudioCtx.resume(); }
+  } catch (e) { batchAudioCtx = null; }
+  return batchAudioCtx;
+}
+
+function batchTone(freqs, length) {
+  var ctx = batchAudio();
+  if (!ctx) { return; }
+  var t = ctx.currentTime;
+  freqs.forEach(function (f, i) {
+    var osc = ctx.createOscillator(), gain = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.value = f;
+    var start = t + i * length;
+    gain.gain.setValueAtTime(0.0001, start);
+    gain.gain.exponentialRampToValueAtTime(0.12, start + 0.015);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + length);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(start);
+    osc.stop(start + length + 0.02);
+  });
+}
+
+function batchToggleSound() {
+  var on = !batchSoundOn();
+  try { localStorage.setItem("bibli.batchSound", on ? "on" : "off"); } catch (e) { /* stays as it was */ }
+  batchShowSound();
+  if (on) { batchTone([660], 0.1); }
+  refocusScan();
+}
+
+function batchShowSound() {
+  var btn = batchEl("batch-sound");
+  if (!btn) { return; }
+  var on = batchSoundOn();
+  btn.setAttribute("aria-pressed", on ? "true" : "false");
+  btn.querySelector("[data-sound-on]").hidden = !on;
+  btn.querySelector("[data-sound-off]").hidden = on;
+}
+document.addEventListener("DOMContentLoaded", batchShowSound);
 
 // Sorting by a column heading. The order lives in two hidden fields of the
 // filter form, so it always posts with the filter; clicking again reverses.

@@ -1678,3 +1678,24 @@ button, input, select, textarea { font-family: inherit; }
 .btn-qty { min-width: 44px; padding: 0; }
 .batch-result { padding: 1rem 1.25rem; }
 .batch-result .big-ok { margin-bottom: .5rem; }
+.batch-result-actions { display: flex; flex-wrap: wrap; gap: .75rem; }
+/* The last answer, big enough to read from the scanner. Amber for a refusal:
+   red means overdue only. */
+.batch-last { display: flex; gap: .9rem; align-items: center; margin-top: .9rem; padding: .8rem .9rem;
+  border-radius: var(--radius-s); border: 2px solid var(--ok-border); background: var(--ok-bg); }
+.batch-last .batch-cover { width: 64px; height: 92px; }
+.batch-last-main { display: flex; flex-direction: column; gap: .2rem; min-width: 0; }
+.batch-last-main b { font-size: 1.15rem; overflow-wrap: anywhere; }
+.batch-last-badge { font-weight: 600; color: var(--ok); }
+.batch-last-known .batch-last-badge { color: var(--accent-dark); }
+.batch-last-refused { border-color: var(--alert); background: var(--alert-bg); color: var(--alert); }
+.batch-last-refused .batch-last-badge { color: var(--alert); }
+.batch-pending-count { margin: .5rem 0 0; color: var(--muted); }
+.batch-sound { margin-top: .5rem; min-height: 44px; font-size: .9rem; }
+.batch-sheet { display: flex; align-items: center; gap: .75rem; margin-top: .5rem; }
+.batch-sheet-bar { flex: 1; height: 8px; border-radius: 4px; background: var(--bg); border: 1px solid var(--border); overflow: hidden; }
+.batch-sheet-bar span { display: block; height: 100%; width: 0; background: var(--accent); transition: width .2s; }
+.batch-sheet.is-full .batch-sheet-bar span { background: var(--ok); }
+.batch-sheet-text { color: var(--muted); font-size: .9rem; white-space: nowrap; }
+.batch-sheet-full { margin: .6rem 0 0; padding: .6rem .8rem; border-radius: var(--radius-s);
+  background: var(--ok-bg); border: 1px solid var(--ok-border); color: var(--ok); font-weight: 600; }
