@@ -92,36 +92,11 @@ func (a *app) printLoans(w http.ResponseWriter, r *http.Request) {
 
 // printInventory is the whole collection, one copy per line, ready to print.
 func (a *app) printInventory(w http.ResponseWriter, r *http.Request) {
-	// The inventory screen on paper, filter and order included.
-	f := readInvFilter(r)
-	rows, err := a.db.Query(
-		`SELECT b.title, COALESCE(b.authors, ''), COALESCE(b.isbn13, ''), c.code, c.status,
-		        COALESCE(c.location, ''),
-		        CASE WHEN l.id IS NOT NULL THEN 'out' ELSE '' END
-		   FROM copy c
-		   JOIN book b ON b.id = c.book_id
-		   LEFT JOIN loan l ON l.copy_id = c.id AND l.returned_on IS NULL`+
-			invWhere(f)+` ORDER BY `+invOrderBy(f), invArgs(f)...)
+	// The inventory screen on paper, filter and order included, read through the
+	// screen's own query so the two cannot drift apart.
+	list, err := a.listInventory(readInvFilter(r))
 	if err != nil {
 		log.Printf("inventory print: %v", err)
-		internalError(w, r)
-		return
-	}
-	defer rows.Close()
-
-	type row struct{ Title, Authors, ISBN, Code, Status, Location, Out string }
-	var list []row
-	for rows.Next() {
-		var l row
-		if err := rows.Scan(&l.Title, &l.Authors, &l.ISBN, &l.Code, &l.Status, &l.Location, &l.Out); err != nil {
-			log.Printf("inventory print (scan): %v", err)
-			internalError(w, r)
-			return
-		}
-		list = append(list, l)
-	}
-	if err := rows.Err(); err != nil {
-		log.Printf("inventory print (rows): %v", err)
 		internalError(w, r)
 		return
 	}

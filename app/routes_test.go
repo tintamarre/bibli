@@ -465,8 +465,11 @@ func TestEveryScreenOpensOverTheDemonstrationData(t *testing.T) {
 		"/print/labels", "/print/loans", "/print/overdue", "/print/inventory", "/export.csv", "/export.xlsx",
 		"/stats", "/stats/collection.xlsx", "/stats/collection.csv", "/settings", "/about",
 	}
+	// The printout and exports take the screen's order, so every one of them too.
 	for key := range invSortColumns {
-		paths = append(paths, "/inventory?sort="+key, "/inventory?sort="+key+"&dir=asc")
+		for _, p := range []string{"/inventory", "/print/inventory", "/print/labels", "/export.csv"} {
+			paths = append(paths, p+"?sort="+key, p+"?sort="+key+"&dir=asc")
+		}
 	}
 	for _, q := range []struct{ prefix, query string }{
 		{"/book/", `SELECT id FROM book`},
@@ -495,9 +498,16 @@ func TestEveryScreenOpensOverTheDemonstrationData(t *testing.T) {
 		}
 	}
 
+	// A template that fails half-way has already sent its 200: the error text
+	// appended to the page is what gives it away.
+	loadForTest(t)
+	failed := T(defaultLang, "error.internal")
 	for _, path := range paths {
-		if w := get(h, path, c); w.Code != http.StatusOK {
+		w := get(h, path, c)
+		if w.Code != http.StatusOK {
 			t.Errorf("GET %s = %d, want 200", path, w.Code)
+		} else if strings.Contains(w.Body.String(), failed) {
+			t.Errorf("GET %s broke off with %q", path, failed)
 		}
 	}
 }

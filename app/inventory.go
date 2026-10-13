@@ -233,7 +233,8 @@ var invSortColumns = map[string]string{
 	"code":     `c.code {dir}`,
 	"location": `COALESCE(c.location, '') = '' {dir}, COALESCE(c.location, '') {dir}, b.title, c.code`,
 	"status":   `c.status {dir}, b.title, c.code`,
-	"loan":     `outFlag {dir}, b.title, c.code`,
+	// Not invSelect's outFlag: the exports read through queries of their own.
+	"loan": `EXISTS (` + openLoanForCopy + `) {dir}, b.title, c.code`,
 	// The order the copies were recorded in, to the second, then as created.
 	"added": `c.created_at {dir}, c.id {dir}`,
 }
