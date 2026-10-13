@@ -557,6 +557,8 @@ button, input, select, textarea { font-family: inherit; }
 .menu-admin-panel a[aria-current="page"] { color: var(--accent-dark); font-weight: 600; }
 .menu-admin-panel a[aria-current="page"] .menu-icon { color: var(--accent); }
 .menu-admin-panel form { margin: .25rem 0 0; padding-top: .25rem; border-top: 1px solid var(--border); }
+/* Between the sections of a page menu: acting, printing, exporting. */
+.menu-admin-panel .menu-sep { border: 0; border-top: 1px solid var(--border); margin: .25rem 0; }
 /* Hamburger menu groups: the desk first, management after. */
 .menu-group {
   margin: .35rem .7rem .15rem; font-size: .8rem; font-weight: 700; color: var(--muted);

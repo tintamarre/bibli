@@ -279,6 +279,9 @@ func (a *app) handler() http.Handler {
 	// Operations
 	mux.HandleFunc("GET /inventory", a.inventoryScreen)
 	mux.HandleFunc("POST /inventory/search", a.inventorySearch)
+	mux.HandleFunc("GET /inventory/move", a.moveScreen)
+	mux.HandleFunc("POST /inventory/move", a.moveScan)
+	mux.HandleFunc("POST /inventory/location", a.locationRename)
 	mux.HandleFunc("POST /inventory/{id}", a.inventoryUpdate)
 	mux.HandleFunc("GET /print/labels", a.printLabels)
 	mux.HandleFunc("GET /print/loans", a.printLoans)

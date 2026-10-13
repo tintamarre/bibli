@@ -489,7 +489,16 @@ func (a *app) inventoryData(f invFilter, offset int) (map[string]any, error) {
 	if err != nil {
 		return nil, err
 	}
-	return map[string]any{"Rows": rows, "Page": pg, "Filter": f, "Locations": locations}, nil
+	// How many copies the filtered location holds, whatever the other filters.
+	count := 0
+	if value, ok := locationFilter(f.Location); ok {
+		for _, l := range locations {
+			if l.Location == value {
+				count = l.Count
+			}
+		}
+	}
+	return map[string]any{"Rows": rows, "Page": pg, "Filter": f, "Locations": locations, "LocationCount": count}, nil
 }
 
 func (a *app) inventoryScreen(w http.ResponseWriter, r *http.Request) {

@@ -1,21 +1,24 @@
 {{define "title_icon"}}{{template "icon-inventory" "title-icon"}}{{end}}
-{{/* Hard right: "Cataloguer", then the output menu. Kept outside inv_actions,
-     which is swapped out of band on every search. */}}
+{{/* Hard right: "Cataloguer", then the menu of everything else. Kept outside
+     inv_actions, which is swapped out of band on every search. */}}
 {{define "title_actions"}}
 <a class="btn-secondary" href="/catalogue">{{template "icon-plus" "btn-icon"}}{{T "inventory.add_book"}}</a>
 {{template "inv_actions" .}}
 {{end}}
 
-{{/* Everything that leaves the screen, behind one <details data-autoclose>
-     (app.js). Each entry carries the filter, so it outputs what the list shows. */}}
+{{/* Every other action, behind one <details data-autoclose> (app.js). The
+     outputs carry the filter, so they output what the list shows. */}}
 {{define "inv_actions"}}
 <details class="page-menu" id="inv-actions" data-autoclose{{if .OOB}} hx-swap-oob="true"{{end}}>
-  <summary>{{template "icon-download" "btn-icon"}}{{T "inventory.actions"}} {{template "icon-chevron" "icon-chevron"}}</summary>
+  <summary>{{template "icon-tools" "btn-icon"}}{{T "inventory.actions"}} {{template "icon-chevron" "icon-chevron"}}</summary>
   <div class="menu-admin-panel">
+    <a href="/inventory/move">{{template "icon-shelf" "menu-icon"}}<span>{{T "inventory.move"}}</span></a>
+    <hr class="menu-sep">
     <a href="{{.Filter.URL "/print/labels"}}" target="_blank" rel="noopener"
       >{{template "icon-card" "menu-icon"}}<span>{{Tn "labels.print_count" .Page.Total}}</span></a>
     <a href="{{.Filter.URL "/print/inventory"}}" target="_blank" rel="noopener"
       >{{template "icon-print" "menu-icon"}}<span>{{T "inventory.print_list"}}</span></a>
+    <hr class="menu-sep">
     {{/* The .xlsx is the one to double-click; the CSV is for whatever reads a
          file. */}}
     <a href="{{.Filter.URL "/export.xlsx"}}">{{template "icon-download" "menu-icon"}}<span>{{T "inventory.export_xlsx"}}</span></a>
@@ -28,6 +31,8 @@
 <p class="note">
   {{T "inventory.help"}}
 </p>
+
+{{template "inv_rename_slot" .}}
 
 {{/* One form for the whole state of the list, so filters and order always post
      together. "sortchange" is fired by the headings (app.js); "change" bubbles
@@ -100,6 +105,7 @@
      current filter. OOB is set only by the search handler, so the first render
      leaves no stray attribute. */}}
 {{if .OOB}}{{template "inv_actions" .}}{{end}}
+{{if .OOB}}{{template "inv_rename_slot" .}}{{end}}
 {{/* The day of entry is a column only while filtered to a period (ByDate).
      Hidden by a class on the table, not left out of the row: inv_row redraws a
      row without the filter, and a row one cell short would shift every value. */}}
@@ -124,6 +130,46 @@
   </tbody>
 </table>
 {{template "pager" .Page}}
+</div>
+{{end}}
+
+{{/* Above the filter bar, which stays joined to the table; swapped out of band
+     like inv_actions so it follows the location filter. */}}
+{{define "inv_rename_slot"}}
+<div id="inv-rename"{{if .OOB}} hx-swap-oob="true"{{end}}>{{if .Filter.Location}}{{template "inv_rename" .}}{{end}}</div>
+{{end}}
+
+{{/* Filtered on one location: rename it, every copy in it following. "-" is
+     the dropdown's value for the copies with no location. */}}
+{{define "inv_rename"}}
+{{$unfiled := eq .Filter.Location "-"}}
+<details class="collapsible form-measured" id="rename-location">
+  <summary>{{if $unfiled}}{{T "rename.summary_unfiled"}}{{else}}{{T "rename.summary"}}{{end}}</summary>
+  <p class="note">{{if $unfiled}}{{Tn "rename.help_unfiled" .LocationCount}}{{else}}{{Tn "rename.help" .LocationCount .Filter.Location}}{{end}}</p>
+  <form hx-post="/inventory/location" hx-target="#rename-result" hx-swap="innerHTML">
+    <input type="hidden" name="from" value="{{.Filter.Location}}">
+    <input type="hidden" name="filter" value="{{.Filter.Query}}">
+    <label class="field"><span>{{T "rename.new_name"}}</span>
+      <input name="to" list="locations" required autocomplete="off"
+             value="{{if not $unfiled}}{{.Filter.Location}}{{end}}"></label>
+    {{template "location_datalist" .Locations}}
+    <div id="rename-result"></div>
+    <div class="form-actions">
+      <button class="btn-primary" type="submit">{{if $unfiled}}{{T "rename.submit_unfiled"}}{{else}}{{T "rename.submit"}}{{end}}</button>
+      {{if not $unfiled}}<a class="link-quiet" href="/inventory/move?location={{.Filter.Location}}">{{T "rename.scan_here"}}</a>{{end}}
+    </div>
+  </form>
+</details>
+{{end}}
+
+{{define "rename_err"}}<p class="return-card err">{{.}}</p>{{end}}
+
+{{/* A name already in use: say what merging means before doing it. */}}
+{{define "rename_merge"}}
+<div class="scan-block choice-block">
+  <p class="step">{{Tn "rename.merge_question" .Count .To}}</p>
+  <button type="button" class="btn-primary" hx-post="/inventory/location" hx-include="closest form"
+          hx-vals='{"merge": "1"}' hx-target="#rename-result" hx-swap="innerHTML">{{T "rename.merge_confirm"}}</button>
 </div>
 {{end}}
 
