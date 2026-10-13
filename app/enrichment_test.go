@@ -535,6 +535,27 @@ func TestSearchOpenLibraryKeepsTheRecordWithoutItsAuthor(t *testing.T) {
 	}
 }
 
+// "n/a" or "Collectif" names no one: the field stays empty.
+func TestSearchOpenLibraryDropsPlaceholderAuthors(t *testing.T) {
+	stubCatalogues(t, func(r *http.Request) (int, string, string) {
+		switch r.URL.Path {
+		case "/isbn/9782070408504.json":
+			return 200, "application/json", `{"title":"Le Petit Prince","authors":[{"key":"/authors/OL1A"},{"key":"/authors/OL2A"},{"key":"/authors/OL31901A"}]}`
+		case "/authors/OL1A.json":
+			return 200, "application/json", `{"name":"n/a"}`
+		case "/authors/OL2A.json":
+			return 200, "application/json", `{"name":"Collectif"}`
+		case "/authors/OL31901A.json":
+			return 200, "application/json", olAuthorJSON
+		}
+		return 404, "", ""
+	})
+	n, err := searchOpenLibrary(context.Background(), petitPrince13, petitPrince10)
+	if err != nil || n == nil || n.Authors != "Antoine de Saint-Exupéry" {
+		t.Errorf("searchOpenLibrary = %+v, %v; want only the real author", n, err)
+	}
+}
+
 // With the budget nearly spent, the authors are not asked.
 func TestSearchOpenLibrarySkipsAuthorsWhenTheBudgetIsSpent(t *testing.T) {
 	calls := stubCatalogues(t, openLibraryStub)

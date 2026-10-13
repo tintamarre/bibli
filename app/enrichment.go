@@ -494,6 +494,16 @@ func (ed openLibraryEdition) holds(i13, i10 string) bool {
 	return false
 }
 
+// placeholderAuthor says whether an Open Library author name stands for no
+// author at all ("n/a", "Collectif"…): better an empty field than a false one.
+func placeholderAuthor(name string) bool {
+	switch strings.ToLower(strings.Trim(strings.TrimSpace(name), ".")) {
+	case "", "n/a", "na", "-", "?", "unknown", "anonymous", "anonyme", "inconnu", "collectif", "collective", "various", "various authors":
+		return true
+	}
+	return false
+}
+
 // openLibraryAuthors resolves the edition's author keys to names, in order,
 // skipping any that cannot be read: an author missing from the form is a
 // field left for the librarian, not a reason to lose the record.
@@ -517,7 +527,7 @@ func openLibraryAuthors(ctx context.Context, ed openLibraryEdition) []string {
 		var au struct {
 			Name string `json:"name"`
 		}
-		if json.Unmarshal(body, &au) == nil && strings.TrimSpace(au.Name) != "" {
+		if json.Unmarshal(body, &au) == nil && !placeholderAuthor(au.Name) {
 			names = append(names, strings.TrimSpace(au.Name))
 		}
 	}

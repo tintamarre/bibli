@@ -264,3 +264,36 @@ func TestUniCatNoMatchDiagnosticIsAbsence(t *testing.T) {
 		t.Errorf("got record %v, error %v; want nil, nil", n, err)
 	}
 }
+
+// Without 041, the language comes from the 008, which UniCat sends shortened.
+func TestRecordFromMarc21LanguageFrom008(t *testing.T) {
+	const body = `<searchRetrieveResponse><records><record><recordData>
+  <record xmlns="http://www.loc.gov/MARC21/slim">
+   <controlfield tag="001">141112180</controlfield>
+   <controlfield tag="008">s2009    xx fre||||||||||||||||| u</controlfield>
+   <datafield tag="245" ind1="1" ind2="4"><subfield code="a">Wall.E</subfield></datafield>
+  </record>
+ </recordData></record></records></searchRetrieveResponse>`
+	n, err := recordFromMarc21([]byte(body), "9782805800429", "2805800427")
+	if err != nil || n == nil {
+		t.Fatalf("recordFromMarc21 = %v, %v; want a record", n, err)
+	}
+	if n.Language != "fr" {
+		t.Errorf("language: %q, want fr", n.Language)
+	}
+}
+
+func TestLanguage008(t *testing.T) {
+	cases := map[string]string{
+		"940101s1994    be a          000 0 dut d": "nl",
+		"s2009    xx fre||||||||||||||||| u":       "fr",
+		"s2009    nyu |||||||||||||||||| u":        "",
+		"940101s1994    fr a          000 0 ||| d": "",
+		"": "",
+	}
+	for in, want := range cases {
+		if got := language008(in); got != want {
+			t.Errorf("language008(%q) = %q, want %q", in, got, want)
+		}
+	}
+}

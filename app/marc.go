@@ -16,7 +16,7 @@ import (
 // Useful UNIMARC fields: 200$a title, 200$e subtitle, 700/701/702 $a$b authors,
 // 214$c/210$c publisher, 214$d/210$d year, 101$a language, 856 the cover.
 // MARC21: 245$a$b title, 100/700$a authors, 260/264$b publisher, 260/264$c
-// year, 041$a language.
+// year, 041$a language, else 008.
 
 func recordFromUnimarc(body []byte, i13, i10 string) (*Record, error) {
 	fields, err := parseUnimarc(body)
@@ -75,7 +75,8 @@ func unimarcCover(fields []Datafield) string {
 	return ""
 }
 
-// Datafield is a UNIMARC tag and its subfields, in order.
+// Datafield is a MARC tag and its subfields, in order. A control field
+// (001-009) holds its whole value as one subfield with an empty code.
 
 type Datafield struct {
 	Tag  string
@@ -116,6 +117,11 @@ func parseUnimarc(data []byte) ([]Datafield, error) {
 				inURI = true
 			case "datafield":
 				cur = &Datafield{Tag: attribute(e, "tag")}
+			case "controlfield":
+				cur = &Datafield{Tag: attribute(e, "tag")}
+				code = ""
+				val.Reset()
+				inSub = true
 			case "subfield":
 				code = attribute(e, "code")
 				val.Reset()
@@ -137,6 +143,13 @@ func parseUnimarc(data []byte) ([]Datafield, error) {
 			case "subfield":
 				if cur != nil {
 					cur.Subs = append(cur.Subs, [2]string{code, strings.TrimSpace(val.String())})
+				}
+				inSub = false
+			case "controlfield":
+				if cur != nil {
+					cur.Subs = append(cur.Subs, [2]string{"", val.String()})
+					fields = append(fields, *cur)
+					cur = nil
 				}
 				inSub = false
 			case "datafield":
@@ -259,7 +272,26 @@ func recordFromMarc21(body []byte, i13, i10 string) (*Record, error) {
 	if f := firstField(fields, "041"); f != nil {
 		n.Language = lang2(subfield(f, "a"))
 	}
+	if f := firstField(fields, "008"); f != nil && n.Language == "" {
+		n.Language = language008(subfield(f, ""))
+	}
 	return n, nil
+}
+
+// language008 reads the language of a MARC21 008: positions 35-37, or for
+// UniCat's shortened 008 ("s2009    xx fre|||…") the first known code in it.
+
+func language008(s string) string {
+	if len(s) == 40 && strings.TrimSpace(strings.Trim(s[35:38], "|")) != "" {
+		return lang2(s[35:38])
+	}
+	for _, w := range strings.Fields(strings.ReplaceAll(s, "|", " ")) {
+		switch w {
+		case "fre", "fra", "dut", "nld", "eng", "ger", "deu":
+			return lang2(w)
+		}
+	}
+	return ""
 }
 
 // cleanMarc removes the trailing ISBD punctuation of a MARC subfield (" : / ; ,").
