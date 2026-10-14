@@ -492,6 +492,7 @@
   "loan.too_many_books": "Too many books match “{0}” — narrow the title down.",
   "loan.too_many_borrowers": "Too many results — narrow it down (group and/or first name).",
   "loan.which_book": "Which book?",
+  "loan.which_copy": "Several copies of “{0}” are on the shelf — scan the code on the label, or choose:",
 
   "loans.all": "All loans",
   "loans.books_count.one": "{0} book",

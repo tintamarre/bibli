@@ -136,7 +136,7 @@
 </ul>
 {{end}}
 
-{{/* A result goes back through /borrow/add, so through every check of a scan. */}}
+{{/* A result goes back through /borrow/add, which asks which copy when several are free. */}}
 {{define "borrow_book_results"}}
 {{if .TooMany}}
   <p class="results-indicator">{{T "loan.too_many_books" .Search}}</p>
@@ -147,17 +147,35 @@
     {{range .Results}}
     <li>
       <button type="button" class="borrower-result"
-              hx-post="/borrow/add" hx-vals='{"code": "{{.Code}}"}'
+              hx-post="/borrow/add" hx-vals='{"book_id": "{{.BookID}}"}' hx-include="#basket"
               hx-target="#scan-feedback" hx-swap="innerHTML">
         <b>{{.Title}}</b>{{with .Authors}}<br><span class="detail">{{.}}</span>{{end}}
-        <br><span class="detail"><span class="code">{{.Code}}</span>{{if gt .Available 1}}
-          · {{Tn "loan.copies_on_shelf" .Available}}{{end}}</span>
+        <br><span class="detail">{{if gt .Available 1}}{{Tn "loan.copies_on_shelf" .Available}}{{else}}<span class="code">{{.Code}}</span>{{end}}</span>
       </button>
     </li>
     {{end}}
   </ul>
 </div>
 {{end}}
+{{end}}
+
+{{/* Several copies of a scanned ISBN on the shelf: the label on the book in
+     hand says which. A choice goes back through /borrow/add like a scan. */}}
+{{define "borrow_copy_choice"}}
+<div class="new-book">
+  <p class="step">{{T "loan.which_copy" .Title}}</p>
+  <ul class="borrower-results">
+    {{range .Copies}}
+    <li>
+      <button type="button" class="borrower-result"
+              hx-post="/borrow/add" hx-vals='{"code": "{{.Code}}"}' hx-include="#basket"
+              hx-target="#scan-feedback" hx-swap="innerHTML">
+        <span class="code">{{.Code}}</span>{{with .Location}} · <span class="detail">{{.}}</span>{{end}}
+      </button>
+    </li>
+    {{end}}
+  </ul>
+</div>
 {{end}}
 
 {{define "borrow_add_err"}}<span class="err">{{.}}</span>{{end}}

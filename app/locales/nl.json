@@ -492,6 +492,7 @@
   "loan.too_many_books": "Te veel boeken passen bij “{0}” — geef de titel preciezer op.",
   "loan.too_many_borrowers": "Te veel resultaten — geef het preciezer op (groep en/of voornaam).",
   "loan.which_book": "Welk boek?",
+  "loan.which_copy": "Er staan meerdere exemplaren van “{0}” in de kast — scan de code op het etiket of kies:",
 
   "loans.all": "Alle uitleningen",
   "loans.books_count.one": "{0} boek",

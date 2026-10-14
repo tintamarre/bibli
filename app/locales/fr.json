@@ -492,6 +492,7 @@
   "loan.too_many_books": "Trop de livres correspondent à « {0} » — précisez le titre.",
   "loan.too_many_borrowers": "Trop de résultats — précisez (groupe et/ou prénom).",
   "loan.which_book": "Quel livre ?",
+  "loan.which_copy": "Plusieurs exemplaires de « {0} » sont en rayon — scannez le code de l’étiquette ou choisissez :",
 
   "loans.all": "Tous les prêts",
   "loans.books_count.one": "{0} livre",
