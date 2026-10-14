@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"os"
@@ -282,7 +283,7 @@ func TestScanFindsAWorkFiledUnderItsISBN10Only(t *testing.T) {
 	}
 
 	// Lending: scanning the barcode on the back must still find the work.
-	workID, title, free, err := a.copiesForISBN("9782211037495", nil)
+	workID, title, free, err := a.copiesForISBN("9782211037495")
 	if err != nil {
 		t.Fatalf("scanning the EAN-13 of a work filed under its ISBN-10: %v", err)
 	}
@@ -307,7 +308,7 @@ func TestScanFindsAWorkFiledUnderItsISBN10Only(t *testing.T) {
 func TestCopiesForISBNListsFreeCopies(t *testing.T) {
 	a := testApp(t)
 
-	workID, title, free, err := a.copiesForISBN("9782070408504", nil)
+	workID, title, free, err := a.copiesForISBN("9782070408504")
 	if err != nil {
 		t.Fatalf("copiesForISBN: %v", err)
 	}
@@ -319,22 +320,12 @@ func TestCopiesForISBNListsFreeCopies(t *testing.T) {
 	}
 }
 
-// A copy already in the basket is not offered again: the next scan of the
-// same ISBN is a second copy.
-func TestCopiesForISBNSkipsTheBasket(t *testing.T) {
-	a := testApp(t)
-
-	if _, _, _, err := a.copiesForISBN("9782070408504", []int64{2}); !errors.Is(err, errNoCopyAvailable) {
-		t.Errorf("err = %v, want errNoCopyAvailable — copy 2 is in the basket", err)
-	}
-}
-
 // The same, on the lending side.
 func TestCopiesForISBNAcceptsBothForms(t *testing.T) {
 	a := testApp(t)
 
 	for _, scan := range []string{"9782070408504", "2070408507"} {
-		_, _, free, err := a.copiesForISBN(scan, nil)
+		_, _, free, err := a.copiesForISBN(scan)
 		if err != nil {
 			t.Errorf("%s: %v", scan, err)
 			continue
@@ -345,15 +336,15 @@ func TestCopiesForISBNAcceptsBothForms(t *testing.T) {
 	}
 }
 
-// Every copy out: workID and title come back so the screen can offer to add a
+// Every copy out: workID and title still come back so the screen can offer to add a
 // copy rather than starting express cataloguing.
 func TestCopiesForISBNAllCopiesOut(t *testing.T) {
 	a := testApp(t)
 	lend(t, a, 2, 103, 1)
 
-	workID, title, _, err := a.copiesForISBN("9782070408504", nil)
-	if !errors.Is(err, errNoCopyAvailable) {
-		t.Fatalf("err = %v, want errNoCopyAvailable", err)
+	workID, title, free, err := a.copiesForISBN("9782070408504")
+	if err != nil || len(free) != 0 {
+		t.Fatalf("copies = %v, err = %v; want none free", free, err)
 	}
 	if workID != 1 || title != "Le Petit Prince" {
 		t.Errorf("work = %d %q, want the work named so a copy can be offered", workID, title)
@@ -370,8 +361,8 @@ func TestCopiesForISBNSkipsUnusableCopies(t *testing.T) {
 				t.Fatal(err)
 			}
 			// Copy 1 is out, copy 2 is now unusable: nothing left to lend.
-			if _, _, _, err := a.copiesForISBN("9782070408504", nil); !errors.Is(err, errNoCopyAvailable) {
-				t.Errorf("status %q: err = %v, want errNoCopyAvailable", status, err)
+			if _, _, free, err := a.copiesForISBN("9782070408504"); err != nil || len(free) != 0 {
+				t.Errorf("status %q: copies = %v, err = %v; want none free", status, free, err)
 			}
 		})
 	}
@@ -382,7 +373,7 @@ func TestCopiesForISBNSkipsUnusableCopies(t *testing.T) {
 func TestCopiesForISBNUnknownISBN(t *testing.T) {
 	a := testApp(t)
 
-	if _, _, _, err := a.copiesForISBN("9782020493727", nil); !errors.Is(err, sql.ErrNoRows) {
+	if _, _, _, err := a.copiesForISBN("9782020493727"); !errors.Is(err, sql.ErrNoRows) {
 		t.Errorf("unknown ISBN: err = %v, want sql.ErrNoRows", err)
 	}
 }
@@ -393,7 +384,7 @@ func TestCopiesForISBNRejectsAnInvalidScan(t *testing.T) {
 	a := testApp(t)
 
 	for _, scan := range []string{"9782070408505", "207040850", "54999", "abc", ""} {
-		if _, _, _, err := a.copiesForISBN(scan, nil); !errors.Is(err, sql.ErrNoRows) {
+		if _, _, _, err := a.copiesForISBN(scan); !errors.Is(err, sql.ErrNoRows) {
 			t.Errorf("%q: err = %v, want sql.ErrNoRows", scan, err)
 		}
 	}
@@ -932,9 +923,8 @@ func borrowAddRequest(t *testing.T, a *app, form string) string {
 	return w.Body.String()
 }
 
-// Several copies of a title on the shelf: the ISBN does not say which one is in
-// hand, so the screen asks instead of lending the first.
-func TestBorrowAddAsksWhichCopy(t *testing.T) {
+func borrowTestApp(t *testing.T) *app {
+	t.Helper()
 	loadForTest(t)
 	a := testApp(t)
 	sets, err := loadTemplates()
@@ -942,6 +932,13 @@ func TestBorrowAddAsksWhichCopy(t *testing.T) {
 		t.Fatalf("loading the templates: %v", err)
 	}
 	a.pages = sets
+	return a
+}
+
+// Several copies of a title on the shelf: the ISBN does not say which one is in
+// hand, so the screen asks instead of lending the first.
+func TestBorrowAddAsksWhichCopy(t *testing.T) {
+	a := borrowTestApp(t)
 	exec(t, a.db, `INSERT INTO copy (book_id, code, location, status) VALUES (1, 'VOL900001', 'réserve', 'available')`)
 
 	for _, form := range []string{"code=9782070408504", "book_id=1"} {
@@ -956,11 +953,40 @@ func TestBorrowAddAsksWhichCopy(t *testing.T) {
 		}
 	}
 
-	// With one of them already in the basket, the other goes straight in.
+	// One already in the basket: scanning the book again may be the same book
+	// read twice, so the last copy is offered, not added.
 	for _, form := range []string{"code=9782070408504&copy_id=2", "book_id=1&copy_id=2"} {
 		body := borrowAddRequest(t, a, form)
-		if !strings.Contains(body, "hx-swap-oob") || !strings.Contains(body, "VOL900001") {
-			t.Errorf("%s: want VOL900001 added to the basket:\n%s", form, body)
+		if strings.Contains(body, "hx-swap-oob") {
+			t.Errorf("%s: VOL900001 went into the basket without asking:\n%s", form, body)
 		}
+		if !strings.Contains(body, "VOL900001") || !strings.Contains(body, T("fr", "loan.in_basket")) {
+			t.Errorf("%s: want VOL900001 offered and VOL811045 shown as in the basket:\n%s", form, body)
+		}
+	}
+}
+
+// The only free copy already in the basket: a second scan says so, rather
+// than offering to create a copy as if every one were out.
+func TestBorrowAddTwiceTheOnlyFreeCopy(t *testing.T) {
+	a := borrowTestApp(t)
+
+	for _, form := range []string{"code=9782070408504&copy_id=2", "book_id=1&copy_id=2"} {
+		body := borrowAddRequest(t, a, form)
+		if !strings.Contains(body, T("fr", "loan.err_in_basket", "Le Petit Prince")) {
+			t.Errorf("%s: want the already-in-basket message:\n%s", form, body)
+		}
+	}
+}
+
+// A malformed book_id is a bad request, not an unknown book.
+func TestBorrowAddBadBookID(t *testing.T) {
+	a := borrowTestApp(t)
+	r := httptest.NewRequest("POST", "/borrow/add", strings.NewReader("book_id=abc"))
+	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	w := httptest.NewRecorder()
+	a.borrowAdd(w, r)
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("status = %d, want 400", w.Code)
 	}
 }

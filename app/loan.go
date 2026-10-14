@@ -6,22 +6,15 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 )
 
 // Sentinels for resolving a scan that is an ISBN rather than an internal code.
 var (
-	errNoCopyAvailable = errors.New("no copy available")
-	errNotOnLoan       = errors.New("no copy of this work is out on loan")
+	errNotOnLoan = errors.New("no copy of this work is out on loan")
 )
-
-// FreeCopy is a copy on the shelf, offered when a scanned ISBN has several.
-type FreeCopy struct {
-	ID       int64
-	Code     string
-	Location string
-}
 
 // bookByISBN finds a work by either form of a scanned ISBN. The "isbn10 IS NOT
 // NULL" guard stops a book without an ISBN-10 (a NULL column) from matching a
@@ -33,12 +26,10 @@ func (a *app) bookByISBN(i13, i10 string) (workID int64, title string, err error
 	return
 }
 
-// copiesForISBN resolves a scanned ISBN to the copies available to lend, those
-// already in the basket left out. err says which of three cases: nil, at least
-// one free copy; errNoCopyAvailable, the work exists but every copy is out or
-// unusable, so offer to add one; sql.ErrNoRows, the ISBN is unknown and express
+// copiesForISBN resolves a scanned ISBN to its work and the copies free to
+// lend, maybe none. sql.ErrNoRows means the ISBN is unknown and express
 // cataloguing takes over.
-func (a *app) copiesForISBN(scan string, inBasket []int64) (workID int64, title string, free []FreeCopy, err error) {
+func (a *app) copiesForISBN(scan string) (workID int64, title string, free []ShelfCopy, err error) {
 	i13, i10, e := ISBNForms(scan)
 	if e != nil {
 		return 0, "", nil, sql.ErrNoRows // neither an internal code nor a valid ISBN
@@ -46,40 +37,58 @@ func (a *app) copiesForISBN(scan string, inBasket []int64) (workID int64, title 
 	if workID, title, err = a.bookByISBN(i13, i10); err != nil {
 		return 0, "", nil, err // sql.ErrNoRows = unknown ISBN
 	}
-	free, err = a.freeCopies(workID, inBasket)
-	if err == nil && len(free) == 0 {
-		err = errNoCopyAvailable
-	}
+	free, err = a.freeCopies(workID)
 	return workID, title, free, err
 }
 
-// freeCopies lists a work's copies on the shelf, those in the basket left out.
-func (a *app) freeCopies(workID int64, inBasket []int64) ([]FreeCopy, error) {
-	query := `SELECT c.id, c.code, COALESCE(c.location, '')
-		   FROM copy c
+// freeCopies lists a work's copies on the shelf: available and not out.
+func (a *app) freeCopies(workID int64) ([]ShelfCopy, error) {
+	rows, err := a.db.Query(
+		`SELECT c.id, c.code, b.title, COALESCE(c.location, '')
+		   FROM copy c JOIN book b ON b.id = c.book_id
 		  WHERE c.book_id = ? AND c.status = 'available'
-		    AND NOT EXISTS (SELECT 1 FROM loan l WHERE l.copy_id = c.id AND l.returned_on IS NULL)`
-	args := []any{workID}
-	if len(inBasket) > 0 {
-		query += ` AND c.id NOT IN (` + placeholders(len(inBasket)) + `)`
-		for _, id := range inBasket {
-			args = append(args, id)
-		}
-	}
-	rows, err := a.db.Query(query+` ORDER BY c.code`, args...)
+		    AND NOT EXISTS (SELECT 1 FROM loan l WHERE l.copy_id = c.id AND l.returned_on IS NULL)
+		  ORDER BY c.code`, workID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var free []FreeCopy
+	var free []ShelfCopy
 	for rows.Next() {
-		var c FreeCopy
-		if err := rows.Scan(&c.ID, &c.Code, &c.Location); err != nil {
+		var c ShelfCopy
+		if err := rows.Scan(&c.ID, &c.Code, &c.Title, &c.Location); err != nil {
 			return nil, err
 		}
 		free = append(free, c)
 	}
 	return free, rows.Err()
+}
+
+// offerCopies decides what a scanned ISBN or a picked title puts in the basket.
+// The work does not say which copy is in hand, so a copy goes in unasked only
+// when it is the only free one and none of the work is in the basket yet:
+// otherwise a second scan of the same book would lend a copy left in the rack.
+func (a *app) offerCopies(w http.ResponseWriter, r *http.Request, workID int64, title string, free []ShelfCopy) {
+	basket := basketCopies(r)
+	var left, taken []ShelfCopy
+	for _, c := range free {
+		if slices.Contains(basket, c.ID) {
+			taken = append(taken, c)
+		} else {
+			left = append(left, c)
+		}
+	}
+	switch {
+	case len(free) == 0:
+		// Every copy is out: offer to add one and lend it.
+		a.fragment(w, r, "borrow", "borrow_add_copy", map[string]any{"BookID": workID, "Title": title})
+	case len(left) == 0:
+		a.fragment(w, r, "borrow", "borrow_add_err", tr(r, "loan.err_in_basket", title))
+	case len(left) == 1 && len(taken) == 0:
+		a.fragment(w, r, "borrow", "borrow_add_ok", AddedRow{CopyID: left[0].ID, Title: title, Code: left[0].Code})
+	default:
+		a.fragment(w, r, "borrow", "borrow_copy_choice", map[string]any{"Title": title, "Copies": left, "Taken": taken})
+	}
 }
 
 type OpenLoan struct {
@@ -547,22 +556,10 @@ func (a *app) borrowAdd(w http.ResponseWriter, r *http.Request) {
 	).Scan(&exID, &foundCode, &status, &title)
 	if err == sql.ErrNoRows {
 		// Internal code (VOL...) unknown: try the ISBN on the back of the book.
-		var workID int64
-		var free []FreeCopy
-		workID, title, free, err = a.copiesForISBN(code, basketCopies(r))
+		workID, title, free, err := a.copiesForISBN(code)
 		switch err {
 		case nil:
-			// The ISBN names the work, not the copy in hand: with several on the
-			// shelf, the first would leave the loan on a copy still in the rack.
-			if len(free) > 1 {
-				a.fragment(w, r, "borrow", "borrow_copy_choice", map[string]any{"Title": title, "Copies": free})
-				return
-			}
-			exID, foundCode, status = free[0].ID, free[0].Code, "available"
-		case errNoCopyAvailable:
-			// Work known but every copy is out: offer to add one and lend it.
-
-			a.fragment(w, r, "borrow", "borrow_add_copy", map[string]any{"BookID": workID, "Title": title})
+			a.offerCopies(w, r, workID, title, free)
 			return
 		case sql.ErrNoRows:
 			// Valid ISBN absent from the catalogue: look it up and offer prefilled
@@ -652,27 +649,29 @@ func (a *app) borrowAdd(w http.ResponseWriter, r *http.Request) {
 	a.fragment(w, r, "borrow", "borrow_add_ok", AddedRow{CopyID: exID, Title: title, Code: foundCode})
 }
 
-// A title picked from the search: its only free copy goes into the basket,
-// otherwise the screen asks which, as for a scanned ISBN.
+// A title picked from the search goes through the same choice as its ISBN.
 func (a *app) borrowAddBook(w http.ResponseWriter, r *http.Request, v string) {
-	workID, _ := strconv.ParseInt(v, 10, 64)
+	workID, err := strconv.ParseInt(v, 10, 64)
+	if err != nil {
+		badRequest(w, r)
+		return
+	}
 	var title string
-	if err := a.db.QueryRow(`SELECT title FROM book WHERE id = ?`, workID).Scan(&title); err != nil {
+	err = a.db.QueryRow(`SELECT title FROM book WHERE id = ?`, workID).Scan(&title)
+	if err == sql.ErrNoRows {
 		a.fragment(w, r, "borrow", "borrow_add_err", tr(r, "loan.err_book_unknown"))
 		return
 	}
-	free, err := a.freeCopies(workID, basketCopies(r))
-	switch {
-	case err != nil:
+	var free []ShelfCopy
+	if err == nil {
+		free, err = a.freeCopies(workID)
+	}
+	if err != nil {
 		log.Printf("loan/add (book): %v", err)
 		internalError(w, r)
-	case len(free) == 0:
-		a.fragment(w, r, "borrow", "borrow_add_copy", map[string]any{"BookID": workID, "Title": title})
-	case len(free) > 1:
-		a.fragment(w, r, "borrow", "borrow_copy_choice", map[string]any{"Title": title, "Copies": free})
-	default:
-		a.fragment(w, r, "borrow", "borrow_add_ok", AddedRow{CopyID: free[0].ID, Title: title, Code: free[0].Code})
+		return
 	}
+	a.offerCopies(w, r, workID, title, free)
 }
 
 // Creates an unknown book on the fly and adds it to the basket, so scanning an

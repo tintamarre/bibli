@@ -68,8 +68,8 @@ func (a *app) locationRename(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("HX-Redirect", string(f.URL("/inventory")))
 }
 
-// MoveCopy is a copy as the move screen shows it.
-type MoveCopy struct {
+// ShelfCopy is a copy as a "which one?" list shows it.
+type ShelfCopy struct {
 	ID       int64
 	Code     string
 	Title    string
@@ -78,13 +78,13 @@ type MoveCopy struct {
 
 // copiesForScan finds what a scan names: one copy by its code, or every copy
 // of the book whose ISBN it is. sql.ErrNoRows when neither.
-func (a *app) copiesForScan(scan string) ([]MoveCopy, error) {
+func (a *app) copiesForScan(scan string) ([]ShelfCopy, error) {
 	const columns = `SELECT c.id, c.code, b.title, COALESCE(c.location, '')
 		   FROM copy c JOIN book b ON b.id = c.book_id`
-	var c MoveCopy
+	var c ShelfCopy
 	err := a.db.QueryRow(columns+` WHERE c.code = ?`, scan).Scan(&c.ID, &c.Code, &c.Title, &c.Location)
 	if err == nil {
-		return []MoveCopy{c}, nil
+		return []ShelfCopy{c}, nil
 	}
 	if err != sql.ErrNoRows {
 		return nil, err
@@ -102,7 +102,7 @@ func (a *app) copiesForScan(scan string) ([]MoveCopy, error) {
 		return nil, err
 	}
 	defer rows.Close()
-	var out []MoveCopy
+	var out []ShelfCopy
 	for rows.Next() {
 		if err := rows.Scan(&c.ID, &c.Code, &c.Title, &c.Location); err != nil {
 			return nil, err
@@ -146,7 +146,7 @@ func (a *app) moveScan(w http.ResponseWriter, r *http.Request) {
 			badRequest(w, r)
 			return
 		}
-		var c MoveCopy
+		var c ShelfCopy
 		err = a.db.QueryRow(`SELECT c.id, c.code, b.title, COALESCE(c.location, '')
 			   FROM copy c JOIN book b ON b.id = c.book_id WHERE c.id = ?`, id).
 			Scan(&c.ID, &c.Code, &c.Title, &c.Location)
@@ -186,7 +186,7 @@ func (a *app) moveScan(w http.ResponseWriter, r *http.Request) {
 	a.moveCopy(w, r, copies[0], location)
 }
 
-func (a *app) moveCopy(w http.ResponseWriter, r *http.Request, c MoveCopy, location string) {
+func (a *app) moveCopy(w http.ResponseWriter, r *http.Request, c ShelfCopy, location string) {
 	data := map[string]any{"Copy": c, "Location": location, "Already": c.Location == location}
 	if c.Location != location {
 		if _, err := a.db.Exec(`UPDATE copy SET location = ? WHERE id = ?`, location, c.ID); err != nil {

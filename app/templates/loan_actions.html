@@ -21,3 +21,7 @@
     >{{template "icon-extend" "action-icon"}}<span class="action-label">{{T "loans.extend"}}</span></button>
 </form>
 {{end}}
+
+{{/* A copy in a "which one?" list (lending, moving): its label code and shelf. */}}
+{{define "copy_choice_label"}}<span class="code">{{.Code}}</span> —
+        {{if .Location}}{{.Location}}{{else}}{{T "filter.no_location"}}{{end}}{{end}}

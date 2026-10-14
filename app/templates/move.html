@@ -34,8 +34,7 @@
       <button type="button" class="borrower-result"
               hx-post="/inventory/move" hx-vals='{"copy_id": "{{.ID}}"}' hx-include="#move-location"
               hx-target="#move-choice" hx-swap="innerHTML">
-        <span class="code">{{.Code}}</span> —
-        {{if .Location}}{{.Location}}{{else}}{{T "filter.no_location"}}{{end}}
+        {{template "copy_choice_label" .}}
       </button>
     </li>
     {{end}}

@@ -159,8 +159,8 @@
 {{end}}
 {{end}}
 
-{{/* Several copies of a scanned ISBN on the shelf: the label on the book in
-     hand says which. A choice goes back through /borrow/add like a scan. */}}
+{{/* Several copies of a work on the shelf: the label on the book in hand says
+     which. A choice goes back through /borrow/add like a scan. */}}
 {{define "borrow_copy_choice"}}
 <div class="new-book">
   <p class="step">{{T "loan.which_copy" .Title}}</p>
@@ -170,11 +170,12 @@
       <button type="button" class="borrower-result"
               hx-post="/borrow/add" hx-vals='{"code": "{{.Code}}"}' hx-include="#basket"
               hx-target="#scan-feedback" hx-swap="innerHTML">
-        <span class="code">{{.Code}}</span>{{with .Location}} · <span class="detail">{{.}}</span>{{end}}
+        {{template "copy_choice_label" .}}
       </button>
     </li>
     {{end}}
   </ul>
+  {{with .Taken}}<p class="detail">{{T "loan.in_basket"}}{{range .}} <span class="code">{{.Code}}</span>{{end}}</p>{{end}}
 </div>
 {{end}}
 
