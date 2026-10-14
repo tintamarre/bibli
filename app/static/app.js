@@ -218,6 +218,11 @@ document.addEventListener('htmx:confirm', function (e) {
 document.addEventListener('submit', function (e) {
   var form = e.target;
   var question = form.dataset ? form.dataset.confirm : null;
+  // data-confirm-change on a field: asked only when it differs from data-saved.
+  var watched = form.querySelector ? form.querySelector('[data-confirm-change]') : null;
+  if (!question && watched && watched.value.trim() !== watched.dataset.saved) {
+    question = watched.dataset.confirmChange;
+  }
   if (!question) { return; }
   e.preventDefault();
   var name = form.dataset.confirmField;

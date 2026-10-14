@@ -731,6 +731,8 @@
   "settings.saved": "Saved.",
   "settings.library_name": "Library name",
   "settings.library_name_placeholder": "Library name",
+  "settings.library_name_help": "Printed on book labels and reader cards. Labels and cards already printed keep the old name.",
+  "settings.library_name_confirm": "Please confirm the change of the name “*{0}*”.\nIt appears on the labels and reader cards already printed: they will not be updated.",
   "settings.tab_catalogue": "Catalogue",
   "settings.tab_general": "General",
   "settings.tab_install": "Installation",

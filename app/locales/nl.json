@@ -731,6 +731,8 @@
   "settings.saved": "Opgeslagen.",
   "settings.library_name": "Naam van de bibliotheek",
   "settings.library_name_placeholder": "Naam van de bibliotheek",
+  "settings.library_name_help": "Gedrukt op de boeketiketten en de lezerskaarten. Reeds gedrukte etiketten en kaarten behouden de oude naam.",
+  "settings.library_name_confirm": "Bevestig de wijziging van de naam “*{0}*”.\nDie staat op de reeds gedrukte etiketten en lezerskaarten: die worden niet bijgewerkt.",
   "settings.tab_catalogue": "Catalogus",
   "settings.tab_general": "Algemeen",
   "settings.tab_install": "Installatie",

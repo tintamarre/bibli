@@ -371,6 +371,9 @@ func (a *app) settingsSave(w http.ResponseWriter, r *http.Request) {
 		setGoogleKey("")
 		log.Print("Google Books: API key removed in /settings")
 	}
+	if old := libraryName(); old != "" && old != libName {
+		log.Printf("library name changed in /settings: %q -> %q (labels already printed keep the old one)", old, libName)
+	}
 	setLibraryName(libName)
 	setLang(lang)
 	setTheme(theme)

@@ -25,8 +25,11 @@
 
         <div class="setting">
           <label class="field"><span>{{T "settings.library_name"}}</span>
+            {{/* A saved name is on printed labels and cards: changing it asks first (app.js). */}}
             <input name="library_name" value="{{.LibraryName}}" maxlength="120"
-                   placeholder="{{T "settings.library_name_placeholder"}}"></label>
+                   placeholder="{{T "settings.library_name_placeholder"}}"
+                   {{with libraryName}}data-saved="{{.}}" data-confirm-change="{{T "settings.library_name_confirm" .}}"{{end}}></label>
+          <p class="note">{{T "settings.library_name_help"}}</p>
         </div>
 
         <div class="setting">
