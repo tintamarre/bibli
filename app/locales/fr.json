@@ -384,6 +384,9 @@
   "inventory.record_title": "Voir la notice",
   "inventory.search_placeholder": "Rechercher un exemplaire (titre, auteur, code, ISBN)…",
   "inventory.sort_by": "Trier par {0}",
+  "inventory.view": "Affichage",
+  "inventory.view_covers": "Couvertures",
+  "inventory.view_list": "Liste",
 
   "inventory_print.col_authors": "Auteurs",
   "inventory_print.col_condition": "État",

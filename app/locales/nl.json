@@ -384,6 +384,9 @@
   "inventory.record_title": "De catalogusfiche bekijken",
   "inventory.search_placeholder": "Een exemplaar zoeken (titel, auteur, code, ISBN)…",
   "inventory.sort_by": "Sorteren op {0}",
+  "inventory.view": "Weergave",
+  "inventory.view_covers": "Omslagen",
+  "inventory.view_list": "Lijst",
 
   "inventory_print.col_authors": "Auteurs",
   "inventory_print.col_condition": "Staat",

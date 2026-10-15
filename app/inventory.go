@@ -186,7 +186,16 @@ type invFilter struct {
 	To    string
 	Sort  string // a key of invSortColumns
 	Dir   string // "asc" or "desc"
+	// How the list is drawn, not what it holds: "" the editable table,
+	// invViewCovers a wall of covers. Ignored by the printouts and exports.
+	View string
 }
+
+// invViewCovers is the one alternative to the table.
+const invViewCovers = "covers"
+
+// Covers says whether the list is drawn as a wall of covers.
+func (f invFilter) Covers() bool { return f.View == invViewCovers }
 
 // addedPeriods is what the dropdown offers besides an exact range. The key
 // travels, not the dates, so a bookmarked "?added=7d" stays relative to today.
@@ -257,6 +266,9 @@ func readInvFilter(r *http.Request) invFilter {
 		Sort:     r.FormValue("sort"),
 		Dir:      r.FormValue("dir"),
 	}
+	if r.FormValue("view") == invViewCovers {
+		f.View = invViewCovers
+	}
 	// A period that is not one of ours means every date, like an empty value.
 	if _, ok := addedPeriods[f.Added]; !ok && f.Added != addedCustom {
 		f.Added = ""
@@ -307,7 +319,7 @@ func (f invFilter) Query() string {
 	for name, value := range map[string]string{
 		"q": f.Q, "location": f.Location, "status": f.Status, "loan": f.Loan,
 		"added": f.Added, "from": f.From, "to": f.To,
-		"sort": f.Sort, "dir": f.Dir,
+		"sort": f.Sort, "dir": f.Dir, "view": f.View,
 	} {
 		if value != "" {
 			v.Set(name, value)

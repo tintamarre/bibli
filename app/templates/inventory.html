@@ -47,6 +47,14 @@
       <input class="field-search" name="q" type="search" value="{{.Filter.Q}}"
              placeholder="{{T "inventory.search_placeholder"}}" autocomplete="off">
     </div>
+    {{/* Table or covers: two radios, so the form's "change" redraws the list
+         and a search keeps the view. */}}
+    <div class="view-switch" role="radiogroup" aria-label="{{T "inventory.view"}}">
+      <label title="{{T "inventory.view_list"}}"><input type="radio" name="view" value=""{{if not .Filter.Covers}} checked{{end}}
+        >{{template "icon-loans" "btn-icon"}}<span>{{T "inventory.view_list"}}</span></label>
+      <label title="{{T "inventory.view_covers"}}"><input type="radio" name="view" value="covers"{{if .Filter.Covers}} checked{{end}}
+        >{{template "icon-covers" "btn-icon"}}<span>{{T "inventory.view_covers"}}</span></label>
+    </div>
   </div>
   {{/* A period, or an exact range whose two fields the data-range entry
        reveals. They also show for an address that arrived carrying dates. */}}
@@ -100,12 +108,20 @@
 {{end}}
 
 {{define "inventory_list"}}
-<div id="inventory-list" class="table-scroll">
+<div id="inventory-list"{{if not .Filter.Covers}} class="table-scroll"{{end}}>
 {{/* The outputs, swapped back into the title row out of band so they carry the
      current filter. OOB is set only by the search handler, so the first render
      leaves no stray attribute. */}}
 {{if .OOB}}{{template "inv_actions" .}}{{end}}
 {{if .OOB}}{{template "inv_rename_slot" .}}{{end}}
+{{if .Filter.Covers}}
+{{/* Read-only: a cover leads to the book's page, where its copies are edited. */}}
+<ul class="cover-wall">
+  {{range .Rows}}{{template "inv_tile" .}}{{else}}
+  <li class="empty">{{T "inventory.empty"}}</li>
+  {{end}}
+</ul>
+{{else}}
 {{/* The day of entry is a column only while filtered to a period (ByDate).
      Hidden by a class on the table, not left out of the row: inv_row redraws a
      row without the filter, and a row one cell short would shift every value. */}}
@@ -129,6 +145,7 @@
     {{end}}
   </tbody>
 </table>
+{{end}}
 {{template "pager" .Page}}
 </div>
 {{end}}
@@ -173,6 +190,27 @@
 </div>
 {{end}}
 
+{{/* Out (and until when) or on the shelf: the table's loan column and a
+     cover's caption. */}}
+{{define "inv_loan"}}<span class="loan-cell">{{if .Out}}<span class="status-pill status-out">{{template "icon-borrow" "status-icon"}}{{T "inventory.out"}}</span>{{if .DueOn}}<span class="copy-due{{if gt .DaysOverdue 0}} overdue{{end}}" title="{{shortDate .DueOn}}">{{if gt .DaysOverdue 0}}{{Tn "loans.days_overdue" .DaysOverdue}}{{else}}{{T "inventory.due_back" (relativeDate .DueOn)}}{{end}}</span>{{end}}{{else if onShelf .Status}}<span class="status-pill status-shelf">{{template "icon-shelf" "status-icon"}}{{T "inventory.on_shelf"}}</span>{{else}}{{/* Lost or withdrawn: a dash, neither out nor on a shelf. Punctuation, so not in the catalogues. */}}<span class="loan-none">&mdash;</span>{{end}}{{if .LoanClosed}}<span class="overdue-badge">{{T "inventory.loan_closed"}}</span>{{end}}</span>{{end}}
+
+{{/* One copy on the wall: no ISBN, no cover to ask for, the neutral image
+     straight away. The status shows only when it is not the usual one. */}}
+{{define "inv_tile"}}
+<li class="cover-tile">
+  <a class="cover-tile-link" href="/book/{{.BookID}}" title="{{.Title}}">
+    <img class="cover-tile-img" src="{{if .ISBN}}/cover/{{.ISBN}}{{else}}{{asset "/static/cover-missing.svg"}}{{end}}" alt="" loading="lazy">
+    <span class="cover-tile-title">{{.Title}}</span>
+  </a>
+  {{with .Authors}}<span class="cover-tile-authors">{{.}}</span>{{end}}
+  <span class="cover-tile-meta">{{with .Mark}}<span class="mark-chip">{{.}}</span>{{end}}<span class="code">{{.Code}}</span></span>
+  {{if eq .Status "damaged"}}<span class="cover-tile-status">▲ {{T "status.damaged"}}</span>
+  {{else if eq .Status "lost"}}<span class="cover-tile-status">? {{T "status.lost"}}</span>
+  {{else if eq .Status "withdrawn"}}<span class="cover-tile-status">✕ {{T "status.withdrawn"}}</span>{{end}}
+  {{if or .Out (onShelf .Status)}}{{template "inv_loan" .}}{{end}}
+</li>
+{{end}}
+
 {{define "inv_row"}}
 <tr id="ex-{{.ID}}"{{if .Flash}} class="flash-ok"{{end}}>
   <td data-label="{{T "inventory.col_mark"}}" class="col-code">{{with .Mark}}<span class="mark-chip">{{.}}</span>{{end}}</td>
@@ -208,7 +246,7 @@
   </td>
   {{/* When an out copy is due back, on the pill's line so the row keeps its
        height. */}}
-  <td data-label="{{T "inventory.col_loan"}}" class="col-loan"><span class="loan-cell">{{if .Out}}<span class="status-pill status-out">{{template "icon-borrow" "status-icon"}}{{T "inventory.out"}}</span>{{if .DueOn}}<span class="copy-due{{if gt .DaysOverdue 0}} overdue{{end}}" title="{{shortDate .DueOn}}">{{if gt .DaysOverdue 0}}{{Tn "loans.days_overdue" .DaysOverdue}}{{else}}{{T "inventory.due_back" (relativeDate .DueOn)}}{{end}}</span>{{end}}{{else if onShelf .Status}}<span class="status-pill status-shelf">{{template "icon-shelf" "status-icon"}}{{T "inventory.on_shelf"}}</span>{{else}}{{/* Lost or withdrawn: a dash, neither out nor on a shelf. Punctuation, so not in the catalogues. */}}<span class="loan-none">&mdash;</span>{{end}}{{if .LoanClosed}}<span class="overdue-badge">{{T "inventory.loan_closed"}}</span>{{end}}</span></td>
+  <td data-label="{{T "inventory.col_loan"}}" class="col-loan">{{template "inv_loan" .}}</td>
   {{/* How long ago rather than the day; the day is under the pointer. */}}
   <td data-label="{{T "labels.col_added"}}" class="col-added">
     <time class="when-ago" datetime="{{.AddedOn}}" title="{{shortDate .AddedOn}}"

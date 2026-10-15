@@ -1,6 +1,7 @@
 package main
 
 import (
+	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"strings"
@@ -598,5 +599,29 @@ func TestListInventorySortsByCote(t *testing.T) {
 	// Anonyme is filed by its title (ALB), Pennart at PEN, Saint-Exupéry at SAI.
 	if want := []string{"ALB", "PEN", "PEN", "SAI", "SAI"}; strings.Join(got, " ") != strings.Join(want, " ") {
 		t.Errorf("by cote: %v, want %v", got, want)
+	}
+}
+
+// The wall of covers is a way of drawing the list: asked for by name only, and
+// carried by the links out of the screen so a search or a return keeps it.
+func TestInventoryCoverView(t *testing.T) {
+	if f := readInvFilter(httptest.NewRequest("GET", "/inventory?view=mosaic", nil)); f.Covers() {
+		t.Error("an unknown view draws covers, want the table")
+	}
+	f := readInvFilter(httptest.NewRequest("GET", "/inventory?view=covers", nil))
+	if !f.Covers() || !strings.Contains(f.Query(), "view=covers") {
+		t.Errorf("view=covers reads as %+v, query %q", f, f.Query())
+	}
+
+	a, h := testHandler(t)
+	c := signedIn(t, a)
+	for path, want := range map[string]string{
+		"/inventory?view=covers": `class="cover-wall"`,
+		"/inventory":             `<table class="table`,
+	} {
+		w := get(h, path, c)
+		if w.Code != http.StatusOK || !strings.Contains(w.Body.String(), want) {
+			t.Errorf("GET %s = %d, want %s in the page", path, w.Code, want)
+		}
 	}
 }

@@ -384,6 +384,9 @@
   "inventory.record_title": "View the catalogue record",
   "inventory.search_placeholder": "Search for a copy (title, author, code, ISBN)…",
   "inventory.sort_by": "Sort by {0}",
+  "inventory.view": "Display",
+  "inventory.view_covers": "Covers",
+  "inventory.view_list": "List",
 
   "inventory_print.col_authors": "Authors",
   "inventory_print.col_condition": "Condition",
