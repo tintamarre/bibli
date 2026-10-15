@@ -729,6 +729,16 @@ function sortTable(formId, column, first) {
   form.dispatchEvent(new Event("sortchange"));
 }
 
+// The same for a dropdown of orders (the wall of covers): value is "sort:dir".
+function sortBy(formId, value) {
+  var form = document.getElementById(formId);
+  var parts = value.split(":");
+  if (!form || parts.length !== 2) { return; }
+  form.elements.sort.value = parts[0];
+  form.elements.dir.value = parts[1];
+  form.dispatchEvent(new Event("sortchange"));
+}
+
 // The /inventory date fields, revealed by the entry marked data-range. Hidden
 // rather than emptied; the server ignores them once a period is chosen.
 function toggleRange(select, id) {

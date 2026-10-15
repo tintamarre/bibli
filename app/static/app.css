@@ -838,6 +838,11 @@ button, input, select, textarea { font-family: inherit; }
 .view-switch label:has(input:checked) { color: var(--accent-dark); background: var(--accent-light); font-weight: 600; }
 .view-switch label:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: -2px; }
 
+/* The wall's order, right-aligned above it. */
+.cover-sort { display: flex; align-items: center; justify-content: flex-end; gap: .5rem .75rem; margin: 0 0 1rem; }
+.cover-sort .filter-label { min-width: 0; }
+@media (max-width: 40rem) { .cover-sort .filter-select { flex: 1 1 auto; min-width: 0; } }
+
 /* The wall of covers: as many columns as fit, two on a phone. Every frame is
    the same 2:3 box, the picture contained in it, so rows line up. */
 .cover-wall {

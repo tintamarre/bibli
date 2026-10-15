@@ -115,6 +115,17 @@
 {{if .OOB}}{{template "inv_actions" .}}{{end}}
 {{if .OOB}}{{template "inv_rename_slot" .}}{{end}}
 {{if .Filter.Covers}}
+{{/* No headings to click: the order is a dropdown, writing the form's hidden
+     sort and dir like a heading does. */}}
+{{$orders := .Filter.CoverOrders}}
+<div class="cover-sort">
+  <label class="filter-label" for="cover-order">{{T "inventory.sort"}}</label>
+  <select class="filter-select" id="cover-order" onchange="sortBy('{{.Filter.SortForm}}', this.value)">
+    {{$picked := false}}{{range $orders}}{{if .Selected}}{{$picked = true}}{{end}}{{end}}
+    {{if not $picked}}<option value="" selected disabled>{{T "inventory.order_other"}}</option>{{end}}
+    {{range $orders}}<option value="{{.Value}}"{{if .Selected}} selected{{end}}>{{T .Label}}</option>{{end}}
+  </select>
+</div>
 {{/* Read-only: a cover leads to the book's page, where its copies are edited. */}}
 <ul class="cover-wall">
   {{range .Rows}}{{template "inv_tile" .}}{{else}}

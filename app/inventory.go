@@ -254,6 +254,37 @@ const (
 	invSortDefaultDir = "desc"
 )
 
+// coverOrders is what the wall of covers offers in place of the headings: a
+// sort key of invSortColumns, a direction, and its label in the catalogues.
+var coverOrders = []struct{ Sort, Dir, Label string }{
+	{"added", "desc", "inventory.order_added_desc"},
+	{"added", "asc", "inventory.order_added_asc"},
+	{"title", "asc", "inventory.order_title_asc"},
+	{"title", "desc", "inventory.order_title_desc"},
+	{"mark", "asc", "inventory.order_mark_asc"},
+	{"location", "asc", "inventory.order_location_asc"},
+	{"loan", "desc", "inventory.order_loan_desc"},
+}
+
+// sortOption is one entry of the wall's sort dropdown.
+type sortOption struct {
+	Value    string // "sort:dir", split by sortBy (app.js)
+	Label    string // a catalogue key
+	Selected bool
+}
+
+// CoverOrders lists the dropdown's entries, the current order selected. An
+// order set from a table heading that is not among them selects none, and the
+// template says so rather than showing an order that is not the one in use.
+func (f invFilter) CoverOrders() []sortOption {
+	out := make([]sortOption, len(coverOrders))
+	for i, o := range coverOrders {
+		out[i] = sortOption{Value: o.Sort + ":" + o.Dir, Label: o.Label,
+			Selected: o.Sort == f.Sort && o.Dir == f.Dir}
+	}
+	return out
+}
+
 // readInvFilter reads the filter from r.Form (query string or posted fields).
 // Anything unrecognised falls back to the default rather than erroring.
 func readInvFilter(r *http.Request) invFilter {

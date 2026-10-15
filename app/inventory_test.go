@@ -625,3 +625,29 @@ func TestInventoryCoverView(t *testing.T) {
 		}
 	}
 }
+
+// Every order the wall offers is one the list can sort by, and the one in use
+// is the one selected.
+func TestCoverOrders(t *testing.T) {
+	for _, o := range coverOrders {
+		if _, ok := invSortColumns[o.Sort]; !ok {
+			t.Errorf("the wall offers %q, which the list cannot sort by", o.Sort)
+		}
+	}
+	f := readInvFilter(httptest.NewRequest("GET", "/inventory?view=covers&sort=title&dir=desc", nil))
+	var picked []string
+	for _, o := range f.CoverOrders() {
+		if o.Selected {
+			picked = append(picked, o.Value)
+		}
+	}
+	if len(picked) != 1 || picked[0] != "title:desc" {
+		t.Errorf("sorted by title desc, the dropdown selects %v", picked)
+	}
+	f = readInvFilter(httptest.NewRequest("GET", "/inventory?view=covers&sort=isbn", nil))
+	for _, o := range f.CoverOrders() {
+		if o.Selected {
+			t.Errorf("sorted by ISBN, the dropdown selects %s", o.Value)
+		}
+	}
+}
