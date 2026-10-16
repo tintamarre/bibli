@@ -1,24 +1,20 @@
 {{define "title_icon"}}{{template "icon-stats" "title-icon"}}{{end}}
 {{define "width"}} page-medium{{end}}
 {{define "content"}}
-  {{/* The year day by day. The grid is the texture; what it says is said in
-       words underneath: nothing is left behind a hover. */}}
-  <section class="stats-card">
-  <h2 class="section-title">{{T "stats.year_title"}}</h2>
-  <div class="hm">
-    <div class="hm-months" style="--weeks:{{.Year.Weeks}}" aria-hidden="true">
-      {{range .Year.Months}}<span style="grid-column:{{.Start}} / span {{.Span}}">{{.Label}}</span>{{end}}
+  {{/* The year day by day, loans or copies added. Both grids are drawn; the
+       switch only shows one, so it needs no request and no script. Each grid
+       carries its own year links, so the shown one keeps the switch. What a
+       grid says is said in words underneath: nothing is left behind a hover. */}}
+  <section class="stats-card hm-card">
+  <div class="hm-head">
+    <h2 class="section-title">{{T "stats.year_title"}}</h2>
+    <div class="view-switch" role="radiogroup" aria-label="{{T "stats.year_show"}}">
+      <label><input type="radio" name="hm-show" value="loans"{{if not .ShowAdded}} checked{{end}}><span>{{T "stats.year_loans"}}</span></label>
+      <label><input type="radio" name="hm-show" value="added"{{if .ShowAdded}} checked{{end}}><span>{{T "stats.year_added"}}</span></label>
     </div>
-    <div class="hm-grid" style="--weeks:{{.Year.Weeks}}" role="img" aria-label="{{.Year.Summary}}">
-      {{range .Year.Rows}}{{range .}}<span class="hm-cell {{if not .Date}}hm-pad{{else if .Ahead}}hm-ahead{{else}}hm-l{{.Level}}{{end}}"{{with .Label}} title="{{.}}"{{end}}></span>{{end}}{{end}}
-    </div>
-    <p class="note hm-legend">
-      <span>{{if .Year.Total}}{{.Year.Summary}}{{with .Year.Busiest}} · {{.}}{{end}}{{else}}{{T "stats.year_none"}}{{end}}</span>
-      <span class="hm-key">{{T "stats.scale_less"}}
-        <span class="hm-cell hm-l0"></span><span class="hm-cell hm-l1"></span><span class="hm-cell hm-l2"></span><span class="hm-cell hm-l3"></span><span class="hm-cell hm-l4"></span>
-        {{T "stats.scale_more"}}</span>
-    </p>
   </div>
+  {{template "stats-heatmap" .Year}}
+  {{template "stats-heatmap" .Added}}
   </section>
 
   <section class="stats-card">
@@ -66,4 +62,26 @@
       <a class="link-quiet" href="/stats/collection.csv" download>{{T "stats.review_csv"}}</a>
     </p>
   </section>
+{{end}}
+
+{{define "stats-heatmap"}}
+  <div class="hm">
+    <div class="hm-months" style="--weeks:{{.Weeks}}" aria-hidden="true">
+      {{range .Months}}<span style="grid-column:{{.Start}} / span {{.Span}}">{{.Label}}</span>{{end}}
+    </div>
+    <div class="hm-grid" style="--weeks:{{.Weeks}}" role="img" aria-label="{{if .Total}}{{.Summary}}{{else}}{{.None}}{{end}}">
+      {{range .Rows}}{{range .}}<span class="hm-cell {{if not .Date}}hm-pad{{else if .Ahead}}hm-ahead{{else}}hm-l{{.Level}}{{end}}"{{with .Label}} title="{{.}}"{{end}}></span>{{end}}{{end}}
+    </div>
+    <p class="note hm-legend">
+      <span>{{if .Total}}{{.Summary}}{{with .Busiest}} · {{.}}{{end}}{{else}}{{.None}}{{end}}</span>
+      <span class="hm-key">{{T "stats.scale_less"}}
+        <span class="hm-cell hm-l0"></span><span class="hm-cell hm-l1"></span><span class="hm-cell hm-l2"></span><span class="hm-cell hm-l3"></span><span class="hm-cell hm-l4"></span>
+        {{T "stats.scale_more"}}</span>
+    </p>
+    <nav class="hm-years" aria-label="{{T "stats.year_nav"}}">
+      {{with .Nav.Prev}}<a class="link-quiet" href="/stats?year={{.}}&show={{$.Show}}" aria-label="{{T "pager.prev"}}">{{template "icon-back" "btn-icon"}}</a>{{else}}<span class="hm-year-gap"></span>{{end}}
+      <span class="pager-range">{{.Nav.Label}}</span>
+      {{with .Nav.Next}}<a class="link-quiet" href="/stats?year={{.}}&show={{$.Show}}" aria-label="{{T "pager.next"}}">{{template "icon-forward" "btn-icon"}}</a>{{else}}<span class="hm-year-gap"></span>{{end}}
+    </nav>
+  </div>
 {{end}}

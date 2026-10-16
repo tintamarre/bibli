@@ -41,6 +41,9 @@ type heatmap struct {
 	Total      int
 	Summary    string // said in words: nothing is kept behind a hover
 	Busiest    string // empty when the year holds no loans
+	None       string // said instead of both when it holds none
+	Nav        YearNav
+	Show       string // the switch position its year links keep: "loans" or "added"
 }
 
 // activityYearBounds gives the first and last day of the activity year containing
@@ -76,10 +79,18 @@ func monthLabel(lang string, m time.Month) string { return T(lang, monthKeys[int
 // week starts on.
 func mondayIndex(w time.Weekday) int { return (int(w) + 6) % 7 }
 
-// newHeatmap lays the counts out on the grid. counts is keyed by ISO day; days
+// newHeatmap lays the loans out on the grid. counts is keyed by ISO day; days
 // it does not mention held no loan.
 func newHeatmap(lang, todayISO string, counts map[string]int) heatmap {
-	startISO, endISO := activityYearBounds(todayISO)
+	return heatmapOf(lang, todayISO, todayISO, counts, "stats.")
+}
+
+// heatmapOf lays any daily count out on the grid of the activity year holding
+// dayISO, its sentences read from the locale keys under prefix: "stats." for
+// loans, "stats.added_" for copies added. A year already over is told from its
+// first day to its last.
+func heatmapOf(lang, todayISO, dayISO string, counts map[string]int, prefix string) heatmap {
+	startISO, endISO := activityYearBounds(dayISO)
 	start, _ := parseDate(startISO)
 	end, _ := parseDate(endISO)
 	now, ok := parseDate(todayISO)
@@ -111,7 +122,7 @@ func newHeatmap(lang, todayISO string, counts map[string]int) heatmap {
 			if !c.Ahead {
 				// Every day reached carries its date and count, nought
 				// included: an idle day is a reading, not a missing cell.
-				c.Label = Tn(lang, "stats.day_label", c.Count, shortDate(lang, iso))
+				c.Label = Tn(lang, prefix+"day_label", c.Count, shortDate(lang, iso))
 			}
 			if c.Count > 0 {
 				h.Total += c.Count
@@ -124,9 +135,15 @@ func newHeatmap(lang, todayISO string, counts map[string]int) heatmap {
 	}
 
 	h.Months = monthSpans(lang, first, weeks, startISO, endISO)
-	h.Summary = Tn(lang, "stats.year_summary", h.Total, shortDate(lang, startISO))
+	if endISO < now.Format("2006-01-02") {
+		h.None = T(lang, prefix+"year_none_past")
+		h.Summary = Tn(lang, prefix+"year_summary_past", h.Total, shortDate(lang, startISO), shortDate(lang, endISO))
+	} else {
+		h.None = T(lang, prefix+"year_none")
+		h.Summary = Tn(lang, prefix+"year_summary", h.Total, shortDate(lang, startISO))
+	}
 	if busiest.Count > 0 {
-		h.Busiest = Tn(lang, "stats.year_busiest", busiest.Count, shortDate(lang, busiest.Date))
+		h.Busiest = Tn(lang, prefix+"year_busiest", busiest.Count, shortDate(lang, busiest.Date))
 	}
 	return h
 }

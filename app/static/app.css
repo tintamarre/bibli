@@ -962,6 +962,20 @@ button, input, select, textarea { font-family: inherit; }
 .hm-key { display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; }
 .hm-key .hm-cell { width: 11px; aspect-ratio: 1; }
 
+/* Loans or additions: the title left, the switch right; the grid not chosen
+   is hidden, loans by default. */
+.hm-head { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: .5rem 1rem; margin-bottom: .75rem; }
+.hm-head .section-title { margin: 0; }
+/* The year turner under the grid: an arrow either side, only where there is a
+   year to turn to, an empty slot of the same size otherwise so the year stays
+   centred. */
+.hm-years { display: flex; justify-content: center; align-items: center; gap: .75rem; margin-top: .5rem; }
+.hm-years a, .hm-year-gap { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; }
+.hm-years .btn-icon { margin: 0; }
+.hm-card .hm + .hm,
+.hm-card:has(input[value="added"]:checked) .hm-head + .hm { display: none; }
+.hm-card:has(input[value="added"]:checked) .hm + .hm { display: block; }
+
 /* Twelve months as bars, percentages of a fixed track, in the grid's third shade. */
 .bars { display: flex; align-items: flex-end; gap: .4rem; }
 .bar { flex: 1 1 0; display: flex; flex-direction: column; gap: .3rem; min-width: 0; }

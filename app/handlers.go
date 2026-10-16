@@ -315,13 +315,16 @@ func (a *app) home(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// Four readings of the loans, kept off / because / is opened at every loan and
+// Readings of the loans and the additions, kept off / because / is opened at every loan and
 // is a public path.
 func (a *app) statsScreen(w http.ResponseWriter, r *http.Request) {
-	d := a.readings(requestLang(r), todayISO())
+	year, _ := strconv.Atoi(r.URL.Query().Get("year"))
+	d := a.readings(requestLang(r), todayISO(), year)
 	a.render(w, r, "stats", map[string]any{
+		"ShowAdded": r.URL.Query().Get("show") == "added",
 		"Title":     tr(r, "stats.title"),
 		"Year":      d.Year,
+		"Added":     d.Added,
 		"Months":    d.Months,
 		"Top":       d.Top,
 		"Idle":      d.Idle,

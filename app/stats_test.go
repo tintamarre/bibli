@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"strconv"
 	"testing"
 )
 
@@ -390,5 +391,52 @@ func TestAMonthWithOneLoanIsStillVisible(t *testing.T) {
 		if b.Count == 1 && b.Height < 4 {
 			t.Errorf("one loan draws %.2f%%, which is nothing at all", b.Height)
 		}
+	}
+}
+
+// Copies count on the day they were entered, and only inside the activity year.
+func TestAddedByDayCountsTheDayOfEntry(t *testing.T) {
+	a := homeApp(t)
+	exec(t, a.db, `UPDATE copy SET created_at = datetime('now','-3 years')`)
+	exec(t, a.db, `UPDATE copy SET created_at = date('now') || ' 10:30:00', acquired_on = '2001-01-01' WHERE id IN (1, 2)`)
+
+	days := a.addedByDay(todayISO())
+	if len(days) != 1 || days[todayISO()] != 2 {
+		t.Fatalf("want 2 copies today and nothing else, got %v", days)
+	}
+}
+
+// The grids turn back to the year of the first loan and no further, and never
+// past the current year.
+func TestReadingsTurnTheYearWithinTheData(t *testing.T) {
+	a := homeApp(t)
+	exec(t, a.db, `UPDATE copy SET created_at = datetime('now')`)
+	exec(t, a.db, `INSERT INTO loan (copy_id, borrower_id, loaned_on, due_on, returned_on) VALUES
+	  (1, 101, date('now','-2 years'), date('now','-2 years','+14 days'), date('now','-2 years','+7 days'))`)
+
+	start, _ := activityYearBounds(todayISO())
+	current, _ := strconv.Atoi(start[:4])
+
+	now := a.readings("fr", todayISO(), 0)
+	if now.Year.Nav.Prev != current-1 || now.Year.Nav.Next != 0 {
+		t.Fatalf("current year: want prev %d and no next, got %+v", current-1, now.Year.Nav)
+	}
+	old := a.readings("fr", todayISO(), current-2)
+	if old.Year.Nav.Prev != 0 || old.Year.Nav.Next != current-1 || old.Year.Total != 1 {
+		t.Errorf("first year: want no prev, next %d and its loan, got %+v (%d loans)", current-1, old.Year.Nav, old.Year.Total)
+	}
+	if far := a.readings("fr", todayISO(), current+5); far.Year.Nav.Next != 0 || far.Year.Nav.Prev != current-1 {
+		t.Errorf("a year ahead falls back to the current one, got %+v", far.Year.Nav)
+	}
+}
+
+// Each grid's year links keep its own side of the switch.
+func TestYearLinksKeepTheSwitch(t *testing.T) {
+	a := homeApp(t)
+	exec(t, a.db, `INSERT INTO loan (copy_id, borrower_id, loaned_on, due_on, returned_on) VALUES
+	  (1, 101, date('now','-2 years'), date('now','-2 years','+14 days'), date('now','-2 years','+7 days'))`)
+	d := a.readings("fr", todayISO(), 0)
+	if d.Year.Show != "loans" || d.Added.Show != "added" || d.Added.Nav != d.Year.Nav {
+		t.Errorf("want both grids on the same year, each keeping its side: %+v / %+v", d.Year.Nav, d.Added.Nav)
 	}
 }

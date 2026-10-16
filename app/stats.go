@@ -1,8 +1,10 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"math"
+	"strconv"
 	"time"
 )
 
@@ -111,6 +113,7 @@ const titlesShown = 5
 // Readings is the whole of what /stats draws.
 type Readings struct {
 	Year   heatmap
+	Added  heatmap
 	Months []MonthBar
 	Top    []TopTitle
 	Idle   IdleStock
@@ -148,12 +151,46 @@ type IdleTitle struct {
 	Since string // ISO
 }
 
-// readings runs the four in order, each one drained before the next: one
-// connection.
-func (a *app) readings(lang, todayISO string) Readings {
+// YearNav is the activity year a grid shows and its neighbours, named by the
+// calendar year they start in; 0 when there is none to turn to.
+type YearNav struct {
+	Label      string // "2025–2026", or "2026" when the year starts in January
+	Prev, Next int
+}
+
+// readings runs them in order, each one drained before the next: one
+// connection. The grids show the activity year starting in year (0 for the
+// current one), turned back no further than the first loan or copy; the other
+// readings stay on the current year.
+func (a *app) readings(lang, todayISO string, year int) Readings {
 	start, _ := activityYearBounds(todayISO)
+	current, _ := strconv.Atoi(start[:4])
+	first := current
+	if earliest := a.earliestDay(); earliest != "" {
+		s, _ := activityYearBounds(earliest)
+		first, _ = strconv.Atoi(s[:4])
+	}
+	if year < first || year > current {
+		year = current
+	}
+	day := fmt.Sprintf("%04d-%02d-01", year, yearStart())
+	nav := YearNav{Label: strconv.Itoa(year)}
+	if yearStart() != time.January {
+		nav.Label += "–" + strconv.Itoa(year+1)
+	}
+	if year > first {
+		nav.Prev = year - 1
+	}
+	if year < current {
+		nav.Next = year + 1
+	}
+	loans := heatmapOf(lang, todayISO, day, a.loansByDay(day), "stats.")
+	loans.Nav, loans.Show = nav, "loans"
+	added := heatmapOf(lang, todayISO, day, a.addedByDay(day), "stats.added_")
+	added.Nav, added.Show = nav, "added"
 	return Readings{
-		Year:   newHeatmap(lang, todayISO, a.loansByDay(todayISO)),
+		Year:   loans,
+		Added:  added,
 		Months: a.monthBars(lang, todayISO),
 		Top:    a.topTitles(start),
 		Idle:   a.idleStock(),
@@ -184,6 +221,51 @@ func (a *app) loansByDay(todayISO string) map[string]int {
 	}
 	if err := rows.Err(); err != nil {
 		log.Printf("readings (days): %v", err)
+	}
+	return counts
+}
+
+// earliestDay is the first day a loan started or a copy was entered, empty on
+// an empty library.
+func (a *app) earliestDay() string {
+	var d *string
+	if err := a.db.QueryRow(
+		`SELECT MIN(d) FROM (SELECT MIN(loaned_on) AS d FROM loan
+		                     UNION ALL SELECT MIN(date(created_at)) FROM copy)`).Scan(&d); err != nil {
+		log.Printf("readings (earliest): %v", err)
+		return ""
+	}
+	if d == nil || len(*d) < 10 {
+		return ""
+	}
+	return (*d)[:10]
+}
+
+// addedByDay counts the copies entered on each day of the activity year: the
+// day of entry, since acquired_on is optional and often backdated.
+func (a *app) addedByDay(todayISO string) map[string]int {
+	start, end := activityYearBounds(todayISO)
+	counts := map[string]int{}
+	rows, err := a.db.Query(
+		`SELECT date(created_at) AS d, COUNT(*) FROM copy
+		  WHERE d >= ? AND d <= ?
+		  GROUP BY d`, start, end)
+	if err != nil {
+		log.Printf("readings (added): %v", err)
+		return counts
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var day string
+		var n int
+		if err := rows.Scan(&day, &n); err != nil {
+			log.Printf("readings (added): %v", err)
+			return counts
+		}
+		counts[day] = n
+	}
+	if err := rows.Err(); err != nil {
+		log.Printf("readings (added): %v", err)
 	}
 	return counts
 }
