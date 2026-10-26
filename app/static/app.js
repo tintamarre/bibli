@@ -343,14 +343,34 @@ function catalogueSearch(e) {
   return false;
 }
 
-// Batch cataloguing. Scans queue up and are asked one after the other, so the
-// scanner never waits for a catalogue. Nothing is written until "Add": a found
-// book is staged with its copies, to be checked, and added under the shelf
-// typed beside the button. A book no catalogue could place is refused and
-// listed, to be catalogued book by book in another tab.
-var batchQueue = [], batchBusy = false, batchSaving = false, batchSeq = 0;
+// Batch cataloguing. Scans queue up and are asked a few at a time, so the
+// scanner never waits for a catalogue and a slow book does not hold the
+// others. Nothing is written until "Add": a found book is staged with its
+// copies, to be checked, and added under the shelf typed beside the button. A
+// book no catalogue could place is refused and listed, to be catalogued book
+// by book in another tab.
+var batchQueue = [], batchFlying = {}, batchActive = 0, batchSaving = false, batchSeq = 0;
+// Lookups at once: enough to get past a slow catalogue, few enough not to be
+// rate-limited by one.
+var batchLanes = 3;
 
 function batchEl(id) { return document.getElementById(id); }
+
+// The ISBN-13 a scan stands for, as staged rows carry it: a price add-on is
+// dropped and a valid ISBN-10 becomes its 978 form. A misread ISBN-10 keeps its
+// own key, so it is never taken for the book it resembles.
+function batchKey(isbn) {
+  var d = (isbn || "").toUpperCase().replace(/[^0-9X]/g, "");
+  if (/^97[89][0-9]{10}([0-9]{2}|[0-9]{5})$/.test(d)) { d = d.slice(0, 13); }
+  if (!/^[0-9]{9}[0-9X]$/.test(d)) { return d; }
+  var sum = 0, i;
+  for (i = 0; i < 10; i++) { sum += (d[i] === "X" ? 10 : +d[i]) * (10 - i); }
+  if (sum % 11) { return d; }
+  d = "978" + d.slice(0, 9);
+  sum = 0;
+  for (i = 0; i < 12; i++) { sum += (+d[i]) * (i % 2 ? 3 : 1); }
+  return d + (10 - sum % 10) % 10;
+}
 
 function batchScan(e) {
   e.preventDefault();
@@ -369,16 +389,37 @@ function batchScan(e) {
   li.appendChild(code);
   var list = batchEl("batch-list");
   list.insertBefore(li, list.firstChild);
-  batchQueue.push({ isbn: isbn, li: li });
+  batchQueue.push({ isbn: isbn, key: batchKey(isbn), li: li });
   batchRefresh();
   batchPump();
   return false;
 }
 
 function batchPump() {
-  if (batchBusy || !batchQueue.length) { return; }
-  batchBusy = true;
-  var job = batchQueue.shift();
+  while (batchActive < batchLanes) {
+    // A copy of a book being looked up waits for that answer.
+    var at = -1;
+    for (var i = 0; i < batchQueue.length && at < 0; i++) {
+      if (!batchFlying[batchQueue[i].key]) { at = i; }
+    }
+    if (at < 0) { return; }
+    var job = batchQueue.splice(at, 1)[0];
+    // A book already staged is one more copy, without a round trip.
+    var staged = Array.prototype.find.call(batchEl("batch-list").children, function (li) {
+      return li.dataset.kind === "found" && li.dataset.isbn === job.key;
+    });
+    if (staged) {
+      batchMoreCopies(staged, 1, job.li);
+      batchRefresh();
+      continue;
+    }
+    batchLookup(job);
+  }
+}
+
+function batchLookup(job) {
+  batchActive++;
+  batchFlying[job.key] = true;
   var body = new URLSearchParams();
   body.set("isbn", job.isbn);
   fetch("/catalogue/batch/add", { method: "POST", body: body, credentials: "same-origin" })
@@ -389,7 +430,8 @@ function batchPump() {
       var row = t.content.firstElementChild;
       // An expired session answers with the sign-in page: no row, same as a fault.
       if (!row || !row.dataset.kind) { throw new Error("no row"); }
-      batchPlace(job.li, row);
+      var refused = batchPlace(job.li, row);
+      if (refused) { batchRefusedQueued(refused, job.key); }
     })
     .catch(function () {
       job.li.className = "batch-row batch-refused";
@@ -402,17 +444,19 @@ function batchPump() {
       batchPlace(job.li, job.li);
     })
     .then(function () {
-      batchBusy = false;
+      batchActive--;
+      delete batchFlying[job.key];
       batchRefresh();
       batchPump();
     });
 }
 
 // A found book is staged; a refused one leaves the list for its own.
+// Answers with the refused line the book ended up on.
 function batchPlace(pending, row) {
   if (row.dataset.kind === "found") {
     batchStage(pending, row);
-    return;
+    return null;
   }
   batchCardRefused(row);
   batchTone([220], 0.22);
@@ -421,23 +465,42 @@ function batchPlace(pending, row) {
     return li !== row && li.dataset.isbn === row.dataset.isbn;
   });
   if (same) {
-    var n = (parseInt(same.dataset.copies, 10) || 1) + 1;
-    same.dataset.copies = n;
-    var times = same.querySelector(".batch-times");
-    if (!times) {
-      times = document.createElement("span");
-      times.className = "batch-times";
-      same.appendChild(times);
-    }
-    times.textContent = "×" + n;
-    // So the form the link opens asks for as many copies as were scanned.
-    var fix = same.querySelector(".batch-fix");
-    if (fix) { fix.href = fix.href.split("&copies=")[0] + "&copies=" + n; }
+    batchRefusedAgain(same);
     pending.remove();
-    return;
+    return same;
   }
   batchEl("batch-refused-list").appendChild(row);
   if (row !== pending) { pending.remove(); }
+  return row;
+}
+
+// One more scan of a refused book: the line says how many, and the link to
+// catalogue it by hand asks for as many copies.
+function batchRefusedAgain(same) {
+  var n = (parseInt(same.dataset.copies, 10) || 1) + 1;
+  same.dataset.copies = n;
+  var times = same.querySelector(".batch-times");
+  if (!times) {
+    times = document.createElement("span");
+    times.className = "batch-times";
+    same.appendChild(times);
+  }
+  times.textContent = "×" + n;
+  var fix = same.querySelector(".batch-fix");
+  if (fix) { fix.href = fix.href.split("&copies=")[0] + "&copies=" + n; }
+}
+
+// Copies scanned while their book was being looked up share the server's
+// refusal: asking again at once would only make the queue wait as long a second
+// time. A scan made after the refusal is shown is a retry, and is asked. A
+// failed request says nothing of the book, so it does not count here.
+function batchRefusedQueued(same, key) {
+  batchQueue = batchQueue.filter(function (job) {
+    if (job.key !== key) { return true; }
+    batchRefusedAgain(same);
+    job.li.remove();
+    return false;
+  });
 }
 
 function batchItem(li) { return JSON.parse(li.dataset.item); }
@@ -459,10 +522,7 @@ function batchStage(pending, row) {
     return li !== pending && li.dataset.kind === "found" && li.dataset.isbn === row.dataset.isbn;
   });
   if (same) {
-    batchSetCopies(same, batchItem(same).copies + it.copies);
-    list.insertBefore(same, list.firstChild);
-    pending.remove();
-    batchCardFound(same, Tn("js.batch_copies", batchItem(same).copies));
+    batchMoreCopies(same, it.copies, pending);
     return;
   }
   row.dataset.seq = pending.dataset.seq;
@@ -470,6 +530,14 @@ function batchStage(pending, row) {
   batchCardFound(row, "");
   if (pending.parentNode === list) { pending.replaceWith(row); }
   else { list.insertBefore(row, list.firstChild); }
+}
+
+function batchMoreCopies(li, n, pending) {
+  batchSetCopies(li, batchItem(li).copies + n);
+  var list = batchEl("batch-list");
+  list.insertBefore(li, list.firstChild);
+  pending.remove();
+  batchCardFound(li, Tn("js.batch_copies", batchItem(li).copies));
 }
 
 function batchQty(btn, delta) {
@@ -490,12 +558,12 @@ function batchRefresh() {
   batchEl("batch-summary").textContent = books ? Tn("js.books", books) + " · " + Tn("js.batch_copies", copies) : "";
   batchEl("batch-save").disabled = books === 0 || batchSaving;
   batchSheet(copies);
-  var waiting = batchQueue.length + (batchBusy ? 1 : 0);
+  var waiting = batchQueue.length + batchActive;
   batchEl("batch-pending").hidden = waiting === 0;
   batchEl("batch-pending").textContent = waiting ? Tn("js.batch_pending", waiting) : "";
   var refused = batchEl("batch-refused-list").children.length;
   batchEl("batch-refused").hidden = refused === 0;
-  var working = batchBusy || batchQueue.length > 0;
+  var working = batchActive > 0 || batchQueue.length > 0;
   // Leaving now would lose what is staged, the refused ISBNs, or scans in flight.
   window.onbeforeunload = (books > 0 || refused > 0 || working)
     ? function (e) { e.preventDefault(); e.returnValue = ""; }

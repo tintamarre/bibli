@@ -70,6 +70,7 @@ const (
 	// Per-screen budget for the whole chain; past it, hand back to manual entry.
 	enrichBudgetDesk     = 10 * time.Second // at the desk: do not keep the queue waiting
 	enrichBudgetBookPage = 25 * time.Second // book page: an explicit request, worth the wait
+	enrichBudgetBatch    = 10 * time.Second // batch: a slow book is set aside, to be scanned again
 )
 
 // enrichWithin gives the chain the screen's budget and pushes the write

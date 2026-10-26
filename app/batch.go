@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -105,9 +106,6 @@ func (a *app) batchAdd(w http.ResponseWriter, r *http.Request) {
 		badRequest(w, r)
 		return
 	}
-	// The catalogues are asked one after the other: no write timeout.
-	extendWriteDeadline(w, 2*time.Minute)
-
 	raw := strings.TrimSpace(r.FormValue("isbn"))
 
 	refuse := func(reason string, manual bool) {
@@ -127,7 +125,13 @@ func (a *app) batchAdd(w http.ResponseWriter, r *http.Request) {
 	if known, ok := a.existingBook(i13, i10); ok {
 		n = known.N
 	} else {
-		rec, err := enrich(r.Context(), i13, i10)
+		// The write deadline is not enrichWithin's: three lookups run at once,
+		// and the row is read after the catalogues, on a connection a save
+		// may be holding.
+		extendWriteDeadline(w, time.Minute)
+		ctx, done := context.WithTimeout(r.Context(), enrichBudgetBatch)
+		rec, err := enrich(ctx, i13, i10)
+		done()
 		if r.Context().Err() != nil {
 			return // the tab was closed
 		}
