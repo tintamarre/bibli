@@ -172,7 +172,9 @@ func monthSpans(lang string, first time.Time, weeks int, startISO, endISO string
 }
 
 // heatThresholds splits the days that saw a loan into quartiles, not a ramp
-// against the busiest day, which would wash the rest of the year pale.
+// against the busiest day, which would wash the rest of the year pale. Each
+// bound is rounded up, so a year of a handful of days still reaches the
+// darkest shade.
 func heatThresholds(counts map[string]int, startISO, endISO string) [3]int {
 	var v []int
 	for iso, n := range counts {
@@ -184,7 +186,8 @@ func heatThresholds(counts map[string]int, startISO, endISO string) [3]int {
 		return [3]int{}
 	}
 	sort.Ints(v)
-	return [3]int{v[len(v)/4], v[len(v)/2], v[len(v)*3/4]}
+	n := len(v)
+	return [3]int{v[(n+3)/4-1], v[(2*n+3)/4-1], v[(3*n+3)/4-1]}
 }
 
 // heatLevel is the shade a count falls in. A tie at a boundary goes to the

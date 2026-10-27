@@ -200,6 +200,21 @@ func TestOneExceptionalDayDoesNotFlattenTheYear(t *testing.T) {
 	}
 }
 
+// A year of a few busy days still spreads them over the four shades.
+func TestAFewDaysReachTheDarkestShade(t *testing.T) {
+	loadForTest(t)
+	counts := map[string]int{"2026-10-12": 40, "2026-10-15": 320, "2026-10-16": 275, "2026-10-19": 150}
+	h := newHeatmap("fr", "2026-10-27", counts)
+	want := map[int]int{40: 1, 150: 2, 275: 3, 320: 4}
+	for _, row := range h.Rows {
+		for _, c := range row {
+			if w, ok := want[c.Count]; ok && c.Level != w {
+				t.Errorf("%s: %d copies draws at level %d, want %d", c.Date, c.Count, c.Level, w)
+			}
+		}
+	}
+}
+
 // A year whose days are all alike draws flat.
 func TestAFlatYearDrawsFlat(t *testing.T) {
 	loadForTest(t)

@@ -51,13 +51,14 @@
   --tl-late: #efa13c;
 
   /* The year heatmap: one ramp, no second hue.
-     --hm-0 is an open day with no loan, drawn rather than left blank. */
-  --hm-0:     #dcdee7;
-  --hm-ahead: #eef0f4;
-  --hm-1:     #e3e6f7;
-  --hm-2:     #c3c9ef;
-  --hm-3:     #a9b1e6;
-  --hm-4:     #6f79cf;
+     --hm-0 is an open day with no loan, drawn rather than left blank, and kept
+     quiet: most days are empty, and --hm-1 must stand out from it for one loan. */
+  --hm-0:     #e6e8ee;
+  --hm-ahead: #f4f5f8;
+  --hm-1:     #aab3ee;
+  --hm-2:     #8590e0;
+  --hm-3:     #6470d0;
+  --hm-4:     #424cb2;
 
   --radius:   12px;
   --radius-s: 8px;
@@ -117,12 +118,12 @@
   --accent-light:  #e8effd;
   --accent-border: #b8cbf5;
   --accent-hover:  #d8e4fb;
-  --hm-0:          #e2e6ed;
-  --hm-ahead:      #f1f3f6;
-  --hm-1:          #e3f1e8;
-  --hm-2:          #bfe3cc;
-  --hm-3:          #8fcca6;
-  --hm-4:          #3f9a66;
+  --hm-0:          #e6e9ef;
+  --hm-ahead:      #f4f6f8;
+  --hm-1:          #8fcfa7;
+  --hm-2:          #5db383;
+  --hm-3:          #3a9161;
+  --hm-4:          #1f663a;
   --shadow:        none;
 }
 /* Page and cards are both white: a dark outline tells them apart. */
