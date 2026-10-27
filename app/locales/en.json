@@ -413,6 +413,7 @@
   "js.batch_new_confirm.other": "Please confirm the new batch.\n{0} books not added *will no longer be listed*: keep them aside to add them by hand.",
   "js.batch_pending.one": "{0} book being looked up…",
   "js.batch_pending.other": "{0} books being looked up…",
+  "js.batch_retry": "The catalogues did not answer: trying again in 30 s…",
   "js.batch_save_failed": "The books could not be added. Nothing was saved: try again.",
   "js.batch_set_aside": "Put this book aside: it is added by hand.",
   "js.batch_sheet": "{0} / {1} labels",

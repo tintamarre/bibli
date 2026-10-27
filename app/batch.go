@@ -138,7 +138,7 @@ func (a *app) batchAdd(w http.ResponseWriter, r *http.Request) {
 		}
 		if rec == nil || rec.Title == "" {
 			if err != nil {
-				refuse(tr(r, "catalogue.batch_silent"), true, true)
+				refuse(tr(r, "catalogue.batch_silent"), true, worthAskingAgain(err))
 			} else {
 				refuse(tr(r, "catalogue.batch_notfound"), true, false)
 			}

@@ -413,6 +413,7 @@
   "js.batch_new_confirm.other": "Veuillez confirmer le nouveau lot.\n{0} livres non ajoutés *ne seront plus listés* : gardez-les de côté pour les ajouter à la main.",
   "js.batch_pending.one": "{0} livre en recherche…",
   "js.batch_pending.other": "{0} livres en recherche…",
+  "js.batch_retry": "Les catalogues n'ont pas répondu : nouvel essai dans 30 s…",
   "js.batch_save_failed": "Les livres n'ont pas pu être ajoutés. Rien n'a été enregistré : réessayez.",
   "js.batch_set_aside": "Mettez ce livre de côté : il s'ajoute à la main.",
   "js.batch_sheet": "{0} / {1} étiquettes",

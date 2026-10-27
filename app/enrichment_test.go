@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"strings"
 	"sync"
@@ -869,5 +870,26 @@ func TestRefusePrivateHost(t *testing.T) {
 	}
 	if err := refusePrivateHost("8.8.8.8"); err != nil {
 		t.Errorf("a public IP was refused: %v", err)
+	}
+}
+
+// A catalogue that timed out or could not be reached is worth a second try; one
+// resting after a 429 or refusing the query is not.
+func TestWorthAskingAgain(t *testing.T) {
+	_, dnsErr := net.LookupHost("no-such-host.invalid")
+	for _, c := range []struct {
+		name string
+		err  error
+		want bool
+	}{
+		{"timeout", fmt.Errorf("bnf: %w", context.DeadlineExceeded), true},
+		{"unreachable", dnsErr, true},
+		{"resting", errors.Join(fmt.Errorf("google: %w", errSourceResting)), false},
+		{"refused query", errors.Join(fmt.Errorf("unicat: status 401")), false},
+		{"one of several", errors.Join(fmt.Errorf("google: %w", errSourceResting), fmt.Errorf("bnf: %w", context.DeadlineExceeded)), true},
+	} {
+		if got := worthAskingAgain(c.err); got != c.want {
+			t.Errorf("%s: worthAskingAgain = %v, want %v", c.name, got, c.want)
+		}
 	}
 }

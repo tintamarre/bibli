@@ -126,6 +126,7 @@ var jsKeys = []string{
 	"js.batch_add_failed",
 	"js.batch_save_failed",
 	"js.batch_pending.one", "js.batch_pending.other",
+	"js.batch_retry",
 	"js.batch_sheet",
 	"js.batch_sheet_next.one", "js.batch_sheet_next.other",
 	"js.batch_set_aside",

@@ -413,6 +413,7 @@
   "js.batch_new_confirm.other": "Bevestig de nieuwe reeks.\n{0} niet toegevoegde boeken *worden niet meer getoond*: leg ze opzij om ze met de hand toe te voegen.",
   "js.batch_pending.one": "{0} boek wordt opgezocht…",
   "js.batch_pending.other": "{0} boeken worden opgezocht…",
+  "js.batch_retry": "De catalogi antwoordden niet: nieuwe poging over 30 s…",
   "js.batch_save_failed": "De boeken konden niet worden toegevoegd. Er is niets opgeslagen: probeer opnieuw.",
   "js.batch_set_aside": "Leg dit boek opzij: het wordt met de hand toegevoegd.",
   "js.batch_sheet": "{0} / {1} etiketten",

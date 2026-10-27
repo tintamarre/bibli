@@ -280,10 +280,11 @@ func requestWithHeader(ctx context.Context, url string, header http.Header) ([]b
 var bnfHedgeAfter = 2 * time.Second
 
 // requestHedged sends the request again when the first has not answered after
-// a while, and keeps whichever answer comes first. For a catalogue that does not
-// rate-limit: it costs a second request each time the first is slow.
+// a while, and keeps whichever answer comes first. Both share one request's
+// timeout, so a catalogue that hangs costs no more than before. For a catalogue
+// that does not rate-limit: it costs a second request each time the first is slow.
 func requestHedged(ctx context.Context, url string, after time.Duration) ([]byte, error) {
-	ctx, cancel := context.WithCancel(ctx)
+	ctx, cancel := context.WithTimeout(ctx, catalogueRequestTimeout)
 	defer cancel() // the request still out is dropped
 	type answer struct {
 		body []byte
@@ -295,7 +296,7 @@ func requestHedged(ctx context.Context, url string, after time.Duration) ([]byte
 		answers <- answer{b, err}
 	}
 	go ask()
-	out, hedged := 1, false
+	out := 1
 	timer := time.NewTimer(after)
 	defer timer.Stop()
 	for {
@@ -307,13 +308,18 @@ func requestHedged(ctx context.Context, url string, after time.Duration) ([]byte
 				return a.body, a.err
 			}
 		case <-timer.C:
-			if !hedged {
-				hedged = true
-				out++
-				go ask()
-			}
+			out++
+			go ask()
 		}
 	}
+}
+
+// worthAskingAgain tells a catalogue that timed out or could not be reached,
+// which may answer a little later, from one resting after a 429 or refusing the
+// query, which will answer the same.
+func worthAskingAgain(err error) bool {
+	var ne net.Error
+	return errors.Is(err, context.DeadlineExceeded) || errors.As(err, &ne)
 }
 
 // 5xx and 403 are retried once: UniCat answers 403 then 200 to the same query.

@@ -425,7 +425,12 @@ function batchAskLater(job) {
   job.retried = true;
   job.later = true;
   batchLater++;
+  var why = document.createElement("span");
+  why.className = "batch-why";
+  why.textContent = T("js.batch_retry");
+  job.li.appendChild(why);
   setTimeout(function () {
+    why.remove();
     batchLater--;
     job.later = false;
     delete batchFlying[job.key];
