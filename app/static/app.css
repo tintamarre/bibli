@@ -1221,6 +1221,9 @@ button, input, select, textarea { font-family: inherit; }
 .info-block .link-quiet { min-height: 44px; }
 .info-block h3 { font-size: .95rem; margin: 0 0 .5rem; color: var(--text); }
 .info-block p { margin: .4rem 0; }
+.log-tail { display: flex; flex-direction: column-reverse; max-height: 20rem; overflow: auto;
+  border: 1px solid var(--border); border-radius: 6px; background: var(--bg); }
+.log-tail pre { margin: 0; padding: .5rem .75rem; font-size: .75rem; line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--text); }
 .info-block .code { overflow-wrap: anywhere; background: var(--bg); }
 
 /* A sortable heading: a <th>'s type and colour, button chrome removed. */

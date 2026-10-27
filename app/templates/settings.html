@@ -175,6 +175,21 @@
         {{end}}
         {{end}}
       </section>
+
+      <section class="info-block">
+        <h3>{{T "settings.log_heading"}}</h3>
+        <p>{{T "settings.log_intro"}}</p>
+        {{if .RecentLog}}
+        {{/* column-reverse keeps the box scrolled to its newest line, without script. */}}
+        <div class="log-tail"><pre>{{.RecentLog}}</pre></div>
+        {{else}}
+        <p>{{T "settings.log_empty"}}</p>
+        {{end}}
+        <p><a class="link-quiet" href="/settings/log.txt" download>{{template "icon-download" "icon-inline"}}{{T "settings.log_download"}}</a></p>
+        <form method="post" action="/settings/log/clear" data-confirm="{{T "settings.log_clear_confirm"}}">
+          <button class="link-quiet" type="submit">{{template "icon-empty" "icon-inline"}}{{T "settings.log_clear"}}</button>
+        </form>
+      </section>
       </div>
 
       <section class="info-block">

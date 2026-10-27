@@ -172,6 +172,7 @@ func (a *app) settingsData(r *http.Request, libName, lang, theme string) map[str
 		"Cache":           a.cacheView(requestLang(r)),
 		"AccessURL":       accessURL(r),
 		"AccessLocal":     accessIsLoopback(r.Host),
+		"RecentLog":       strings.Join(recentLog.last(recentLogShown), "\n"),
 	}
 }
 

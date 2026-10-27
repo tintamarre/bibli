@@ -8,6 +8,7 @@ import (
 	"flag"
 	"fmt"
 	"html/template"
+	"io"
 	"io/fs"
 	"log"
 	"net/http"
@@ -37,6 +38,8 @@ type app struct {
 	trustProxy    bool   // believe X-Forwarded-For (behind a reverse proxy)
 	dbPath        string // path of the SQLite file, shown in the settings
 	backupDir     string // where the daily backups are written, "" = disabled
+	logPath       string // -log-file, "" = the log goes to stderr
+	logFile       *logFile
 	throttle      *throttle
 	covers        *coverCache
 }
@@ -59,14 +62,19 @@ func main() {
 	flag.Parse()
 	allowTrackingLinks(*trackingOffer)
 
-	// A Windows service has no stderr: without a file, its log is lost.
+	// A Windows service has no stderr: without a file, its log is lost. The
+	// recent lines are also kept in memory, for the settings screen.
+	var logOut io.Writer = os.Stderr
+	var lf *logFile
 	if *logPath != "" {
-		lf, err := openLogFile(*logPath, maxLogSize)
+		var err error
+		lf, err = openLogFile(*logPath, maxLogSize)
 		if err != nil {
 			log.Fatalf("log file: %v", err)
 		}
-		log.SetOutput(lf)
+		logOut = lf
 	}
+	log.SetOutput(io.MultiWriter(logOut, recentLog))
 
 	// Early: the Windows service manager gives up on a service that does not
 	// check in within 30 seconds.
@@ -127,6 +135,8 @@ func main() {
 		secureCookies: *secureCookies,
 		trustProxy:    *trustProxy,
 		dbPath:        *dbPath,
+		logPath:       *logPath,
+		logFile:       lf,
 		throttle:      newThrottle(),
 		covers:        newCoverCache(*cacheDir),
 	}
@@ -299,6 +309,8 @@ func (a *app) handler() http.Handler {
 	mux.HandleFunc("POST /settings", a.settingsSave)
 	mux.HandleFunc("POST /settings/covers/absences/forget", a.settingsForgetAbsences)
 	mux.HandleFunc("GET /settings/backup/{name}", a.backupDownload)
+	mux.HandleFunc("GET /settings/log.txt", a.logDownload)
+	mux.HandleFunc("POST /settings/log/clear", a.logClear)
 	mux.HandleFunc("POST /settings/restore", a.restoreUpload)
 	mux.HandleFunc("POST /settings/restore/undo", a.restoreUndo)
 	mux.HandleFunc("POST /settings/restore/confirm", a.restoreConfirm)

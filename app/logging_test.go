@@ -1,9 +1,12 @@
 package main
 
 import (
+	"io"
 	"log"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -185,5 +188,76 @@ func TestLoggingHidesTheTrackingToken(t *testing.T) {
 
 	if line := out.String(); strings.Contains(line, "s3cr3t-token-value") {
 		t.Errorf("the family token was logged: %q", line)
+	}
+}
+
+// The ring keeps the newest lines, without the colours of the development log.
+func TestLogRingKeepsTheLastLines(t *testing.T) {
+	l := &logRing{max: 3}
+	for _, s := range []string{"one\n", "two\n", "\x1b[31mthree\x1b[0m\n", "2026/10/27 05:46:47 200 GET /static/app.js (125µs)\n", "four\n"} {
+		l.Write([]byte(s))
+	}
+	if got := strings.Join(l.last(10), ","); got != "two,three,four" {
+		t.Errorf("last = %q, want two,three,four", got)
+	}
+	if got := strings.Join(l.last(1), ","); got != "four" {
+		t.Errorf("last(1) = %q, want four", got)
+	}
+}
+
+// The log is handed out to a signed-in librarian only: the memory without a
+// log file, the files (previous one first) with one.
+func TestLogDownload(t *testing.T) {
+	a, h := testHandler(t)
+	recentLog.Write([]byte("catalogue/bnf: a line to find\n"))
+
+	if w := get(h, "/settings/log.txt", nil); w.Code == http.StatusOK {
+		t.Error("the log was handed out without signing in")
+	}
+	w := get(h, "/settings/log.txt", signedIn(t, a))
+	if w.Code != http.StatusOK || !strings.Contains(w.Body.String(), "a line to find") {
+		t.Errorf("GET /settings/log.txt = %d %q, want the line kept in memory", w.Code, w.Body.String())
+	}
+	if !strings.Contains(w.Header().Get("Content-Disposition"), "attachment") {
+		t.Error("the log is not offered as a download")
+	}
+
+	a.logPath = filepath.Join(t.TempDir(), "bibli.log")
+	os.WriteFile(a.logPath+".1", []byte("older\n"), 0o644)
+	os.WriteFile(a.logPath, []byte("newer\n"), 0o644)
+	w = get(h, "/settings/log.txt", signedIn(t, a))
+	if got := w.Body.String(); got != "older\nnewer\n" {
+		t.Errorf("with a log file, body = %q, want the two files in order", got)
+	}
+}
+
+// Clearing empties the memory and both files, and leaves one line saying so.
+func TestLogClear(t *testing.T) {
+	a, h := testHandler(t)
+	recentLog.Write([]byte("before the purge\n"))
+	path := filepath.Join(t.TempDir(), "bibli.log")
+	lf, err := openLogFile(path, maxLogSize)
+	if err != nil {
+		t.Fatal(err)
+	}
+	lf.Write([]byte("in the file\n"))
+	os.WriteFile(path+".1", []byte("rotated\n"), 0o644)
+	a.logPath, a.logFile = path, lf
+
+	saved := log.Writer()
+	log.SetOutput(io.MultiWriter(lf, recentLog))
+	t.Cleanup(func() { log.SetOutput(saved) })
+
+	if w := postForm(h, signedIn(t, a), "/settings/log/clear", nil); w.Code != http.StatusSeeOther {
+		t.Fatalf("POST /settings/log/clear = %d, want 303", w.Code)
+	}
+	if got := strings.Join(recentLog.last(10), "|"); strings.Contains(got, "before the purge") || !strings.Contains(got, "log cleared") {
+		t.Errorf("memory after clear = %q", got)
+	}
+	if _, err := os.Stat(path + ".1"); !os.IsNotExist(err) {
+		t.Error("the rotated file is still there")
+	}
+	if b, _ := os.ReadFile(path); strings.Contains(string(b), "in the file") || !strings.Contains(string(b), "log cleared") {
+		t.Errorf("file after clear = %q", b)
 	}
 }
