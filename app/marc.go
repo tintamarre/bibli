@@ -10,24 +10,59 @@ import (
 	"strings"
 )
 
-// Reading what the catalogues answer: UNIMARC from the BnF, MARC21 from
-// UniCat. Apart from the network calls so it can be tested on real responses.
+// Reading what the catalogues answer: UNIMARC from the BnF and the Sudoc,
+// MARC21 from UniCat. Apart from the network calls so it can be tested on real
+// responses.
 //
 // Useful UNIMARC fields: 200$a title, 200$e subtitle, 700/701/702 $a$b authors,
 // 214$c/210$c publisher, 214$d/210$d year, 101$a language, 856 the cover.
 // MARC21: 245$a$b title, 100/700$a authors, 260/264$b publisher, 260/264$c
 // year, 041$a language, else 008.
 
+// recordFromUnimarc reads a BnF answer: its permalink is the ARK, and it may
+// announce a cover.
 func recordFromUnimarc(body []byte, i13, i10 string) (*Record, error) {
 	fields, err := parseUnimarc(body)
 	if err != nil || len(fields) == 0 {
 		return nil, err
 	}
+	n := unimarcRecord(fields, body, i13, i10)
+	n.Source = "bnf"
+	n.CoverURL = unimarcCover(fields)
+	if ark := reArkBnF.FindString(string(body)); ark != "" {
+		n.URL = "https://catalogue.bnf.fr/" + ark
+	}
+	return n, nil
+}
 
-	n := &Record{ISBN13: i13, ISBN10: i10, Source: "bnf", Payload: string(body)}
+// recordFromSudoc reads a Sudoc record (www.sudoc.fr/<ppn>.xml): the same
+// UNIMARC, its permalink built from the PPN, and no cover. holds says whether
+// an 010$a carries this ISBN, in either form.
+func recordFromSudoc(body []byte, ppn, i13, i10 string) (n *Record, holds bool, err error) {
+	fields, err := parseUnimarc(body)
+	if err != nil || len(fields) == 0 {
+		return nil, false, err
+	}
+	n = unimarcRecord(fields, body, i13, i10)
+	n.Source = "sudoc"
+	n.URL = "https://www.sudoc.fr/" + ppn
+	for i := range fields {
+		if fields[i].Tag != "010" {
+			continue
+		}
+		if f13, _, err := ISBNForms(subfield(&fields[i], "a")); err == nil && f13 == i13 {
+			holds = true
+		}
+	}
+	return n, holds, nil
+}
+
+// unimarcRecord reads the fields both UNIMARC catalogues share.
+func unimarcRecord(fields []Datafield, body []byte, i13, i10 string) *Record {
+	n := &Record{ISBN13: i13, ISBN10: i10, Payload: string(body)}
 	if f := firstField(fields, "200"); f != nil {
-		n.Title = subfield(f, "a")
-		n.Subtitle = subfield(f, "e")
+		n.Title = strings.Join(strings.Fields(subfield(f, "a")), " ")
+		n.Subtitle = strings.Join(strings.Fields(subfield(f, "e")), " ")
 	}
 	// 214 (new standard) then 210 (old). The field is repeatable: a record often
 	// carries a publication 214 and a manufacturing 214 with neither publisher
@@ -44,11 +79,7 @@ func recordFromUnimarc(body []byte, i13, i10 string) (*Record, error) {
 		n.Language = lang2(subfield(f, "a"))
 	}
 	n.Authors = authorsUnimarc(fields)
-	n.CoverURL = unimarcCover(fields)
-	if ark := reArkBnF.FindString(string(body)); ark != "" {
-		n.URL = "https://catalogue.bnf.fr/" + ark
-	}
-	return n, nil
+	return n
 }
 
 var reArkBnF = regexp.MustCompile(`ark:/12148/cb[0-9a-z]+`)

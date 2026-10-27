@@ -7,6 +7,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 	"testing"
@@ -119,7 +120,7 @@ func nothingFound(r *http.Request) (int, string, string) {
 	switch r.URL.Host {
 	case "www.googleapis.com":
 		return 200, "application/json", `{"totalItems":0}`
-	case "openlibrary.org":
+	case "openlibrary.org", "www.sudoc.fr":
 		return 404, "", ""
 	default:
 		return 200, "text/xml", emptySRU
@@ -170,8 +171,8 @@ func TestEnrichFallsThroughToTheNextCatalogue(t *testing.T) {
 	if n.Source != "unicat" {
 		t.Errorf("source: %q, want unicat", n.Source)
 	}
-	// The BnF came up empty; Google and Open Library are spared.
-	want := []string{"catalogue.bnf.fr", "www.unicat.be"}
+	// The BnF and the Sudoc came up empty; Google and Open Library are spared.
+	want := []string{"catalogue.bnf.fr", "www.sudoc.fr", "www.unicat.be"}
 	got := calls.hosts(t)
 	if len(got) != len(want) {
 		t.Fatalf("catalogues queried: %v, want %v", got, want)
@@ -183,16 +184,16 @@ func TestEnrichFallsThroughToTheNextCatalogue(t *testing.T) {
 	}
 }
 
-// An absence is remembered too. A miss costs five requests: one per
+// An absence is remembered too. A miss costs six requests: one per
 // catalogue, and a second for Open Library, asked under each ISBN form.
-const requestsForAMiss = 5
+const requestsForAMiss = 6
 
 func TestEnrichRemembersAnAbsence(t *testing.T) {
 	calls := stubCatalogues(t, nothingFound)
 
 	n, err := enrich(context.Background(), petitPrince13, petitPrince10)
 	if n != nil || err != nil {
-		t.Fatalf("four catalogues answered \"no\": record %+v, err %v — want nothing and no fault", n, err)
+		t.Fatalf("every catalogue answered \"no\": record %+v, err %v — want nothing and no fault", n, err)
 	}
 	if got := calls.count(); got != requestsForAMiss {
 		t.Errorf("first pass: %d requests, want %d", got, requestsForAMiss)
@@ -249,9 +250,11 @@ func TestOnlyTheISBNLeavesTheServer(t *testing.T) {
 			t.Errorf("request carrying neither form of the ISBN: %s", u)
 		}
 	}
-	// The two SRU catalogues are asked for both forms.
-	for _, u := range urls[:2] {
-		if !strings.Contains(u, petitPrince10) {
+	// The two SRU catalogues are asked for both forms. The Sudoc is asked for
+	// the ISBN-13 alone: its index finds a record catalogued under the ISBN-10.
+	for _, u := range urls {
+		sru := strings.Contains(u, "catalogue.bnf.fr") || strings.Contains(u, "www.unicat.be")
+		if sru && !strings.Contains(u, petitPrince10) {
 			t.Errorf("SRU request without the ISBN-10 — a pre-2007 work would be missed: %s", u)
 		}
 	}
@@ -777,8 +780,8 @@ func TestAForbiddenAnswerIsTriedAgain(t *testing.T) {
 	if rec.Source != "unicat" {
 		t.Errorf("source %q, want unicat", rec.Source)
 	}
-	if got := calls.hosts(t); len(got) != 3 || got[1] != "www.unicat.be" || got[2] != "www.unicat.be" {
-		t.Errorf("catalogues queried: %v, want the BnF then UniCat twice", got)
+	if got := calls.hosts(t); len(got) != 4 || got[2] != "www.unicat.be" || got[3] != "www.unicat.be" {
+		t.Errorf("catalogues queried: %v, want the BnF, the Sudoc, then UniCat twice", got)
 	}
 }
 
@@ -791,8 +794,8 @@ func TestAnUnauthorisedAnswerIsNotTriedAgain(t *testing.T) {
 		if _, err := enrich(context.Background(), petitPrince13, petitPrince10); err == nil {
 			t.Errorf("status %d passed for an answer", status)
 		}
-		if got := calls.count(); got != 4 {
-			t.Errorf("status %d: %d requests, want 4 — one per catalogue, none retried", status, got)
+		if got := calls.count(); got != 5 {
+			t.Errorf("status %d: %d requests, want 5 — one per catalogue, none retried", status, got)
 		}
 	}
 }
@@ -818,7 +821,7 @@ func TestANotFoundIsAnAnswerAndIsRemembered(t *testing.T) {
 		t.Fatalf("%d requests, want %d: a 404 is an answer and is not retried", got, requestsForAMiss)
 	}
 	if _, known := catalogueMemo.record(petitPrince13); !known {
-		t.Error("the absence was not remembered: every book page would query four catalogues again")
+		t.Error("the absence was not remembered: every book page would query the catalogues again")
 	}
 }
 
@@ -839,7 +842,7 @@ func TestTheNarratedChainIsTheSameChain(t *testing.T) {
 	if err != nil || n == nil {
 		t.Fatalf("record %+v, err %v — want UniCat's record and no fault", n, err)
 	}
-	want := []string{"bnf", "unicat"}
+	want := []string{"bnf", "sudoc", "unicat"}
 	if strings.Join(tried, ",") != strings.Join(want, ",") {
 		t.Errorf("narrated %v, want %v — the log must follow the chain, not a copy of it", tried, want)
 	}
@@ -847,8 +850,8 @@ func TestTheNarratedChainIsTheSameChain(t *testing.T) {
 		t.Errorf("answered for %v, want %v", answered, want)
 	}
 	// And it fed the one memory, so the desk now finds what this screen found.
-	if got := calls.count(); got != 2 {
-		t.Fatalf("%d requests, want 2", got)
+	if got := calls.count(); got != 3 {
+		t.Fatalf("%d requests, want 3", got)
 	}
 	if _, known := catalogueMemo.record("9782211037495"); !known {
 		t.Error("the narrated chain remembered nothing: the desk would go back out for it")
@@ -890,6 +893,114 @@ func TestWorthAskingAgain(t *testing.T) {
 	} {
 		if got := worthAskingAgain(c.err); got != c.want {
 			t.Errorf("%s: worthAskingAgain = %v, want %v", c.name, got, c.want)
+		}
+	}
+}
+
+// The Sudoc's answer to isbn2ppn, in its three shapes.
+const sudocOne = `{"sudoc":{"query":{"isbn":"9782378881849","result":{"ppn":"266714730"}}}}`
+const sudocMany = `{"sudoc":{"query":{"isbn":"9782070408504","result":[{"ppn":"045184011"},{"ppn":"161679005"}]}}}`
+const sudocNoHolding = `{"sudoc":{"query":{"isbn":"2800136391","resultNoHolding":{"ppn":"084212128"}}}}`
+
+func sudocRecord(t *testing.T) string {
+	t.Helper()
+	b, err := os.ReadFile("testdata/sudoc-266714730.xml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(b)
+}
+
+// The records a library holds come first, a PPN that is not one never makes a
+// URL, and a 200 without any record is a fault, not an absence.
+func TestSudocPPNs(t *testing.T) {
+	for _, c := range []struct{ name, body, want string }{
+		{"one", sudocOne, "266714730"},
+		{"several", sudocMany, "045184011,161679005"},
+		{"no holding", sudocNoHolding, "084212128"},
+		{"held first", `{"sudoc":{"query":{"resultNoHolding":{"ppn":"084212128"},"result":{"ppn":"266714730"}}}}`, "266714730,084212128"},
+		{"not a PPN", `{"sudoc":{"query":{"result":[{"ppn":"../admin"},{"ppn":"266714730"}]}}}`, "266714730"},
+	} {
+		got, err := sudocPPNs([]byte(c.body))
+		if err != nil || strings.Join(got, ",") != c.want {
+			t.Errorf("%s: sudocPPNs = %v, %v; want %s", c.name, got, err, c.want)
+		}
+	}
+	for _, body := range []string{`{"sudoc":{"error":"Aucune notice"}}`, `{"sudoc":{"query":{"result":{"ppn":"../admin"}}}}`, "<html>maintenance</html>"} {
+		if _, err := sudocPPNs([]byte(body)); err == nil {
+			t.Errorf("%s passed for an answer", body)
+		}
+	}
+}
+
+// Of several records, the one whose 010$a carries the scanned ISBN is kept.
+func TestSearchSudocPrefersTheRecordThatCarriesTheISBN(t *testing.T) {
+	rec := sudocRecord(t)
+	other := strings.Replace(strings.Replace(rec, "978-2-37888-184-9", "978-2-07-040850-4", 1), "Chevalier chouette", "Another book", 1)
+	calls := stubCatalogues(t, func(r *http.Request) (int, string, string) {
+		switch r.URL.Path {
+		case "/services/isbn2ppn/9782378881849&format=text/json":
+			return 200, "text/json", `{"sudoc":{"query":{"result":[{"ppn":"111111111"},{"ppn":"266714730"}]}}}`
+		case "/111111111.xml":
+			return 200, "application/xml", other
+		}
+		return 200, "application/xml", rec
+	})
+	n, err := searchSudoc(context.Background(), "9782378881849", "2378881843")
+	if err != nil || n == nil || n.Title != "Chevalier chouette" || n.URL != "https://www.sudoc.fr/266714730" {
+		t.Fatalf("searchSudoc = %+v, %v; want the record carrying the ISBN", n, err)
+	}
+	if got := calls.count(); got != 3 {
+		t.Errorf("%d requests, want 3", got)
+	}
+}
+
+// A real Sudoc record reads as the BnF's would, with its permalink and no cover.
+func TestSearchSudoc(t *testing.T) {
+	rec := sudocRecord(t)
+	calls := stubCatalogues(t, func(r *http.Request) (int, string, string) {
+		if strings.HasPrefix(r.URL.Path, "/services/isbn2ppn/") {
+			return 200, "text/json", sudocOne
+		}
+		return 200, "application/xml", rec
+	})
+	n, err := searchSudoc(context.Background(), "9782378881849", "2378881843")
+	if err != nil || n == nil {
+		t.Fatalf("searchSudoc = %v, %v", n, err)
+	}
+	if n.Source != "sudoc" || n.Title != "Chevalier chouette" || n.Publisher != "Kaléidoscope" ||
+		n.Year != 2023 || n.Language != "fr" || !strings.Contains(n.Authors, "Denise") {
+		t.Errorf("record = %+v", n)
+	}
+	if n.URL != "https://www.sudoc.fr/266714730" || n.CoverURL != "" {
+		t.Errorf("URL %q, cover %q; want the PPN permalink and no cover", n.URL, n.CoverURL)
+	}
+	if got := calls.all(); len(got) != 2 || !strings.HasSuffix(got[1], "/266714730.xml") {
+		t.Errorf("requests: %v, want isbn2ppn then the record", got)
+	}
+}
+
+// When the BnF does not answer, the Sudoc does, and UniCat is spared.
+func TestEnrichTurnsToTheSudocWhenTheBnFIsSilent(t *testing.T) {
+	rec := sudocRecord(t)
+	calls := stubCatalogues(t, func(r *http.Request) (int, string, string) {
+		switch {
+		case r.URL.Host == "catalogue.bnf.fr":
+			return 503, "", ""
+		case strings.HasPrefix(r.URL.Path, "/services/isbn2ppn/"):
+			return 200, "text/json", sudocOne
+		case r.URL.Host == "www.sudoc.fr":
+			return 200, "application/xml", rec
+		}
+		return nothingFound(r)
+	})
+	n, err := enrich(context.Background(), "9782378881849", "2378881843")
+	if err != nil || n == nil || n.Source != "sudoc" {
+		t.Fatalf("enrich = %+v, %v; want the Sudoc's record", n, err)
+	}
+	for _, h := range calls.hosts(t) {
+		if h == "www.unicat.be" {
+			t.Error("UniCat asked although the Sudoc answered")
 		}
 	}
 }

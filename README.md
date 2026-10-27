@@ -16,7 +16,7 @@
 ## Ce que fait Bibli
 
 - **Prêt et retour en quelques secondes.** On scanne la carte de l'emprunteur, puis ses livres ; au retour, un seul scan suffit. Une douchette USB à 30 € fait l'affaire, la caméra d'une tablette aussi.
-- **Catalogage par ISBN.** Le titre, l'auteur, l'éditeur et la couverture arrivent seuls, depuis la BnF, UniCat, Google Books et Open Library. Un livre sans ISBN se saisit à la main.
+- **Catalogage par ISBN.** Le titre, l'auteur, l'éditeur et la couverture arrivent seuls, depuis la BnF, le Sudoc, UniCat, Google Books et Open Library. Un livre sans ISBN se saisit à la main.
 - **Étiquettes et cartes.** Planches A4 autocollantes, avec code-barres et cote de rangement ; les étiquettes d'une séance sortent dans l'ordre du catalogage.
 - **Emprunteurs et groupes.** Import de la liste depuis un fichier CSV (exporté d'un tableur), cartes d'emprunteur, changement de groupe en un écran. Les emprunteurs sont rangés par groupe : une classe, un étage, une unité de soins, un atelier.
 - **Retards, inventaire, statistiques.** Liste des retards à imprimer, inventaire modifiable ligne par ligne, lectures de l'année, exports CSV et Excel.

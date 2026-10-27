@@ -129,7 +129,7 @@ Dans **Prêts** (ou sur la fiche de l'emprunteur), le bouton *Prolonger* sur la 
 ### Avec un ISBN (le cas normal)
 
 1. Ouvrir **Cataloguer** et scanner l'ISBN au dos du livre.
-2. Bibli interroge les catalogues (BnF, UniCat, Google Books, Open Library) et remplit la fiche : titre, auteurs, éditeur, année, couverture. **Seul l'ISBN sort de Bibli**, jamais une donnée d'emprunteur.
+2. Bibli interroge les catalogues (BnF, Sudoc, UniCat, Google Books, Open Library) et remplit la fiche : titre, auteurs, éditeur, année, couverture. **Seul l'ISBN sort de Bibli**, jamais une donnée d'emprunteur.
 3. **Vérifier la couverture** : c'est le moyen le plus rapide de voir qu'on a scanné le bon livre. Corriger ce qui est faux, tout est modifiable.
 4. Indiquer le **nombre d'exemplaires** (5 pour un lot destiné à un groupe) et, si on veut, un **emplacement** (« Albums 3/5 », « classe P3 »).
 5. *Ajouter au catalogue*. Chaque exemplaire reçoit son code interne. Le bouton *Étiquettes (optionnel)* les imprime tout de suite.

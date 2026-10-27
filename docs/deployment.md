@@ -255,7 +255,7 @@ Les seules limites fixes sont celles des codes imprimés sur les étiquettes et 
 
 ## Bon à savoir
 
-- **Catalogues interrogés** : BnF, UniCat, Google Books et Open Library, à partir de l'ISBN seul. Rien d'autre ne quitte le serveur.
+- **Catalogues interrogés** : BnF, Sudoc, UniCat, Google Books et Open Library, à partir de l'ISBN seul. Rien d'autre ne quitte le serveur.
 - **Couvertures** : récupérées par le serveur (Open Library, puis BnF) et servies par lui, jamais par le navigateur. Elles sont conservées dans `-cache-dir`, un fichier par ISBN, absences comprises. Rien n'est écrit en base : le dossier peut être vidé à la main.
 - **Langue** : un réglage pour toute l'instance (français, anglais, néerlandais). `?lang=en` ou `?lang=nl` sur n'importe quelle adresse la change pour un seul navigateur pendant douze heures, `?lang=auto` revient au réglage.
 - **Liens de suivi** : activés par défaut ; `-tracking-links=false` les retire là où personne ne peut joindre le serveur.

@@ -28,7 +28,7 @@ type Record struct {
 	Publisher string
 	Year      int
 	Language  string
-	Source    string // 'bnf' | 'unicat' | 'google' | 'openlibrary' | 'manual' | 'local' (catalogue.go)
+	Source    string // 'bnf' | 'sudoc' | 'unicat' | 'google' | 'openlibrary' | 'manual' | 'local' (catalogue.go)
 	URL       string // permanent record URL (BnF ARK, Open Library page...)
 	// Never stored in the database — see cover.go.
 	CoverURL string
@@ -58,6 +58,7 @@ type enrichSource struct {
 func enrichmentSources() []enrichSource {
 	return []enrichSource{
 		{"catalogue.source_bnf", "bnf", searchBnF},
+		{"catalogue.source_sudoc", "sudoc", searchSudoc},
 		{"catalogue.source_unicat", "unicat", searchUniCat},
 		{"catalogue.source_google", "google",
 			func(ctx context.Context, i13, _ string) (*Record, error) { return searchGoogle(ctx, i13) }},
@@ -413,6 +414,97 @@ func searchUniCat(ctx context.Context, i13, i10 string) (*Record, error) {
 		return nil, err
 	}
 	return recordFromMarc21(body, i13, i10)
+}
+
+// Sudoc — the French university union catalogue (ABES, Licence Ouverte), a
+// separate server holding most of what the BnF holds, in the same UNIMARC: it
+// answers when the BnF stalls. Two requests: the ISBN to its records (PPNs),
+// then a record. The ISBN-13 alone is enough: on 25 books from before 2007,
+// it found the same records as the ISBN-10.
+
+var rePPN = regexp.MustCompile(`^[0-9]{8}[0-9X]$`)
+
+// sudocTries caps the records read when an ISBN has several.
+const sudocTries = 3
+
+func searchSudoc(ctx context.Context, i13, i10 string) (*Record, error) {
+	body, err := request(ctx, "https://www.sudoc.fr/services/isbn2ppn/"+url.PathEscape(i13)+"&format=text/json")
+	if err != nil {
+		return nil, err // a 404 is errNoRecord: no record for this ISBN
+	}
+	ppns, err := sudocPPNs(body)
+	if err != nil {
+		return nil, err
+	}
+	// Several records: the one whose 010$a carries this ISBN, else the first
+	// (the ISBN may be printed wrong on the book, and catalogued as such in $z).
+	var first *Record
+	for i, ppn := range ppns {
+		if i == sudocTries {
+			break
+		}
+		body, err := request(ctx, "https://www.sudoc.fr/"+ppn+".xml")
+		if err != nil {
+			if first != nil {
+				break
+			}
+			return nil, err
+		}
+		n, holds, err := recordFromSudoc(body, ppn, i13, i10)
+		if err != nil || n == nil {
+			if first != nil {
+				break
+			}
+			return nil, err
+		}
+		if holds || len(ppns) == 1 {
+			return n, nil
+		}
+		if first == nil {
+			first = n
+		}
+	}
+	return first, nil
+}
+
+// sudocPPNs lists the records of an isbn2ppn answer, those a library holds
+// first. Each list is an object for one record, an array for more. A 404 says
+// "none"; a 200 without one is not an answer.
+func sudocPPNs(body []byte) ([]string, error) {
+	var reply struct {
+		Sudoc struct {
+			Query struct {
+				Result          json.RawMessage `json:"result"`
+				ResultNoHolding json.RawMessage `json:"resultNoHolding"`
+			} `json:"query"`
+		} `json:"sudoc"`
+	}
+	if err := json.Unmarshal(body, &reply); err != nil {
+		return nil, fmt.Errorf("unreadable reply: %w", err)
+	}
+	var ppns []string
+	for _, raw := range []json.RawMessage{reply.Sudoc.Query.Result, reply.Sudoc.Query.ResultNoHolding} {
+		type entry struct {
+			PPN string `json:"ppn"`
+		}
+		var many []entry
+		var one entry
+		if json.Unmarshal(raw, &many) != nil {
+			if json.Unmarshal(raw, &one) != nil {
+				continue
+			}
+			many = []entry{one}
+		}
+		for _, e := range many {
+			if rePPN.MatchString(e.PPN) {
+				ppns = append(ppns, e.PPN)
+			}
+		}
+	}
+	if len(ppns) == 0 {
+		return nil, errors.New("isbn2ppn answered without a record")
+	}
+	return ppns, nil
 }
 
 // Google Books — good recall on non-French titles.

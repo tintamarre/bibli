@@ -363,7 +363,7 @@ const (
 // statusWording does for a copy's status.
 func sourceWording(lang, source string) string {
 	switch source {
-	case "bnf", "unicat", "google", "openlibrary", sourceManual, sourceLocal:
+	case "bnf", "sudoc", "unicat", "google", "openlibrary", sourceManual, sourceLocal:
 		return T(lang, "source."+source)
 	default:
 		return source // unexpected value: show it as is rather than lie

@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<record>
+  <leader>     cam0 22        450 </leader>
+  <controlfield tag="001">266714730</controlfield>
+  <datafield tag="010" ind1="#" ind2="#">
+    <subfield code="a">978-2-37888-184-9</subfield>
+    <subfield code="b">rel.</subfield>
+    <subfield code="d">14 EUR, 14,50 EUR</subfield>
+  </datafield>
+  <datafield tag="101" ind1="1" ind2="#">
+    <subfield code="a">fre</subfield>
+    <subfield code="c">eng</subfield>
+    <subfield code="2">639-2</subfield>
+  </datafield>
+  <datafield tag="200" ind1="1" ind2="#">
+    <subfield code="a">Chevalier chouette</subfield>
+    <subfield code="f">Christopher Denise</subfield>
+    <subfield code="g">[texte traduit de l&apos;anglais (États-Unis) par Claire Billaud]</subfield>
+  </datafield>
+  <datafield tag="214" ind1="#" ind2="0">
+    <subfield code="a">Paris</subfield>
+    <subfield code="c">Kaléidoscope</subfield>
+    <subfield code="d">DL 2023</subfield>
+  </datafield>
+  <datafield tag="700" ind1="#" ind2="1">
+    <subfield code="3">242859240</subfield>
+    <subfield code="a">Denise</subfield>
+    <subfield code="b">Christopher</subfield>
+    <subfield code="f">1967-....</subfield>
+    <subfield code="c">artiste et illustrateur</subfield>
+    <subfield code="4">070</subfield>
+    <subfield code="4">440</subfield>
+  </datafield>
+  <datafield tag="701" ind1="#" ind2="1">
+    <subfield code="3">16573700X</subfield>
+    <subfield code="a">Billaud</subfield>
+    <subfield code="b">Claire</subfield>
+    <subfield code="f">1983-....</subfield>
+    <subfield code="4">730</subfield>
+  </datafield>
+  <datafield tag="801" ind1="#" ind2="3">
+    <subfield code="a">FR</subfield>
+    <subfield code="b">Abes</subfield>
+    <subfield code="c">20251216</subfield>
+    <subfield code="g">AFNOR</subfield>
+  </datafield>
+  <datafield tag="801" ind1="#" ind2="0">
+    <subfield code="a">FR</subfield>
+    <subfield code="b">FR-751131015</subfield>
+    <subfield code="c">20221229</subfield>
+    <subfield code="g">AFNOR</subfield>
+    <subfield code="2">intermrc</subfield>
+  </datafield>
+</record>

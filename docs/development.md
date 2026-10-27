@@ -104,7 +104,7 @@ Tout le code Go vit dans `app/`, en **un seul paquet plat** : les fichiers y son
     app/i18n.go          catalogue de traduction, langue de la requête
     app/loan.go          prêt et retour, le cœur du produit
     app/catalogue.go     écran de catalogage, création d'exemplaires
-    app/enrichment.go    interrogation des catalogues (BnF, UniCat, Google, Open Library)
+    app/enrichment.go    interrogation des catalogues (BnF, Sudoc, UniCat, Google, Open Library)
     app/marc.go          lecture de l'UNIMARC et du MARC21 qu'ils renvoient
     app/cover.go         vignettes de couverture, servies par le binaire
     app/book.go          fiche d'un ouvrage

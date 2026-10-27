@@ -23,4 +23,4 @@ Seule la **dernière version publiée** reçoit les correctifs. Mettre à jour e
 ## Hors du périmètre
 
 - Une installation exposée sur Internet sans HTTPS, ou avec un mot de passe faible : voir [HTTPS ou réseau local](docs/deployment.md#https-ou-réseau-local--choisir-le-bon-mode) dans [Déployer un serveur](docs/deployment.md).
-- Les catalogues externes (BnF, UniCat, Google Books, Open Library) : Bibli ne leur envoie qu'un ISBN.
+- Les catalogues externes (BnF, Sudoc, UniCat, Google Books, Open Library) : Bibli ne leur envoie qu'un ISBN, puis, pour lire la notice trouvée, l'identifiant que le catalogue lui a lui-même renvoyé (numéro Sudoc, clé d'auteur Open Library). Aucune donnée d'emprunteur.
