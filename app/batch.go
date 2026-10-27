@@ -56,6 +56,7 @@ type batchRow struct {
 	Item   string // batchItem as JSON
 	Reason string
 	Manual bool // a valid ISBN, so the refusal can link to cataloguing it by hand
+	Retry  bool // the catalogues did not answer: worth asking again a little later
 	Codes  []string
 }
 
@@ -108,15 +109,15 @@ func (a *app) batchAdd(w http.ResponseWriter, r *http.Request) {
 	}
 	raw := strings.TrimSpace(r.FormValue("isbn"))
 
-	refuse := func(reason string, manual bool) {
-		a.fragment(w, r, "batch", "batch_row", batchRow{Kind: "refused", ISBN: raw, Reason: reason, Manual: manual})
+	refuse := func(reason string, manual, retry bool) {
+		a.fragment(w, r, "batch", "batch_row", batchRow{Kind: "refused", ISBN: raw, Reason: reason, Manual: manual, Retry: retry})
 	}
 
 	i13, i10, err := ISBNForms(raw)
 	if err != nil {
 		// A wrong check digit is a misread far more often than a wrong book:
 		// scanning it again is the fix, not typing a notice.
-		refuse(tr(r, "catalogue.batch_bad_isbn"), false)
+		refuse(tr(r, "catalogue.batch_bad_isbn"), false, false)
 		return
 	}
 	raw = i13
@@ -137,9 +138,9 @@ func (a *app) batchAdd(w http.ResponseWriter, r *http.Request) {
 		}
 		if rec == nil || rec.Title == "" {
 			if err != nil {
-				refuse(tr(r, "catalogue.batch_silent"), true)
+				refuse(tr(r, "catalogue.batch_silent"), true, true)
 			} else {
-				refuse(tr(r, "catalogue.batch_notfound"), true)
+				refuse(tr(r, "catalogue.batch_notfound"), true, false)
 			}
 			return
 		}

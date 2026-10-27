@@ -353,6 +353,9 @@ var batchQueue = [], batchFlying = {}, batchActive = 0, batchSaving = false, bat
 // Lookups at once: enough to get past a slow catalogue, few enough not to be
 // rate-limited by one.
 var batchLanes = 3;
+// A catalogue that did not answer in time often answers the same question at
+// once a little later: such a book is asked once more before it is refused.
+var batchRetryAfter = 30000, batchLater = 0;
 
 function batchEl(id) { return document.getElementById(id); }
 
@@ -417,6 +420,21 @@ function batchPump() {
   }
 }
 
+// Back at the head of the queue, ahead of the copies that waited for it.
+function batchAskLater(job) {
+  job.retried = true;
+  job.later = true;
+  batchLater++;
+  setTimeout(function () {
+    batchLater--;
+    job.later = false;
+    delete batchFlying[job.key];
+    batchQueue.unshift(job);
+    batchRefresh();
+    batchPump();
+  }, batchRetryAfter);
+}
+
 function batchLookup(job) {
   batchActive++;
   batchFlying[job.key] = true;
@@ -430,6 +448,10 @@ function batchLookup(job) {
       var row = t.content.firstElementChild;
       // An expired session answers with the sign-in page: no row, same as a fault.
       if (!row || !row.dataset.kind) { throw new Error("no row"); }
+      if (row.hasAttribute("data-retry") && !job.retried) {
+        batchAskLater(job);
+        return;
+      }
       var refused = batchPlace(job.li, row);
       if (refused) { batchRefusedQueued(refused, job.key); }
     })
@@ -445,7 +467,8 @@ function batchLookup(job) {
     })
     .then(function () {
       batchActive--;
-      delete batchFlying[job.key];
+      // A book asked again later keeps its copies waiting for that answer.
+      if (!job.later) { delete batchFlying[job.key]; }
       batchRefresh();
       batchPump();
     });
@@ -558,12 +581,12 @@ function batchRefresh() {
   batchEl("batch-summary").textContent = books ? Tn("js.books", books) + " · " + Tn("js.batch_copies", copies) : "";
   batchEl("batch-save").disabled = books === 0 || batchSaving;
   batchSheet(copies);
-  var waiting = batchQueue.length + batchActive;
+  var waiting = batchQueue.length + batchActive + batchLater;
   batchEl("batch-pending").hidden = waiting === 0;
   batchEl("batch-pending").textContent = waiting ? Tn("js.batch_pending", waiting) : "";
   var refused = batchEl("batch-refused-list").children.length;
   batchEl("batch-refused").hidden = refused === 0;
-  var working = batchActive > 0 || batchQueue.length > 0;
+  var working = batchActive > 0 || batchQueue.length > 0 || batchLater > 0;
   // Leaving now would lose what is staged, the refused ISBNs, or scans in flight.
   window.onbeforeunload = (books > 0 || refused > 0 || working)
     ? function (e) { e.preventDefault(); e.returnValue = ""; }

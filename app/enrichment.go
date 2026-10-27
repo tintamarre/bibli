@@ -275,6 +275,47 @@ func requestWithHeader(ctx context.Context, url string, header http.Header) ([]b
 	return nil, lastErr
 }
 
+// BnF stalls at random, a quarter of its answers past 7 s, while the same
+// request sent again usually answers in under a second.
+var bnfHedgeAfter = 2 * time.Second
+
+// requestHedged sends the request again when the first has not answered after
+// a while, and keeps whichever answer comes first. For a catalogue that does not
+// rate-limit: it costs a second request each time the first is slow.
+func requestHedged(ctx context.Context, url string, after time.Duration) ([]byte, error) {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel() // the request still out is dropped
+	type answer struct {
+		body []byte
+		err  error
+	}
+	answers := make(chan answer, 2)
+	ask := func() {
+		b, err := request(ctx, url)
+		answers <- answer{b, err}
+	}
+	go ask()
+	out, hedged := 1, false
+	timer := time.NewTimer(after)
+	defer timer.Stop()
+	for {
+		select {
+		case a := <-answers:
+			out--
+			// A failure waits for the other request, if one is still out.
+			if a.err == nil || errors.Is(a.err, errNoRecord) || out == 0 {
+				return a.body, a.err
+			}
+		case <-timer.C:
+			if !hedged {
+				hedged = true
+				out++
+				go ask()
+			}
+		}
+	}
+}
+
 // 5xx and 403 are retried once: UniCat answers 403 then 200 to the same query.
 // 400, 401 and 422 are final, since a wrong key or a malformed query answers
 // the same way however often it is asked.
@@ -301,6 +342,11 @@ func requestOnce(ctx context.Context, url string, header http.Header) (body []by
 		return nil, false, errSourceResting
 	}
 	resp, err := catalogueClient.Do(req)
+	if errors.Is(err, context.DeadlineExceeded) {
+		// A catalogue that let the request time out is still working on it:
+		// asking again at once doubles the wait for the same silence.
+		return nil, false, err
+	}
 	if err != nil {
 		return nil, true, err // network error: transient
 	}
@@ -334,7 +380,7 @@ func searchBnF(ctx context.Context, i13, i10 string) (*Record, error) {
 		"maximumRecords": {"1"},
 	}.Encode()
 
-	body, err := request(ctx, u)
+	body, err := requestHedged(ctx, u, bnfHedgeAfter)
 	if err != nil {
 		return nil, err
 	}

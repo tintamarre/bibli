@@ -62,7 +62,7 @@
 {{/* A line of the lists; app.js reads its data-* and moves it between them. A
      refused scan links to cataloguing that book by hand, in another tab: the
      batch under way is only staged and would be lost by leaving. */}}
-{{define "batch_row"}}{{if eq .Kind "found"}}{{template "batch_staged" .}}{{else}}<li class="batch-row batch-refused" data-kind="refused" data-isbn="{{.ISBN}}"{{if .Manual}} data-manual{{end}}>
+{{define "batch_row"}}{{if eq .Kind "found"}}{{template "batch_staged" .}}{{else}}<li class="batch-row batch-refused" data-kind="refused" data-isbn="{{.ISBN}}"{{if .Manual}} data-manual{{end}}{{if .Retry}} data-retry{{end}}>
   <span class="code">{{.ISBN}}</span> <span class="batch-why">{{.Reason}}</span>
   {{if .Manual}}<a class="link-quiet batch-fix" href="/catalogue/manual?isbn={{.ISBN}}" target="_blank" rel="noopener">{{T "catalogue.batch_refused_add"}}</a>{{end}}
 </li>{{end}}{{end}}

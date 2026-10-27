@@ -294,6 +294,54 @@ func TestRequestRetriesOnceOnATransientFailure(t *testing.T) {
 	}
 }
 
+// A BnF request that stalls is sent again, and the second answer is kept.
+func TestBnFAsksAgainWhenTheFirstRequestStalls(t *testing.T) {
+	saved := bnfHedgeAfter
+	bnfHedgeAfter = 20 * time.Millisecond
+	t.Cleanup(func() { bnfHedgeAfter = saved })
+	var mu sync.Mutex
+	n := 0
+	calls := stubCatalogues(t, func(r *http.Request) (int, string, string) {
+		mu.Lock()
+		n++
+		first := n == 1
+		mu.Unlock()
+		if first {
+			<-r.Context().Done() // stalls until it is dropped
+			return 0, "", ""
+		}
+		return 200, "text/xml", bnfResponse
+	})
+
+	start := time.Now()
+	rec, err := searchBnF(context.Background(), petitPrince13, petitPrince10)
+	if rec == nil || err != nil {
+		t.Fatalf("searchBnF = %v, %v; want the second request's record", rec, err)
+	}
+	if d := time.Since(start); d > time.Second {
+		t.Errorf("took %s: the stalled request was waited for", d)
+	}
+	if got := calls.count(); got != 2 {
+		t.Errorf("%d requests, want 2", got)
+	}
+}
+
+// A BnF request that answers in time is sent once.
+func TestBnFAsksOnceWhenTheAnswerIsQuick(t *testing.T) {
+	saved := bnfHedgeAfter
+	bnfHedgeAfter = time.Second
+	t.Cleanup(func() { bnfHedgeAfter = saved })
+	calls := stubCatalogues(t, func(r *http.Request) (int, string, string) {
+		return 200, "text/xml", bnfResponse
+	})
+	if rec, _ := searchBnF(context.Background(), petitPrince13, petitPrince10); rec == nil {
+		t.Fatal("nil record")
+	}
+	if got := calls.count(); got != 1 {
+		t.Errorf("%d requests, want 1", got)
+	}
+}
+
 func TestRequestDoesNotRetryOnAPermanentFailure(t *testing.T) {
 	calls := stubCatalogues(t, func(r *http.Request) (int, string, string) {
 		return 404, "", "no such record"
