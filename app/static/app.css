@@ -1564,6 +1564,14 @@ button, input, select, textarea { font-family: inherit; }
     font-size: .8rem; font-weight: 700; color: var(--muted);
   }
   .table td:empty { display: none; }
+  /* A label/value table (About): the label is the first cell, not a data-label,
+     so the card stacks the pair instead of setting it against a second label.
+     Values break anywhere: a commit hash and a URL are unbreakable words. */
+  .table-pairs td { display: block; padding: .15rem 0; text-align: left; }
+  .table-pairs td::before { content: none; }
+  .table-pairs td:first-child { font-size: .8rem; font-weight: 700; color: var(--muted); }
+  .table-pairs td + td { overflow-wrap: anywhere; }
+  .table-pairs .code { white-space: normal; }
   /* Grouped loans as cards: the borrower band is a heading above them. Must stay
      below `.table td`, which weighs the same. */
   .row-borrower > td { display: block; border-radius: var(--radius-s); margin: .2rem 0 .5rem; }
