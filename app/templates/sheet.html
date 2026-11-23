@@ -69,12 +69,20 @@
   body.no-library .sticker .library { display: none; }
   .toolbar .opt input[type=number] { width: 4.5em; height: 44px; font: inherit; padding: 0 .5rem;
     border: 1px solid var(--border-strong); border-radius: var(--radius-s); background: var(--surface); }
+  .toolbar .opt #st-scale { width: 6.5em; }
   @media print {
     body { padding: 0; background: none; }
     .page { margin: 0; box-shadow: none; break-after: page; }
     .page:last-child { break-after: auto; }
     .sticker { outline: none; }
     body.cut-lines .sticker { outline: .2mm dashed #999; }
+    /* A printer that will not print to the edge and shrinks the full page to
+       fit (AirPrint's print-scaling=auto, e.g. a Brother laser) does so about
+       the page centre; enlarging by the inverse about the same point cancels it. */
+    .page { transform: scale(var(--st-scale, 1)); transform-origin: 50% 50%; background: none; }
+    /* What the enlargement pushes past the paper's edge holds no sticker; left
+       to overflow, Chrome would shrink the whole print to fit it back in. */
+    .sheet { overflow: clip; }
   }
 </style>{{end}}
 
@@ -83,7 +91,9 @@
 {{define "sticker_controls"}}<label class="opt">{{T "sticker.start"}} <input type="number" id="st-start" min="1" value="1"
     onchange="stickerLayout()"></label>
   <label class="opt"><input type="checkbox"
-    onchange="document.body.classList.toggle('cut-lines', this.checked)"> {{T "sticker.cut_lines"}}</label>{{end}}
+    onchange="document.body.classList.toggle('cut-lines', this.checked)"> {{T "sticker.cut_lines"}}</label>
+  <label class="opt">{{T "sticker.scale"}} <input type="number" id="st-scale" min="90" max="115" step="0.1" value="100"
+    onchange="stickerScale()"></label>{{end}}
 
 {{define "sticker_note"}}<p class="sheet-note">{{T "sticker.note"}}</p>{{end}}
 
@@ -131,6 +141,21 @@
       stSheet.appendChild(page);
     }
   }
+
+  // The correction belongs to the printer next to this computer, so this
+  // browser keeps it.
+  function stickerScale() {
+    var box = document.getElementById("st-scale");
+    var pct = parseFloat(box.value);
+    if (!(pct >= 90 && pct <= 115)) pct = 100;
+    box.value = pct;
+    document.documentElement.style.setProperty("--st-scale", pct / 100);
+    try { localStorage.setItem("bibli.stickerScale", String(pct)); } catch (e) { /* this time only */ }
+  }
+  try {
+    var stSaved = localStorage.getItem("bibli.stickerScale");
+    if (stSaved) document.getElementById("st-scale").value = stSaved;
+  } catch (e) { /* none saved */ }
 
   // Firefox hands a reloaded page its inputs as they were left, but not what
   // their handlers had done — the sheet would then contradict its own boxes.

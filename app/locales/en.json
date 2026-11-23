@@ -825,7 +825,8 @@
   "status.lost": "lost",
   "status.withdrawn": "withdrawn",
   "sticker.cut_lines": "Cut lines (plain paper)",
-  "sticker.note": "For A4 sheets of 40 labels, 48.5 × 25.4 mm (Avery 3657 type). Print at 100% (\"actual size\"), without fitting to the page. Starting at label 5 leaves the first 4, already used, blank.",
+  "sticker.note": "For A4 sheets of 40 labels, 48.5 × 25.4 mm (Avery 3657 type). Print at 100% (\"actual size\"), without fitting to the page. Starting at label 5 leaves the first 4, already used, blank. Labels shifted towards the centre? Your printer shrinks the page: on plain paper with cut lines, measure from the 1st to the last row (228.6 mm expected); correction = 228.6 ÷ measurement × 100.",
+  "sticker.scale": "Printer correction (%)",
   "sticker.start": "Start at label",
 
   "theme.ink": "Ink — indigo top bar",

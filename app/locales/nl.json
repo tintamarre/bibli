@@ -825,7 +825,8 @@
   "status.lost": "verloren",
   "status.withdrawn": "afgevoerd",
   "sticker.cut_lines": "Snijlijnen (gewoon papier)",
-  "sticker.note": "Voor A4-vellen met 40 etiketten van 48,5 × 25,4 mm (type Avery 3657). Druk af op 100 % (\"werkelijke grootte\"), zonder aanpassen aan de pagina. Beginnen bij etiket 5 laat de eerste 4, al gebruikt, leeg.",
+  "sticker.note": "Voor A4-vellen met 40 etiketten van 48,5 × 25,4 mm (type Avery 3657). Druk af op 100 % (\"werkelijke grootte\"), zonder aanpassen aan de pagina. Beginnen bij etiket 5 laat de eerste 4, al gebruikt, leeg. Etiketten naar het midden verschoven? Uw printer verkleint de pagina: meet op gewoon papier met snijlijnen van de 1e tot de laatste rij (228,6 mm verwacht); correctie = 228,6 ÷ meting × 100.",
+  "sticker.scale": "Printercorrectie (%)",
   "sticker.start": "Beginnen bij etiket",
 
   "theme.ink": "Inkt — indigo balk bovenaan",
